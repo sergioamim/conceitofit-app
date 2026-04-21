@@ -1,7 +1,11 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { axe } from "vitest-axe";
 
-import { SaleReceiptModal } from "@/components/shared/sale-receipt-modal";
+import {
+  FOCUS_UNIVERSAL_SEARCH_EVENT,
+  SaleReceiptModal,
+} from "@/components/shared/sale-receipt-modal";
 import type { Aluno, Tenant, Venda } from "@/lib/types";
 
 /** Espera o próximo tick para deixar o `useEffect` rodar (formatador BRL). */
@@ -333,5 +337,199 @@ describe("SaleReceiptModal (VUN-4.1)", () => {
 
     const metodo = screen.getByTestId("thermal-receipt-metodo");
     expect(metodo.textContent).toMatch(/Crédito/);
+  });
+});
+
+// ============================================================================
+// VUN-4.2 — a11y + "Nova venda" reset + mocks de print/email
+// ============================================================================
+describe("SaleReceiptModal (VUN-4.2)", () => {
+  it("AC1: handler e-mail valida via zod, entra em loading e anuncia via aria-live", async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <SaleReceiptModal
+          open
+          onClose={() => {}}
+          venda={mkVenda()}
+          cliente={CLIENTE}
+          tenant={TENANT}
+        />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const btn = screen.getByTestId("sale-receipt-send-email");
+      const liveRegion = screen.getByTestId("sale-receipt-live-region");
+      expect(liveRegion.getAttribute("aria-live")).toBe("polite");
+
+      fireEvent.click(btn);
+      // Estado de loading imediato + anúncio "Enviando…"
+      expect(btn.textContent).toMatch(/Enviando/);
+      expect(liveRegion.textContent).toMatch(/Enviando/);
+
+      // Avança o mock (600ms) para completar o envio
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(650);
+      });
+
+      expect(btn.textContent).not.toMatch(/Enviando/);
+      expect(liveRegion.textContent).toBe("E-mail enviado");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("AC1: e-mail inválido não dispara loading e anuncia erro via aria-live", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={{ ...CLIENTE, email: "" }}
+        tenant={TENANT}
+      />,
+    );
+    await flushEffects();
+
+    const input = screen.getByTestId(
+      "sale-receipt-email-input",
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "nao-e-email" } });
+    const btn = screen.getByTestId("sale-receipt-send-email");
+    fireEvent.click(btn);
+
+    // Não entra em loading
+    expect(btn.textContent).not.toMatch(/Enviando/);
+    const liveRegion = screen.getByTestId("sale-receipt-live-region");
+    expect(liveRegion.textContent).toMatch(/inválido/i);
+  });
+
+  it("AC2: handler imprimir entra em loading e anuncia via aria-live", async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <SaleReceiptModal
+          open
+          onClose={() => {}}
+          venda={mkVenda()}
+          cliente={CLIENTE}
+          tenant={TENANT}
+        />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      const btn = screen.getByTestId("sale-receipt-print-button");
+      const liveRegion = screen.getByTestId("sale-receipt-live-region");
+
+      fireEvent.click(btn);
+      expect(btn.textContent).toMatch(/Imprimindo/);
+      expect(liveRegion.textContent).toMatch(/impressora/i);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(850);
+      });
+
+      expect(btn.textContent).not.toMatch(/Imprimindo/);
+      expect(liveRegion.textContent).toBe("Enviado para impressora");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("AC3: atalhos PDF / WhatsApp / 2ª via têm aria-label descritivo", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={CLIENTE}
+        tenant={TENANT}
+      />,
+    );
+    await flushEffects();
+
+    expect(
+      screen.getByTestId("sale-receipt-shortcut-pdf").getAttribute("aria-label"),
+    ).toMatch(/PDF/i);
+    expect(
+      screen
+        .getByTestId("sale-receipt-shortcut-whatsapp")
+        .getAttribute("aria-label"),
+    ).toMatch(/WhatsApp/i);
+    expect(
+      screen
+        .getByTestId("sale-receipt-shortcut-segunda-via")
+        .getAttribute("aria-label"),
+    ).toMatch(/2ª via/i);
+  });
+
+  it("AC4: 'Nova venda' dispatcha CustomEvent focus-universal-search + fecha modal", async () => {
+    let closed = false;
+    const listener = vi.fn();
+    window.addEventListener(FOCUS_UNIVERSAL_SEARCH_EVENT, listener);
+    try {
+      render(
+        <SaleReceiptModal
+          open
+          onClose={() => {
+            closed = true;
+          }}
+          venda={mkVenda()}
+          cliente={CLIENTE}
+          tenant={TENANT}
+        />,
+      );
+      await flushEffects();
+
+      fireEvent.click(screen.getByTestId("sale-receipt-nova-venda"));
+      expect(closed).toBe(true);
+
+      // Espera o requestAnimationFrame disparar o event (happy-dom chama
+      // rAF no próximo microtask — aguardamos).
+      await waitFor(() => {
+        expect(listener).toHaveBeenCalledTimes(1);
+      });
+      const event = listener.mock.calls[0][0] as Event;
+      expect(event.type).toBe(FOCUS_UNIVERSAL_SEARCH_EVENT);
+    } finally {
+      window.removeEventListener(FOCUS_UNIVERSAL_SEARCH_EVENT, listener);
+    }
+  });
+
+  it("AC5: foco inicial vai pro botão 'Enviar por e-mail' ao abrir", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={CLIENTE}
+        tenant={TENANT}
+      />,
+    );
+    // Aguarda o onOpenAutoFocus ser chamado pelo Radix (microtask).
+    await waitFor(() => {
+      const btn = screen.getByTestId("sale-receipt-send-email");
+      expect(document.activeElement).toBe(btn);
+    });
+  });
+
+  it("AC7: axe — modal aberto com venda não deve ter violações críticas", async () => {
+    const { container } = render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={CLIENTE}
+        tenant={TENANT}
+      />,
+    );
+    await flushEffects();
+
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
   });
 });
