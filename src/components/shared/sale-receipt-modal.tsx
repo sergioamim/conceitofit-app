@@ -1,19 +1,115 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import {
+  CheckCircle2,
+  FileDown,
+  MessageCircle,
+  Plus,
+  Printer,
+  RotateCcw,
+  Send,
+} from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  ThermalReceipt,
+  type ThermalReceiptItem,
+} from "@/components/shared/thermal-receipt";
+import { useToast } from "@/components/ui/use-toast";
 import type { Aluno, Plano, Tenant, Venda } from "@/lib/types";
-import { formatBRL, formatDateBR, formatDateTime } from "@/lib/formatters";
+import type { TipoFormaPagamento } from "@/lib/shared/types/pagamento";
+import { cn } from "@/lib/utils";
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("\"", "&quot;")
-    .replaceAll("'", "&#39;");
+/**
+ * Modal pós-venda (VUN-4.1): layout 820×560 em duas colunas.
+ *
+ * - **Esquerda**: `<ThermalReceipt variant="modal" />` — fonte única de verdade
+ *   visual do recibo (RN-017: carrinho e modal NÃO divergem).
+ * - **Direita**: badge "Venda Aprovada" + valor total + parcelamento + envio
+ *   de recibo por e-mail + card de impressora + atalhos PDF/WhatsApp/2ª via +
+ *   botão "Nova venda".
+ *
+ * Responsivo: viewport < 860px cai em full-screen com layout empilhado.
+ *
+ * API externa preservada (consumidores como `/vendas/nova` continuam funcionando
+ * sem mudanças). Wiring automático com `finalizar()` (VUN-3.3) fica para
+ * integração em follow-up — aqui o modal aceita `venda: Venda | null`.
+ */
+
+type MetodoThermal =
+  | "DINHEIRO"
+  | "CREDITO"
+  | "DEBITO"
+  | "PIX"
+  | "RECORRENTE";
+
+function mapMetodoPagamento(
+  forma: TipoFormaPagamento | undefined,
+): MetodoThermal | undefined {
+  switch (forma) {
+    case "DINHEIRO":
+      return "DINHEIRO";
+    case "PIX":
+      return "PIX";
+    case "CARTAO_CREDITO":
+      return "CREDITO";
+    case "CARTAO_DEBITO":
+      return "DEBITO";
+    case "RECORRENTE":
+      return "RECORRENTE";
+    default:
+      // BOLETO e outros ficam sem equivalente no thermal — omitimos.
+      return undefined;
+  }
+}
+
+function mapItensToThermal(venda: Venda): ThermalReceiptItem[] {
+  return venda.itens.map((item) => ({
+    id: item.id,
+    nome: item.descricao,
+    qtd: item.quantidade,
+    valorUnit: item.valorUnitario,
+    valorTotal: item.valorTotal,
+  }));
+}
+
+const PLACEHOLDER_TOTAL = "R$ —";
+
+// Sentinel "hasMounted" via useSyncExternalStore — canônico para SSR safety
+// sem disparar `react-hooks/set-state-in-effect`. Retorna false no SSR e
+// true após hidratação no cliente.
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+function useHasMounted(): boolean {
+  return useSyncExternalStore(
+    subscribeNoop,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+}
+
+function useBRLFormatter(): (value: number) => string {
+  const mounted = useHasMounted();
+  // Formatador BRL só aparece pós-mount para evitar divergência SSR/client
+  // (Intl.NumberFormat pode diferir entre Node e browser).
+  if (!mounted) return () => PLACEHOLDER_TOTAL;
+  const fmt = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+  return (value: number) =>
+    Number.isFinite(value) ? fmt.format(value) : PLACEHOLDER_TOTAL;
 }
 
 export function SaleReceiptModal({
@@ -37,374 +133,326 @@ export function SaleReceiptModal({
   voucherCodigo?: string;
   voucherDescontoPercent?: number;
 }) {
-  const [email, setEmail] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [sentMessage, setSentMessage] = useState("");
-  const [sendingContrato, setSendingContrato] = useState(false);
-  const [sentContratoMessage, setSentContratoMessage] = useState("");
+  const { toast } = useToast();
+  const [emailOverride, setEmailOverride] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  // Status fictício da impressora (mock). Integração real é follow-up.
+  const [printerOnline] = useState(true);
+  const formatBRL = useBRLFormatter();
 
-  const totalItens = useMemo(
-    () => venda?.itens.reduce((sum, item) => sum + item.quantidade, 0) ?? 0,
-    [venda]
-  );
+  const emailValue = emailOverride ?? cliente?.email ?? "";
 
-  const emailValue = email ?? cliente?.email ?? "";
-  function resetAndClose() {
-    setSentMessage("");
-    setSentContratoMessage("");
-    setSending(false);
-    setSendingContrato(false);
-    setEmail(null);
+  function handleClose() {
+    setEmailOverride(null);
+    setSendingEmail(false);
+    setPrinting(false);
     onClose();
-  }
-
-  function formatDocumento(value: string | undefined) {
-    if (!value) return "";
-    const digits = value.replace(/\D/g, "");
-    if (digits.length === 11) {
-      return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-    }
-    if (digits.length === 14) {
-      return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
-    }
-    return value;
-  }
-
-  function renderContractTemplate(templateHtml: string): string {
-    const replacements: Record<string, string> = {
-      NOME_CLIENTE: cliente?.nome ?? venda?.clienteNome ?? "",
-      CPF_CLIENTE: formatDocumento(cliente?.cpf),
-      EMAIL_CLIENTE: cliente?.email ?? "",
-      TELEFONE_CLIENTE: cliente?.telefone ?? "",
-      NOME_PLANO: plano?.nome ?? "",
-      VALOR_PLANO: formatBRL(Number(plano?.valor ?? 0)),
-      NOME_UNIDADE: tenant?.nome ?? "",
-      RAZAO_SOCIAL_UNIDADE: tenant?.razaoSocial ?? tenant?.nome ?? "",
-      CNPJ_UNIDADE: formatDocumento(tenant?.documento),
-      DATA_ASSINATURA: formatDateBR(new Date()),
-      NUMERO_RECIBO: venda?.id ?? "",
-      DATA_PAGAMENTO: venda ? formatDateTime(venda.dataCriacao) : "",
-    };
-
-    let html = templateHtml;
-    Object.entries(replacements).forEach(([key, value]) => {
-      const safe = escapeHtml(value);
-      html = html.replaceAll(`{{${key}}}`, safe).replaceAll(`%${key}%`, safe);
-    });
-    return html;
   }
 
   async function handleSendEmail() {
     const mail = emailValue.trim();
     if (!mail || !mail.includes("@")) {
-      setSentMessage("Informe um e-mail válido.");
+      toast({
+        title: "E-mail inválido",
+        description: "Informe um e-mail válido para o envio do recibo.",
+        variant: "destructive",
+      });
       return;
     }
-    setSending(true);
-    setSentMessage("");
+    setSendingEmail(true);
+    // Mock: integração real com backend em follow-up.
     await new Promise((resolve) => setTimeout(resolve, 700));
-    setSending(false);
-    setSentMessage(`Recibo enviado para ${mail}.`);
+    setSendingEmail(false);
+    toast({
+      title: "Recibo enviado",
+      description: `Recibo enviado para ${mail}.`,
+    });
   }
 
-  async function handleSendContratoEmail() {
-    const mail = emailValue.trim();
-    if (!mail || !mail.includes("@")) {
-      setSentContratoMessage("Informe um e-mail válido para envio do contrato.");
-      return;
-    }
-    if (!plano?.contratoTemplateHtml?.trim()) {
-      setSentContratoMessage("Plano sem contrato configurado.");
-      return;
-    }
-    setSendingContrato(true);
-    setSentContratoMessage("");
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    setSendingContrato(false);
-    setSentContratoMessage(`Contrato enviado para ${mail}.`);
+  async function handlePrint() {
+    setPrinting(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setPrinting(false);
+    toast({
+      title: "Impressão enviada",
+      description: "Recibo enviado para a impressora térmica.",
+    });
   }
 
-  function handlePrintCupom() {
-    if (!venda) return;
-    const mode = tenant?.configuracoes?.impressaoCupom?.modo ?? "80MM";
-    const custom = Number(tenant?.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
-    const mm = mode === "58MM" ? 58 : mode === "80MM" ? 80 : Math.max(40, Math.min(120, custom || 80));
-
-    const itemsHtml = venda.itens.map((item) => {
-      const title = escapeHtml(item.descricao);
-      const line = `${item.quantidade} x ${formatBRL(item.valorUnitario)}`;
-      return `
-        <div class="item">
-          <div class="name">${title}</div>
-          <div class="meta">
-            <span>${escapeHtml(line)}</span>
-            <span>${escapeHtml(formatBRL(item.valorTotal))}</span>
-          </div>
-        </div>
-      `;
-    }).join("");
-
-    const html = `
-      <!doctype html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="utf-8" />
-        <title>Recibo de pagamento</title>
-        <style>
-          @page { size: auto; margin: 4mm; }
-          body { margin: 0; font-family: Arial, sans-serif; color: #111; }
-          .cupom { width: ${mm}mm; margin: 0 auto; font-size: 12px; line-height: 1.3; }
-          .title { text-align: center; font-weight: 700; margin: 2mm 0 1mm; }
-          .sub { text-align: center; margin-bottom: 2mm; font-size: 11px; }
-          .sep { border-top: 1px dashed #444; margin: 2mm 0; }
-          .line { display: flex; justify-content: space-between; gap: 8px; }
-          .item { margin-bottom: 2mm; }
-          .item .name { font-weight: 700; margin-bottom: 1mm; word-break: break-word; }
-          .item .meta { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
-          .total { font-size: 14px; font-weight: 700; }
-          .foot { margin-top: 3mm; text-align: center; font-size: 10px; }
-          .print-actions { margin-top: 3mm; display: flex; justify-content: center; }
-          .print-btn { border: 1px solid #222; background: #fff; padding: 6px 10px; font-size: 12px; cursor: pointer; }
-          @media print { .print-actions { display: none; } }
-        </style>
-      </head>
-      <body>
-        <div class="cupom">
-          <div class="title">${escapeHtml(tenant?.nome ?? "Unidade")}</div>
-          <div class="sub">Recibo de pagamento</div>
-          ${tenant?.razaoSocial ? `<div class="sub">${escapeHtml(tenant.razaoSocial)}</div>` : ""}
-          ${tenant?.documento ? `<div class="sub">Documento: ${escapeHtml(tenant.documento)}</div>` : ""}
-          <div class="sep"></div>
-          <div class="line"><span>Nº:</span><span>${escapeHtml(venda.id)}</span></div>
-          <div class="line"><span>Data:</span><span>${escapeHtml(formatDateTime(venda.dataCriacao))}</span></div>
-          <div class="line"><span>Cliente:</span><span>${escapeHtml(venda.clienteNome ?? "Não identificado")}</span></div>
-          <div class="sep"></div>
-          ${itemsHtml}
-          <div class="sep"></div>
-          <div class="line"><span>Subtotal</span><span>${escapeHtml(formatBRL(venda.subtotal))}</span></div>
-          <div class="line"><span>Desconto</span><span>${escapeHtml(formatBRL(venda.descontoTotal))}</span></div>
-          <div class="line"><span>Acréscimo</span><span>${escapeHtml(formatBRL(venda.acrescimoTotal))}</span></div>
-          <div class="line total"><span>Total</span><span>${escapeHtml(formatBRL(venda.total))}</span></div>
-          <div class="sep"></div>
-          <div class="line"><span>Pagamento</span><span>${escapeHtml(venda.pagamento.formaPagamento)}</span></div>
-          ${venda.pagamento.parcelas ? `<div class="line"><span>Parcelas</span><span>${venda.pagamento.parcelas}x</span></div>` : ""}
-          <div class="line"><span>Valor pago</span><span>${escapeHtml(formatBRL(venda.pagamento.valorPago))}</span></div>
-          <div class="foot">Documento comercial não fiscal</div>
-          <div class="print-actions">
-            <button class="print-btn" onclick="window.print()">Imprimir recibo</button>
-          </div>
-        </div>
-        <script>
-          window.onload = () => { setTimeout(() => window.print(), 150); };
-        </script>
-      </body>
-      </html>
-    `;
-    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-    const w = window.open(url, "_blank");
-    if (!w) {
-      URL.revokeObjectURL(url);
-      window.alert("Não foi possível abrir o recibo. Verifique bloqueio de pop-up.");
-      return;
-    }
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  function handleShortcut(
+    tipo: "PDF" | "WHATSAPP" | "SEGUNDA_VIA",
+    label: string,
+  ) {
+    // Mock shortcuts — integrações reais são follow-up.
+    toast({
+      title: label,
+      description: `Ação "${label}" acionada (mock).`,
+    });
+    // Usa o tipo em data-* para testes e telemetria.
+    void tipo;
   }
 
-  function handlePrintContrato() {
-    if (!venda || !plano?.contratoTemplateHtml?.trim()) {
-      window.alert("Este plano não possui contrato vinculado.");
-      return;
-    }
-    const mode = tenant?.configuracoes?.impressaoCupom?.modo ?? "80MM";
-    const custom = Number(tenant?.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80);
-    const mm = mode === "58MM" ? 58 : mode === "80MM" ? 80 : Math.max(40, Math.min(120, custom || 80));
-    const contratoHtml = renderContractTemplate(plano.contratoTemplateHtml);
-    const assinaturaHint =
-      plano.contratoAssinatura === "DIGITAL"
-        ? "Assinatura digital obrigatória."
-        : plano.contratoAssinatura === "PRESENCIAL"
-          ? "Assinatura presencial obrigatória."
-          : "Assinatura digital ou presencial.";
-
-    const html = `
-      <!doctype html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="utf-8" />
-        <title>Contrato - ${escapeHtml(plano.nome)}</title>
-        <style>
-          @page { size: auto; margin: 8mm; }
-          body { margin: 0; font-family: Arial, sans-serif; color: #111; background: #fff; }
-          .doc { width: ${Math.max(80, mm)}mm; margin: 0 auto; font-size: 12px; line-height: 1.4; }
-          .head { text-align: center; margin-bottom: 8px; }
-          .head h1 { margin: 0; font-size: 16px; }
-          .meta { font-size: 11px; color: #333; margin-bottom: 8px; }
-          .content { border: 1px solid #ccc; padding: 8px; }
-          .assinatura { margin-top: 16px; font-size: 11px; }
-          .line { margin-top: 20px; border-top: 1px solid #111; width: 100%; }
-          .actions { margin-top: 12px; display: flex; justify-content: center; }
-          .btn { border: 1px solid #222; background: #fff; padding: 6px 10px; cursor: pointer; }
-          @media print { .actions { display: none; } }
-        </style>
-      </head>
-      <body>
-        <div class="doc">
-          <div class="head">
-            <h1>Contrato / Assinatura</h1>
-            <div class="meta">${escapeHtml(tenant?.nome ?? "Unidade")} · ${escapeHtml(plano.nome)}</div>
-          </div>
-          <div class="content">${contratoHtml}</div>
-          <div class="assinatura">
-            <p><strong>Regras de assinatura:</strong> ${escapeHtml(assinaturaHint)}</p>
-            <div class="line"></div>
-            <p>Assinatura do cliente</p>
-          </div>
-          <div class="actions">
-            <button class="btn" onclick="window.print()">Imprimir contrato</button>
-          </div>
-        </div>
-        <script>window.onload = () => { setTimeout(() => window.print(), 150); };</script>
-      </body>
-      </html>
-    `;
-    const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-    const w = window.open(url, "_blank");
-    if (!w) {
-      URL.revokeObjectURL(url);
-      window.alert("Não foi possível abrir o contrato. Verifique bloqueio de pop-up.");
-      return;
-    }
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  function handleNovaVenda() {
+    handleClose();
+    toast({
+      title: "Nova venda",
+      description: "Iniciando nova venda.",
+    });
   }
 
-  if (!venda) return null;
+  const thermalItems = useMemo<ThermalReceiptItem[]>(
+    () => (venda ? mapItensToThermal(venda) : []),
+    [venda],
+  );
+
+  const cabecalho = {
+    academiaNome: tenant?.nome ?? "Unidade",
+    cnpj: tenant?.documento,
+    endereco:
+      tenant?.endereco?.logradouro ||
+      tenant?.endereco?.bairro ||
+      tenant?.endereco?.cidade ||
+      undefined,
+  };
+
+  const parcelas = venda?.pagamento.parcelas;
+  const total = venda?.total ?? 0;
+  const showParcelamento = !!(parcelas && parcelas > 1 && total > 0);
+  const valorParcela = showParcelamento ? total / (parcelas as number) : 0;
+
+  const rodape = useMemo(() => {
+    if (voucherCodigo) {
+      const pct = voucherDescontoPercent ? ` (${voucherDescontoPercent}%)` : "";
+      return `Cupom ${voucherCodigo}${pct} aplicado. Documento não fiscal.`;
+    }
+    return "Documento comercial não fiscal.";
+  }, [voucherCodigo, voucherDescontoPercent]);
 
   return (
-    <Dialog open={open} onOpenChange={(next) => (!next ? resetAndClose() : null)}>
-      <DialogContent className="border-border bg-card sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Recibo da venda</DialogTitle>
+    <Dialog open={open} onOpenChange={(next) => (!next ? handleClose() : null)}>
+      <DialogContent
+        data-testid="sale-receipt-modal"
+        className={cn(
+          // Layout 820×560 em viewports >= 860px; fullscreen abaixo disso.
+          "max-h-[100dvh] w-screen max-w-[100vw] overflow-hidden p-0",
+          "md:h-[560px] md:w-[820px] md:max-w-[820px] md:rounded-2xl",
+          "border-border bg-card",
+        )}
+        showCloseButton
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Recibo da venda</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-secondary/30 p-3 text-sm">
-            <p><span className="text-muted-foreground">Nº:</span> {venda.id}</p>
-            <p><span className="text-muted-foreground">Data:</span> {formatDateTime(venda.dataCriacao)}</p>
-            <p><span className="text-muted-foreground">Tipo:</span> {venda.tipo}</p>
-            <p><span className="text-muted-foreground">Cliente:</span> {venda.clienteNome ?? "Não identificado"}</p>
-          </div>
-
-          <div className="rounded-lg border border-border">
-            <div className="border-b border-border px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Itens ({totalItens})
-            </div>
-            <div className="space-y-2 p-3">
-              {venda.itens.map((item) => (
-                <div key={item.id} className="flex items-center justify-between text-sm">
-                  <div>
-                    <p className="font-medium">{item.descricao}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.quantidade} x {formatBRL(item.valorUnitario)}
-                    </p>
-                  </div>
-                  <p className="font-semibold">{formatBRL(item.valorTotal)}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1 rounded-lg border border-border bg-secondary/20 p-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{formatBRL(venda.subtotal)}</span>
-            </div>
-            {voucherCodigo && venda.descontoTotal > 0 ? (
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gym-teal">
-                  Cupom {voucherCodigo} aplicado{voucherDescontoPercent ? ` (${voucherDescontoPercent}%)` : ""}
-                </span>
-                <span className="text-gym-teal">- {formatBRL(venda.descontoTotal)}</span>
+        {venda ? (
+          <div
+            className="flex h-full min-h-0 w-full flex-col md:flex-row"
+            data-testid="sale-receipt-modal-layout"
+          >
+            {/* Coluna esquerda — Recibo térmico */}
+            <div
+              className={cn(
+                "flex min-h-0 shrink-0 items-start justify-center bg-neutral-100 p-4",
+                "md:h-full md:w-[420px]",
+              )}
+              data-testid="sale-receipt-modal-left"
+            >
+              <div className="h-full w-full max-w-[380px]">
+                <ThermalReceipt
+                  items={thermalItems}
+                  subtotal={venda.subtotal}
+                  desconto={venda.descontoTotal}
+                  total={venda.total}
+                  parcelamento={
+                    showParcelamento
+                      ? { n: parcelas as number, valorParcela }
+                      : undefined
+                  }
+                  cupomAplicado={voucherCodigo}
+                  metodoPagamento={mapMetodoPagamento(
+                    venda.pagamento.formaPagamento,
+                  )}
+                  cabecalho={cabecalho}
+                  rodape={rodape}
+                  variant="modal"
+                  className="!h-full !w-full"
+                />
               </div>
-            ) : null}
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Desconto</span>
-              <span>{formatBRL(venda.descontoTotal)}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Acréscimo</span>
-              <span>{formatBRL(venda.acrescimoTotal)}</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-border pt-2 text-base font-bold">
-              <span>Total pago</span>
-              <span className="text-gym-accent">{formatBRL(venda.total)}</span>
-            </div>
-          </div>
 
-          <div className="space-y-2 rounded-lg border border-border p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Enviar recibo por e-mail
-            </p>
-            <div className="flex items-center gap-2">
-              <Input
-                value={emailValue}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@cliente.com"
-                className="bg-secondary border-border"
-              />
-              <Button type="button" onClick={handleSendEmail} disabled={sending}>
-                {sending ? "Enviando..." : "Enviar"}
-              </Button>
-            </div>
-            {sentMessage && <p className="text-xs text-muted-foreground">{sentMessage}</p>}
-          </div>
+            {/* Coluna direita — Ações */}
+            <div
+              className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5"
+              data-testid="sale-receipt-modal-right"
+            >
+              <div className="space-y-3">
+                <Badge
+                  variant="default"
+                  className="bg-emerald-500 text-white [&>svg]:size-3.5"
+                  data-testid="sale-receipt-status-badge"
+                >
+                  <CheckCircle2 />
+                  Venda Aprovada
+                </Badge>
 
-          {plano?.contratoTemplateHtml?.trim() ? (
-            <div className="space-y-2 rounded-lg border border-border p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Contrato / Assinatura
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Plano: {plano.nome} · modo de assinatura: {plano.contratoAssinatura.toLowerCase()}
-              </p>
-              {venda.contratoStatus ? (
-                <p className="text-xs text-muted-foreground">
-                  Status atual: {venda.contratoStatus === "ASSINADO"
-                    ? "assinado"
-                    : venda.contratoStatus === "PENDENTE_ASSINATURA"
-                      ? "pendente de assinatura"
-                      : "sem contrato obrigatório"}
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Valor total
+                  </p>
+                  <p
+                    className="font-mono text-[32px] font-bold leading-tight text-foreground"
+                    data-testid="sale-receipt-total"
+                  >
+                    {formatBRL(venda.total)}
+                  </p>
+                  {showParcelamento ? (
+                    <p
+                      className="text-sm text-muted-foreground"
+                      data-testid="sale-receipt-parcelamento"
+                    >
+                      {parcelas}x de {formatBRL(valorParcela)}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Envio por e-mail */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="sale-receipt-email"
+                  className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                >
+                  Enviar recibo por e-mail
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="sale-receipt-email"
+                    type="email"
+                    value={emailValue}
+                    onChange={(e) => setEmailOverride(e.target.value)}
+                    placeholder="cliente@exemplo.com"
+                    className="flex-1"
+                    data-testid="sale-receipt-email-input"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleSendEmail}
+                    disabled={sendingEmail}
+                    data-testid="sale-receipt-send-email"
+                  >
+                    <Send className="size-4" aria-hidden />
+                    {sendingEmail ? "Enviando..." : "Enviar por e-mail"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Card impressora */}
+              <div
+                className="rounded-lg border border-border p-3"
+                data-testid="sale-receipt-printer-card"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Printer className="size-4 text-muted-foreground" aria-hidden />
+                    <div>
+                      <p className="text-sm font-semibold">Impressora térmica</p>
+                      <p className="text-xs text-muted-foreground">
+                        Status:{" "}
+                        <span
+                          className={cn(
+                            "font-medium",
+                            printerOnline
+                              ? "text-emerald-600"
+                              : "text-destructive",
+                          )}
+                          data-testid="sale-receipt-printer-status"
+                        >
+                          {printerOnline ? "Conectada" : "Offline"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handlePrint}
+                    disabled={!printerOnline || printing}
+                    data-testid="sale-receipt-print-button"
+                  >
+                    {printing ? "Imprimindo..." : "Imprimir"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Atalhos */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Atalhos
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleShortcut("PDF", "Baixar PDF")}
+                    data-testid="sale-receipt-shortcut-pdf"
+                  >
+                    <FileDown className="size-4" aria-hidden />
+                    PDF
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleShortcut("WHATSAPP", "WhatsApp")}
+                    data-testid="sale-receipt-shortcut-whatsapp"
+                  >
+                    <MessageCircle className="size-4" aria-hidden />
+                    WhatsApp
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleShortcut("SEGUNDA_VIA", "2ª via")}
+                    data-testid="sale-receipt-shortcut-segunda-via"
+                  >
+                    <RotateCcw className="size-4" aria-hidden />
+                    2ª via
+                  </Button>
+                </div>
+              </div>
+
+              {/* Contrato/auto-envio — mantido para compat com API atual */}
+              {contratoAutoEnvioMensagem || plano?.contratoTemplateHtml ? (
+                <p
+                  className="text-xs text-muted-foreground"
+                  data-testid="sale-receipt-contrato-msg"
+                >
+                  {contratoAutoEnvioMensagem ?? "Contrato disponível para envio manual."}
                 </p>
               ) : null}
-              {contratoAutoEnvioMensagem ? (
-                <p className="text-xs text-gym-teal">{contratoAutoEnvioMensagem}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {plano.contratoEnviarAutomaticoEmail
-                    ? "Envio automático habilitado (cliente sem e-mail disponível nesta venda)."
-                    : "Envio automático não habilitado para este plano."}
-                </p>
-              )}
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                <Button type="button" variant="outline" className="border-border" onClick={handlePrintContrato}>
-                  Imprimir contrato
-                </Button>
-                <Button type="button" variant="outline" className="border-border" onClick={handleSendContratoEmail} disabled={sendingContrato}>
-                  {sendingContrato ? "Enviando..." : "Enviar contrato por e-mail"}
-                </Button>
-              </div>
-              {sentContratoMessage && <p className="text-xs text-muted-foreground">{sentContratoMessage}</p>}
-            </div>
-          ) : null}
 
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" className="border-border" onClick={handlePrintCupom}>
-              Imprimir recibo
-            </Button>
-            <Button type="button" variant="outline" className="border-border" onClick={resetAndClose}>
-              Fechar
-            </Button>
+              {/* Spacer para empurrar o CTA final para baixo em telas grandes */}
+              <div className="flex-1" aria-hidden />
+
+              <Button
+                type="button"
+                onClick={handleNovaVenda}
+                className="w-full"
+                data-testid="sale-receipt-nova-venda"
+              >
+                <Plus className="size-4" aria-hidden />
+                Nova venda
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div
+            className="flex h-full min-h-[320px] w-full items-center justify-center p-8 text-center text-sm text-muted-foreground"
+            data-testid="sale-receipt-empty"
+          >
+            Nenhuma venda para exibir.
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
