@@ -85,7 +85,7 @@ export function DashboardContent({
 
   const metrics = useMemo(() => {
     if (!dashboardData) return null;
-    const defaultStatusCount: Record<StatusAluno, number> = { ATIVO: 0, INATIVO: 0, SUSPENSO: 0, CANCELADO: 0 };
+    const defaultStatusCount: Record<StatusAluno, number> = { ATIVO: 0, INATIVO: 0, SUSPENSO: 0, CANCELADO: 0, BLOQUEADO: 0 };
     return {
       ...dashboardData,
       statusAlunoCount: { ...defaultStatusCount, ...(dashboardData.statusAlunoCount ?? {}) },

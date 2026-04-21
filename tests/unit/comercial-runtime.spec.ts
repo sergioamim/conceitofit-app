@@ -29,10 +29,10 @@ test.afterEach(() => {
 });
 
 test.describe("comercial runtime", () => {
-  // normalizeAlunoStatus mapeia "BLOQUEADO" → "INATIVO"; o teste esperava
-  // "BLOQUEADO" preservado no pipeline. Requer decisão de produto: manter o
-  // status bruto do backend ou a normalização atual.
-  test.fixme("coordena servicos de alunos e vendas sem store legado", async () => {
+  // Decisão de domínio: BLOQUEADO é estado distinto de INATIVO (acesso
+  // suspenso por inadimplência vs plano vencido) — normalizeAlunoStatus
+  // preserva o valor bruto do backend.
+  test("coordena servicos de alunos e vendas sem store legado", async () => {
     const { calls, restore } = mockFetchWithSequence([
       {
         body: {
@@ -62,20 +62,25 @@ test.describe("comercial runtime", () => {
         },
       },
       {
-        body: [
-          {
-            id: "al-2",
-            tenantId: "tenant-1",
-            nome: "Bruno",
-            email: "bruno@email.com",
-            telefone: "11988888888",
-            cpf: "99999999999",
-            dataNascimento: "1991-01-01",
-            sexo: "M",
-            status: "BLOQUEADO",
-            dataCadastro: "2026-03-14T10:05:00Z",
-          },
-        ],
+        body: {
+          items: [
+            {
+              id: "al-2",
+              tenantId: "tenant-1",
+              nome: "Bruno",
+              email: "bruno@email.com",
+              telefone: "11988888888",
+              cpf: "99999999999",
+              dataNascimento: "1991-01-01",
+              sexo: "M",
+              status: "BLOQUEADO",
+              dataCadastro: "2026-03-14T10:05:00Z",
+            },
+          ],
+          page: 0,
+          size: 500,
+          hasNext: false,
+        },
       },
       {
         body: {

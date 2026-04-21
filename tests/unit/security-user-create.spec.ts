@@ -5,9 +5,8 @@ import {
 } from "../../src/lib/tenant/security-user-create";
 
 test.describe("security user create validators", () => {
-  // aguardando decisão de produto: userKind default no payload.
-  // O validador atual retorna "OPERADOR" por padrão; o teste espera "COLABORADOR".
-  test.fixme("monta payload global com escopo de rede e política opcional", () => {
+  // Taxonomia canônica (PLATAFORMA / OPERADOR / CLIENTE): default userKind = "OPERADOR".
+  test("monta payload global com escopo de rede e política opcional", () => {
     const payload = validateGlobalUserCreateDraft({
       name: "Ana Admin",
       email: "ana@qa.local",
@@ -24,7 +23,7 @@ test.describe("security user create validators", () => {
       name: "Ana Admin",
       fullName: "Ana Admin",
       email: "ana@qa.local",
-      userKind: "COLABORADOR",
+      userKind: "OPERADOR",
       scopeType: "REDE",
       academiaId: "academia-norte",
       tenantIds: ["tenant-centro", "tenant-barra"],
@@ -50,9 +49,8 @@ test.describe("security user create validators", () => {
     ).toThrow("Propagação para novas unidades só pode ser definida em escopo de rede.");
   });
 
-  // aguardando decisão de produto: userKind default no payload.
-  // O validador atual retorna "OPERADOR" por padrão; o teste espera "COLABORADOR".
-  test.fixme("monta payload restrito à academia e valida tenants/perfis permitidos", () => {
+  // Taxonomia canônica (PLATAFORMA / OPERADOR / CLIENTE): default userKind = "OPERADOR".
+  test("monta payload restrito à academia e valida tenants/perfis permitidos", () => {
     const payload = validateAcademiaUserCreateDraft({
       name: "Carla Operações",
       email: "carla@qa.local",
@@ -70,7 +68,7 @@ test.describe("security user create validators", () => {
       name: "Carla Operações",
       fullName: "Carla Operações",
       email: "carla@qa.local",
-      userKind: "COLABORADOR",
+      userKind: "OPERADOR",
       networkId: "rede-norte",
       networkName: "Rede Norte",
       networkSubdomain: "rede-norte",

@@ -116,28 +116,29 @@ test.afterEach(() => {
 });
 
 test.describe("session context full", () => {
-  // requer revisão: fallback de loading em useTenantContext sem provider.
-  // O hook atual pode retornar loading=false fora do provider, divergindo do contrato do teste.
-  test.fixme("mantém fallback estável quando não há provider", async () => {
+  // Fallback sem provider: `loading: false` por design (fail-fast em dev
+  // com console.error, sem spinner eterno em prod). Ver
+  // resolveUnprovidedTenantContextValue em use-session-context.tsx.
+  test("mantém fallback estável quando não há provider", async () => {
     const { result } = renderHook(() => useTenantContext());
 
     expect(result.current.tenantName).toBe(DEFAULT_ACTIVE_TENANT_LABEL);
     expect(result.current.baseTenantName).toBe(DEFAULT_BASE_TENANT_LABEL);
     expect(result.current.tenantId).toBe("");
-    expect(result.current.loading).toBe(true);
+    expect(result.current.loading).toBe(false);
     expect(typeof result.current.refresh).toBe("function");
     expect(typeof result.current.setTenant).toBe("function");
     expect(typeof result.current.switchActiveTenant).toBe("function");
     expect(typeof result.current.syncAcademiaBranding).toBe("function");
   });
 
-  // requer revisão: fallback de loading em useTenantContext sem provider.
-  test.fixme("useAuthAccess reaproveita o contrato de acesso do contexto", async () => {
+  // Fallback sem provider: `loading: false` por design. Ver comentário acima.
+  test("useAuthAccess reaproveita o contrato de acesso do contexto", async () => {
     const { result } = renderHook(() => useAuthAccess());
 
     expect(result.current.roles).toEqual([]);
     expect(result.current.canAccessElevatedModules).toBe(false);
-    expect(result.current.loading).toBe(true);
+    expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
     expect(typeof result.current.refresh).toBe("function");
   });

@@ -26,7 +26,7 @@ describe("api/alunos", () => {
       expect(result).toEqual(items);
     });
 
-    it("envelope com items → extrai e normaliza", () => {
+    it("envelope com items → extrai e preserva BLOQUEADO como status distinto", () => {
       const result = extractAlunosFromListResponse({
         items: [{ id: "a1", status: "BLOQUEADO" }] as never,
         page: 0,
@@ -34,8 +34,9 @@ describe("api/alunos", () => {
         hasNext: false,
       });
       expect(result).toHaveLength(1);
-      // BLOQUEADO é normalizado para INATIVO
-      expect(result[0].status).toBe("INATIVO");
+      // Task 458 follow-up: BLOQUEADO é estado distinto de INATIVO
+      // (acesso suspenso por inadimplência vs plano vencido). Preservado.
+      expect(result[0].status).toBe("BLOQUEADO");
     });
 
     it("envelope com items null → array vazio", () => {

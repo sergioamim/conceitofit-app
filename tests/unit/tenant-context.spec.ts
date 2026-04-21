@@ -51,14 +51,14 @@ test.describe("tenant context", () => {
     expect(snapshot.tenantResolved).toBe(false);
   });
 
-  // Task 458 removeu availableTenants do storage local — getSessionTenantIds/getSessionDefaultTenantId
-  // dependiam dessa lista. O teste precisa ser reescrito para a nova fonte (claims do backend)
-  // ou marcado como obsoleto. Aguardando decisão de produto.
-  test.fixme(
+  // Task 458 (confirmada): availableTenants não é mais armazenado no cookie/local —
+  // getAvailableTenantsFromSession() retorna sempre []. O frontend busca a lista de
+  // unidades via endpoint de contexto quando necessário. Os helpers puramente
+  // funcionais (dedupeTenants, resolveTenantContextSnapshot, tenantContextNeedsRepair)
+  // continuam valendo e são validados aqui.
+  test(
     "deduplica tenants e resolve snapshot priorizando sessao e tenant valido",
     async () => {
-      // Cobertura antiga dependia de availableTenants em localStorage.
-      // Preserva-se chamadas puramente funcionais:
       expect(
         dedupeTenants([
           TENANT_CENTRO,
@@ -86,13 +86,15 @@ test.describe("tenant context", () => {
     },
   );
 
-  // Task 458: syncTenantContextInStore não pode mais popular availableTenants local
-  // (getAvailableTenantsFromSession retorna sempre []). O snapshot otimista baseado
-  // em sessão precisa de nova fonte. Aguardando decisão de produto.
-  test.fixme(
-    "sincroniza store local, atualiza sessao e preserva snapshot otimista",
+  // Task 458: getAvailableTenantsFromSession retorna sempre [] (claims cookie enxuto
+  // para evitar fetch por tela). Valida contrato da nova fonte canônica.
+  test(
+    "getAvailableTenantsFromSession retorna lista vazia (claims enxutos — Task 458)",
     async () => {
-      // A lógica depende de availableTenants populados por saveAuthSession — removido pelo Task 458.
+      const { getAvailableTenantsFromSession } = await import(
+        "../../src/lib/api/session"
+      );
+      expect(getAvailableTenantsFromSession()).toEqual([]);
     },
   );
 });

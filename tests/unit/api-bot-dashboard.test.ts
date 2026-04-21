@@ -151,6 +151,8 @@ describe("api/dashboard", () => {
       INATIVO: 5,
       SUSPENSO: 2,
       CANCELADO: 1,
+      // Task 458 follow-up: BLOQUEADO é status distinto no domínio (default 0 se ausente).
+      BLOQUEADO: 0,
     });
   });
 
