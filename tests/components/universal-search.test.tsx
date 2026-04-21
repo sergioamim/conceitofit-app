@@ -119,6 +119,12 @@ vi.mock("@/components/ui/dialog", () => ({
 
 vi.mock("@/lib/formatters", () => ({
   formatBRL: (value: number) => `R$ ${value.toFixed(2).replace(".", ",")}`,
+  formatCpf: (value: string | null | undefined) => {
+    if (!value) return "";
+    const digits = value.replace(/\D/g, "");
+    if (digits.length !== 11) return value;
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+  },
 }));
 
 vi.mock("@/lib/utils", () => ({
@@ -298,17 +304,16 @@ describe("UniversalSearch (VUN-2.1)", () => {
     );
   });
 
-  it("exibe placeholder 'Criar prospect rápido' quando CPF válido sem cliente (AC9)", async () => {
+  it("exibe CTA 'Criar prospect com CPF …' quando CPF válido sem cliente (AC9/VUN-2.4 AC1)", async () => {
     setupApiMocks({ alunos: [] });
-    const onCreateProspect = vi.fn();
-    render(<UniversalSearch onCreateProspect={onCreateProspect} />);
+    render(<UniversalSearch />);
     await openDialog();
-    await typeQuery("123.456.789-01");
+    // CPF válido (Maria Silva) → backend retorna vazio → CTA aparece
+    await typeQuery("529.982.247-25");
 
     const cta = await screen.findByTestId("universal-search-create-prospect");
     expect(cta).toBeInTheDocument();
-    fireEvent.click(cta);
-    expect(onCreateProspect).toHaveBeenCalledWith("123.456.789-01");
+    expect(cta).toHaveTextContent(/Criar prospect com CPF 529\.982\.247-25/i);
   });
 
   it("scanner toggle alterna o painel inline com video + input manual (AC5, AC10)", async () => {
