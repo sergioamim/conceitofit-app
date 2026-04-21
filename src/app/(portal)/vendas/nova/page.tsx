@@ -7,7 +7,7 @@ import { SaleTypeSelector } from "./components/sale-type-selector";
 import { ClientAndItemSelector } from "./components/client-and-item-selector";
 import { PlanoDetails } from "./components/plano-details";
 import { CartItems } from "./components/cart-items";
-import { SaleSummary } from "./components/sale-summary";
+import { PaymentPanel } from "./components/payment-panel";
 import { ScannerDialog } from "./components/scanner-dialog";
 import { CockpitShell } from "./components/cockpit-shell";
 
@@ -84,7 +84,7 @@ function NovaVendaPageContent() {
         columnRight={
           <div className="flex flex-col gap-4 p-4">
             <CartItems workspace={workspace} />
-            <SaleSummary
+            <PaymentPanel
               workspace={workspace}
               handleConfirmPayment={handleConfirmPayment}
             />
