@@ -126,17 +126,26 @@ function NovaVendaPageContent() {
 
   return (
     <>
-      <SaleReceiptModal
-        open={receiptOpen}
-        onClose={() => setReceiptOpen(false)}
-        venda={receiptVenda}
-        cliente={receiptCliente}
-        tenant={tenant}
-        plano={receiptPlano}
-        contratoAutoEnvioMensagem={receiptContratoAutoMsg}
-        voucherCodigo={receiptVoucherCodigo || undefined}
-        voucherDescontoPercent={receiptVoucherPercent || undefined}
-      />
+      {/* Mount condicional: SaleReceiptModal só entra na árvore quando há
+          recibo para exibir. Deixar o modal sempre montado (apenas com
+          open=false) custava um Dialog+Portal+Overlay permanentemente na
+          árvore e abriu espaço pra cascata de re-renders que explodia em
+          "Maximum update depth exceeded" no DialogOverlay quando o modal
+          abria pós-venda. Com mount condicional, a árvore do modal só
+          existe quando realmente aberto → zero reconciliação idle. */}
+      {receiptOpen && (
+        <SaleReceiptModal
+          open
+          onClose={() => setReceiptOpen(false)}
+          venda={receiptVenda}
+          cliente={receiptCliente}
+          tenant={tenant}
+          plano={receiptPlano}
+          contratoAutoEnvioMensagem={receiptContratoAutoMsg}
+          voucherCodigo={receiptVoucherCodigo || undefined}
+          voucherDescontoPercent={receiptVoucherPercent || undefined}
+        />
+      )}
 
       <CockpitShell
         headerLeft={
