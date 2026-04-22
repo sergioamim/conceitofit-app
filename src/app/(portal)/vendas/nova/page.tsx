@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback } from "react";
+import { Suspense, useCallback, useSyncExternalStore } from "react";
 import nextDynamic from "next/dynamic";
 import { ScanLine } from "lucide-react";
 import { formatBRL, formatCpf } from "@/lib/formatters";
@@ -23,6 +23,14 @@ const SaleReceiptModal = nextDynamic(
   () => import("@/components/shared/sale-receipt-modal").then((mod) => mod.SaleReceiptModal),
   { ssr: false }
 );
+
+// useHasMounted inline — evita hydration mismatch no nome da unidade do
+// header (tenant é resolvido só após mount client-side via session).
+// Mesmo padrão do SaleReceiptModal; não consolidado em hook compartilhado
+// porque só 2 usos hoje e inline fica autocontido.
+const subscribeNoopHeader = () => () => {};
+const getClientSnapshotHeader = () => true;
+const getServerSnapshotHeader = () => false;
 
 function NovaVendaPageContent() {
   const workspace = useVendaWorkspace();
@@ -59,6 +67,12 @@ function NovaVendaPageContent() {
     setClienteId("");
     setClienteQuery("");
   }, [setClienteId, setClienteQuery]);
+
+  const hasMounted = useSyncExternalStore(
+    subscribeNoopHeader,
+    getClientSnapshotHeader,
+    getServerSnapshotHeader,
+  );
 
   // VUN-5.8 — stream SSE de check-ins pendentes (Gympass/TotalPass) pra recepção.
   // Hook só conecta quando o cockpit está montado + tenant resolvido; limpa no unmount.
@@ -140,8 +154,11 @@ function NovaVendaPageContent() {
               <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-[color:oklch(0.72_0_0)]">
                 Unidade
               </span>
-              <span className="text-[12px] font-semibold text-[color:oklch(0.98_0_0)]">
-                {tenant?.nome ?? "—"}
+              <span
+                className="text-[12px] font-semibold text-[color:oklch(0.98_0_0)]"
+                suppressHydrationWarning
+              >
+                {hasMounted ? (tenant?.nome ?? "—") : "—"}
               </span>
             </div>
           </div>
