@@ -134,7 +134,12 @@ export function useVendaWorkspace() {
 
     void applyPrefillCliente();
     return () => { cancelled = true; };
-  }, [alunos, alunosLoaded, loadAlunos, prefillClienteId, setClienteId, tenantContext]);
+    // deps enxutos (valores, não o objeto `tenantContext`): passar o contexto
+    // inteiro como dep fazia o effect re-disparar a cada render do provider
+    // (objeto recriado), contribuindo pra loops de render em cascata e
+    // "Maximum update depth exceeded" observados em 2026-04-22.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alunos, alunosLoaded, loadAlunos, prefillClienteId, setClienteId]);
 
   // Sync client query label
   useEffect(() => {
