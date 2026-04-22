@@ -8,7 +8,7 @@ import {
   formatDateLabel,
   formatMonthLabel,
 } from "@/lib/tenant/comercial/matriculas-insights";
-import type { ContratoDashboardMensalPlano } from "@/lib/api/matriculas";
+import type { ContratoDashboardMensalPlano } from "@/lib/api/contratos";
 import {
   resolveContratoStatusFromPlano,
   resolveFluxoComercialStatus,
@@ -16,7 +16,7 @@ import {
   STATUS_FLUXO_COMERCIAL_LABEL,
 } from "@/lib/tenant/comercial/plano-flow";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { useContratos, useRenovarContrato, useCancelarContrato } from "@/lib/query/use-matriculas";
+import { useContratos, useRenovarContrato, useCancelarContrato } from "@/lib/query/use-contratos";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";

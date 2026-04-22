@@ -9,7 +9,7 @@ export * from './types/aluno';
 export * from './types/prospect';
 export * from './types/plano';
 export * from './types/pagamento';
-export * from './types/matricula';
+export * from './types/contrato';
 export * from './types/venda';
 export * from './types/tenant';
 export * from './types/financial';

@@ -9,7 +9,7 @@ import {
   normalizeContratoApiResponse as normalizeMatriculaApiResponse,
   renovarContratoApi as renovarMatriculaApi,
   signContratoApi as signMatriculaContractApi,
-} from "@/lib/api/matriculas";
+} from "@/lib/api/contratos";
 import * as http from "@/lib/api/http";
 import { ApiRequestError } from "@/lib/api/http";
 

@@ -4,7 +4,7 @@ import {
   cancelarContratoService,
   renovarContratoService,
 } from "@/lib/tenant/comercial/runtime";
-import type { ContratoDashboardMensalResult } from "@/lib/api/matriculas";
+import type { ContratoDashboardMensalResult } from "@/lib/api/contratos";
 import { ApiRequestError } from "@/lib/api/http";
 import { isTenantContextErrorMessage } from "@/lib/utils/error-codes";
 import { queryKeys } from "./keys";

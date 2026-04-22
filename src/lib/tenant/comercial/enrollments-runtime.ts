@@ -8,10 +8,9 @@ import {
   listContratosByAlunoApi,
   listContratosPageApi,
   renovarContratoApi,
-} from "@/lib/api/matriculas";
+} from "@/lib/api/contratos";
 import { createAssinaturaApi, cancelarAssinaturaApi } from "@/lib/api/billing";
 import { logger } from "@/lib/shared/logger";
-import { type ContratoView, contratoViewFromMatricula } from "./contratos";
 
 async function listContratosService(input: {
   tenantId: string;
@@ -116,22 +115,3 @@ export async function renovarContratoService(input: {
   return renovarContratoApi(input);
 }
 
-async function listContratosViewService(input: {
-  tenantId: string;
-  status?: string;
-  page?: number;
-  size?: number;
-}): Promise<ContratoView[]> {
-  const contratos = await listContratosApi(input);
-  return contratos.map(contratoViewFromMatricula);
-}
-
-async function listContratosViewByAlunoService(input: {
-  tenantId: string;
-  alunoId: string;
-  page?: number;
-  size?: number;
-}): Promise<ContratoView[]> {
-  const contratos = await listContratosByAlunoApi(input);
-  return contratos.map(contratoViewFromMatricula);
-}

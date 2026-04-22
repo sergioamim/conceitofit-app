@@ -15,7 +15,8 @@ function phoneDigits(phone: string): string {
   return phone.replace(/\D/g, "");
 }
 
-function calcAge(dataNascimento: string): number | null {
+function calcAge(dataNascimento: string | null | undefined): number | null {
+  if (!dataNascimento) return null;
   const [year, month, day] = dataNascimento.split("-").map(Number);
   if (!year || !month || !day) return null;
   const birth = new Date(year, month - 1, day);

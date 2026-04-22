@@ -6,7 +6,7 @@ import {
   listAlunosApi,
 } from "@/lib/api/alunos";
 import { listAtividadesApi } from "@/lib/api/administrativo";
-import { listContratosApi } from "@/lib/api/matriculas";
+import { listContratosApi } from "@/lib/api/contratos";
 import {
   cancelarReservaAulaApi,
   getAulaOcupacaoApi,

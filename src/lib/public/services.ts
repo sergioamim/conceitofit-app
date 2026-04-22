@@ -23,7 +23,7 @@ import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import {
   listContratosByAlunoApi,
   signContratoApi,
-} from "@/lib/api/matriculas";
+} from "@/lib/api/contratos";
 import { listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { getVendaApi, createVendaApi } from "@/lib/api/vendas";
 import { getTenantAppName, resolveTenantTheme } from "@/lib/tenant/tenant-theme";

@@ -3,7 +3,7 @@ export * from './aluno';
 export * from './prospect';
 export * from './plano';
 export * from './pagamento';
-export * from './matricula';
+export * from './contrato';
 export * from './venda';
 export * from './tenant';
 export * from './lead-b2b';

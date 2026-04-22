@@ -19,7 +19,7 @@ import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPrefer
 import { ApiRequestError, apiRequest } from "./http";
 import { listAcademiasApi, listUnidadesApi, setTenantContextApi } from "./contexto-unidades";
 import { listProspectsApi } from "./crm";
-import { listContratosApi } from "./matriculas";
+import { listContratosApi } from "./contratos";
 import { listReservasAulaApi } from "./reservas";
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { UUID, LocalDate, LocalDateTime, Sexo, Endereco, ContatoEmergencia } from './comum';
 import { Aluno } from './aluno';
-import { Contrato } from './matricula';
+import { Contrato } from './contrato';
 import { Pagamento, TipoFormaPagamento } from './pagamento';
 
 export type OrigemProspect =

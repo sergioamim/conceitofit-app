@@ -1,7 +1,7 @@
 import { UUID, LocalDate, LocalDateTime, Endereco } from './comum';
 import { Aluno, StatusAluno } from './aluno';
 import { OrigemProspect, Prospect } from './prospect';
-import { Contrato } from './matricula';
+import { Contrato } from './contrato';
 import { Pagamento } from './pagamento';
 import { Plano } from './plano';
 

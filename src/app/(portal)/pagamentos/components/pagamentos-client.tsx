@@ -20,7 +20,7 @@ import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listConveniosApi } from "@/lib/api/beneficios";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
-import { listContratosApi } from "@/lib/api/matriculas";
+import { listContratosApi } from "@/lib/api/contratos";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import {
   type ImportarPagamentosResultado,
