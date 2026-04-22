@@ -168,8 +168,13 @@ export function useVendaWorkspace() {
     setParcelasState(clamped);
   }, []);
 
+  // Passthrough: a sanitização (só-dígitos + slice 12) é feita no RHF via
+  // `setValueAs` no input de autorização (payment-panel.tsx). Duplicar aqui
+  // gerava loop infinito no useEffect de sync form↔workspace quando as duas
+  // rotinas divergiam por ordem de execução. Confiar numa única fonte
+  // elimina o ping-pong.
   const setAutorizacao = useCallback((next: string) => {
-    setAutorizacaoState(String(next ?? "").replace(/\D/g, "").slice(0, 12));
+    setAutorizacaoState(next ?? "");
   }, []);
 
   /**
@@ -189,26 +194,31 @@ export function useVendaWorkspace() {
   }, []);
 
   const requiresNsu = formaPagamento === "CARTAO_CREDITO" || formaPagamento === "CARTAO_DEBITO";
-  const nsuValid = !requiresNsu || autorizacao.trim().length >= 4;
+  // Código de autorização agora é opcional em qualquer forma de pagamento —
+  // manter `nsuValid` sempre true preserva a shape pública do workspace sem
+  // gate em `canFinalize`. Consumidores legados continuam recebendo true.
+  const nsuValid = true;
   const valorParcela = useMemo(() => {
     const n = Math.max(1, parcelas || 1);
     return total > 0 ? total / n : 0;
   }, [parcelas, total]);
 
   /**
-   * canFinalize (RN-005 + RN-013):
+   * canFinalize (RN-013):
    *  - carrinho não-vazio e total > 0
    *  - se requireCliente (plano/serviço), clienteId presente
-   *  - se crédito/débito, NSU ≥ 4 dígitos
    *  - forma de pagamento selecionada (sempre true: state tem default PIX)
+   *
+   * Obs: código de autorização (NSU / auth do cartão) é opcional — não entra
+   * neste gate. O PaymentPanel segue mostrando o input em cartões, mas sem
+   * obrigatoriedade de preenchimento.
    */
   const canFinalize = useMemo(() => {
     if (cart.length === 0) return false;
     if (total <= 0) return false;
     if (requireCliente && !clienteId) return false;
-    if (!nsuValid) return false;
     return true;
-  }, [cart.length, total, requireCliente, clienteId, nsuValid]);
+  }, [cart.length, total, requireCliente, clienteId]);
 
   function handleAddPlano(plano: Plano) {
     const maxParcelas = Math.max(1, Number(plano.parcelasMaxAnuidade ?? 1));

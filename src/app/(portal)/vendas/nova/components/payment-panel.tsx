@@ -39,7 +39,7 @@ function toPanelMetodo(value: TipoFormaPagamento): PaymentPanelMetodo {
  */
 function toThermalMetodo(
   value: PaymentPanelMetodo,
-): "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" | "RECORRENTE" {
+): "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" {
   if (value === "CARTAO_CREDITO") return "CREDITO";
   if (value === "CARTAO_DEBITO") return "DEBITO";
   return value;
@@ -61,7 +61,6 @@ const METODO_LABEL: Record<PaymentPanelMetodo, string> = {
   CARTAO_CREDITO: "Crédito",
   CARTAO_DEBITO: "Débito",
   PIX: "PIX",
-  RECORRENTE: "Recorrente",
 };
 
 interface PaymentPanelProps {
@@ -95,7 +94,6 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
     autorizacao,
     setAutorizacao,
     valorParcela,
-    selectedPlano,
   } = workspace;
 
   const form = useForm<PaymentPanelFormValues>({
@@ -148,8 +146,15 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parcelas]);
 
+  // Reset externo: quando o workspace zera `autorizacao` (ex.: após finalizar
+  // venda em `handleConfirmPayment`), reflete no form. Checagem explícita
+  // contra "" evita o ping-pong com o effect oposto (linha 133) que sincroniza
+  // form → workspace — ambos tinham a mesma condição e causavam "Maximum
+  // update depth exceeded".
   useEffect(() => {
-    if ((watchedAutorizacao ?? "") !== autorizacao) setValue("autorizacao", autorizacao);
+    if (autorizacao === "" && (watchedAutorizacao ?? "") !== "") {
+      setValue("autorizacao", "");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autorizacao]);
 
@@ -167,6 +172,15 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
   const mostrarParcelas = watchedForma === "CARTAO_CREDITO";
   const mostrarNsu =
     watchedForma === "CARTAO_CREDITO" || watchedForma === "CARTAO_DEBITO";
+  const formIsValid = useMemo(
+    () =>
+      paymentPanelSchema.safeParse({
+        formaPagamento: watchedForma,
+        parcelas: watchedParcelas,
+        autorizacao: watchedAutorizacao ?? "",
+      }).success,
+    [watchedAutorizacao, watchedForma, watchedParcelas],
+  );
 
   // Botão Finalizar (RN-018)
   const finalizeLabel = useMemo(() => {
@@ -224,12 +238,8 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
     });
   };
 
-  // RECORRENTE exige plano com cobrança recorrente habilitada (preserva regra legada).
-  const recorrenteDesabilitada = Boolean(
-    selectedPlano && !selectedPlano.permiteCobrancaRecorrente,
-  );
 
-  const disableFinalize = saving || !canFinalize || !formState.isValid;
+  const disableFinalize = saving || !canFinalize || !formIsValid;
 
   return (
     <form
@@ -345,7 +355,6 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
             aria-label="Forma de pagamento"
           >
             {PAYMENT_PANEL_METODOS.map((metodo) => {
-              const disabled = metodo === "RECORRENTE" && recorrenteDesabilitada;
               const checked = watchedForma === metodo;
               return (
                 <label
@@ -353,13 +362,11 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
                   className={cn(
                     "flex cursor-pointer items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm",
                     checked ? "border-gym-accent ring-1 ring-gym-accent" : "",
-                    disabled ? "cursor-not-allowed opacity-50" : "",
                   )}
                 >
                   <input
                     type="radio"
                     value={metodo}
-                    disabled={disabled}
                     checked={checked}
                     onChange={() =>
                       setValue("formaPagamento", metodo, {
@@ -429,21 +436,21 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
           </fieldset>
         ) : null}
 
-        {/* Input NSU (autorização) — RN-005 */}
+        {/* Input Código Autorização — opcional */}
         {mostrarNsu ? (
           <div className="mt-4 space-y-1.5">
             <label
               htmlFor="payment-panel-nsu"
               className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
             >
-              NSU / Autorização
+              Código Autorização
             </label>
             <Input
               id="payment-panel-nsu"
               data-testid="payment-panel-nsu"
               inputMode="numeric"
               autoComplete="off"
-              placeholder="Mínimo 4 dígitos"
+              placeholder="Opcional"
               className="border-border bg-secondary font-mono"
               aria-invalid={Boolean(formState.errors.autorizacao)}
               aria-describedby={
