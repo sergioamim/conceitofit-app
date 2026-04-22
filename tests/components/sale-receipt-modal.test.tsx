@@ -18,7 +18,7 @@ import {
   FOCUS_UNIVERSAL_SEARCH_EVENT,
   SaleReceiptModal,
 } from "@/components/shared/sale-receipt-modal";
-import type { Aluno, Tenant, Venda } from "@/lib/types";
+import type { Aluno, Plano, Tenant, Venda } from "@/lib/types";
 
 /** Espera o próximo tick para deixar o `useEffect` rodar (formatador BRL). */
 async function flushEffects() {
@@ -581,5 +581,176 @@ describe("SaleReceiptModal (VUN-4.2)", () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+});
+
+// ============================================================================
+// VUN-Onda-5 — Botão "Imprimir contrato" no SaleReceiptModal
+// ============================================================================
+function mkPlanoComContrato(overrides: Partial<Plano> = {}): Plano {
+  return {
+    id: "plano-1",
+    tenantId: "tenant-1",
+    nome: "Plano Mensal Black",
+    tipo: "MENSAL",
+    duracaoDias: 30,
+    valor: 180,
+    valorMatricula: 0,
+    cobraAnuidade: false,
+    permiteRenovacaoAutomatica: false,
+    permiteCobrancaRecorrente: false,
+    contratoTemplateHtml:
+      "<h1>Contrato</h1><p>Cliente: {{cliente.nome}} - CPF {{cliente.cpf}}</p><p>Plano: {{plano.nome}} ({{plano.valor}})</p><p>Tenant: {{tenant.nome}}</p><p>Total: {{venda.total}}</p>",
+    contratoAssinatura: "DIGITAL",
+    contratoEnviarAutomaticoEmail: false,
+    destaque: false,
+    ativo: true,
+    ...overrides,
+  };
+}
+
+describe("SaleReceiptModal (VUN-Onda-5: Imprimir contrato)", () => {
+  it("exibe o botão 'Imprimir contrato' quando plano.contratoTemplateHtml != vazio + tipo PLANO + cliente", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={CLIENTE}
+        tenant={TENANT}
+        plano={mkPlanoComContrato()}
+      />,
+    );
+    await flushEffects();
+
+    const btn = screen.getByTestId("sale-receipt-imprimir-contrato");
+    expect(btn).toBeInTheDocument();
+    expect(btn.getAttribute("aria-label")).toMatch(/Imprimir contrato/i);
+  });
+
+  it("oculta o botão quando tipo != PLANO", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda({ tipo: "PRODUTO" })}
+        cliente={CLIENTE}
+        tenant={TENANT}
+        plano={mkPlanoComContrato()}
+      />,
+    );
+    await flushEffects();
+
+    expect(
+      screen.queryByTestId("sale-receipt-imprimir-contrato"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("oculta o botão quando não há cliente (venda avulsa)", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={null}
+        tenant={TENANT}
+        plano={mkPlanoComContrato()}
+      />,
+    );
+    await flushEffects();
+
+    expect(
+      screen.queryByTestId("sale-receipt-imprimir-contrato"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("oculta o botão quando plano não tem contratoTemplateHtml", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={CLIENTE}
+        tenant={TENANT}
+        plano={mkPlanoComContrato({ contratoTemplateHtml: "" })}
+      />,
+    );
+    await flushEffects();
+
+    expect(
+      screen.queryByTestId("sale-receipt-imprimir-contrato"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("click chama window.open com HTML contendo os placeholders preenchidos", async () => {
+    const writes: string[] = [];
+    const popupDoc = {
+      write: vi.fn((chunk: string) => {
+        writes.push(chunk);
+      }),
+      close: vi.fn(),
+    };
+    const popupWin = {
+      document: popupDoc,
+      focus: vi.fn(),
+      print: vi.fn(),
+    };
+    const openSpy = vi
+      .spyOn(window, "open")
+      .mockReturnValue(popupWin as unknown as Window);
+
+    try {
+      render(
+        <SaleReceiptModal
+          open
+          onClose={() => {}}
+          venda={mkVenda()}
+          cliente={CLIENTE}
+          tenant={TENANT}
+          plano={mkPlanoComContrato()}
+        />,
+      );
+      await flushEffects();
+
+      const btn = screen.getByTestId("sale-receipt-imprimir-contrato");
+      fireEvent.click(btn);
+
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(popupDoc.write).toHaveBeenCalledTimes(1);
+      const written = writes.join("");
+      expect(written).toContain("Maria Silva");
+      expect(written).toContain("12345678900");
+      expect(written).toContain("Plano Mensal Black");
+      expect(written).toContain("Conceito Fit Centro");
+      expect(written).toMatch(/Contrato — Maria Silva/);
+      expect(popupDoc.close).toHaveBeenCalledTimes(1);
+      expect(popupWin.focus).toHaveBeenCalledTimes(1);
+      expect(popupWin.print).toHaveBeenCalledTimes(1);
+    } finally {
+      openSpy.mockRestore();
+    }
+  });
+
+  it("quando popup é bloqueado (window.open retorna null), não quebra e não chama print", async () => {
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+    try {
+      render(
+        <SaleReceiptModal
+          open
+          onClose={() => {}}
+          venda={mkVenda()}
+          cliente={CLIENTE}
+          tenant={TENANT}
+          plano={mkPlanoComContrato()}
+        />,
+      );
+      await flushEffects();
+
+      const btn = screen.getByTestId("sale-receipt-imprimir-contrato");
+      expect(() => fireEvent.click(btn)).not.toThrow();
+      expect(openSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      openSpy.mockRestore();
+    }
   });
 });

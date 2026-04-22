@@ -114,6 +114,38 @@ function useHasMounted(): boolean {
   );
 }
 
+/**
+ * VUN-Onda-5: Preenche placeholders `{{entidade.campo}}` no template HTML do
+ * contrato com valores simples do cliente/plano/venda/tenant. Valores ausentes
+ * são substituídos por "—". Regex cobre dot.notation de 2 níveis.
+ */
+export function preencherContratoTemplate(
+  template: string,
+  ctx: {
+    cliente?: { nome?: string; cpf?: string; email?: string; telefone?: string };
+    plano?: { nome?: string; valor?: string };
+    venda?: {
+      dataCriacao?: string;
+      total?: string;
+      dataInicioContrato?: string;
+      dataFimContrato?: string;
+    };
+    tenant?: { nome?: string; documento?: string };
+  },
+): string {
+  return template.replace(
+    /\{\{\s*(cliente|plano|venda|tenant)\.(\w+)\s*\}\}/g,
+    (_match, entidade: string, campo: string) => {
+      const bag = (ctx as Record<string, Record<string, string | undefined> | undefined>)[
+        entidade
+      ];
+      const raw = bag?.[campo];
+      if (raw === undefined || raw === null || raw === "") return "—";
+      return String(raw);
+    },
+  );
+}
+
 function useBRLFormatter(): (value: number) => string {
   const mounted = useHasMounted();
   // Formatador BRL só aparece pós-mount para evitar divergência SSR/client
@@ -209,6 +241,62 @@ export function SaleReceiptModal({
 
   // Stubs AC3: integrações reais são follow-up; preservamos aria-label
   // descritivo para leitores de tela.
+  // VUN-Onda-5: abre nova janela e imprime o contrato preenchido.
+  // TODO: quando o backend expor `renovacaoMesmoPlano` no VendaResponse,
+  // esconder este botão se `renovacaoMesmoPlano === true` e
+  // `plano.exigeAssinaturaRenovacao === false`.
+  function handleImprimirContrato() {
+    const templateHtml = plano?.contratoTemplateHtml?.trim();
+    if (!venda || !cliente || !templateHtml) {
+      return;
+    }
+    const ctx = {
+      cliente: {
+        nome: cliente.nome,
+        cpf: cliente.cpf,
+        email: cliente.email,
+        telefone: cliente.telefone,
+      },
+      plano: {
+        nome: plano?.nome,
+        valor:
+          typeof plano?.valor === "number" ? formatBRL(plano.valor) : undefined,
+      },
+      venda: {
+        dataCriacao: venda.dataCriacao,
+        total: formatBRL(venda.total),
+        dataInicioContrato: venda.dataInicioContrato ?? undefined,
+        dataFimContrato: venda.dataFimContrato ?? undefined,
+      },
+      tenant: {
+        nome: tenant?.nome,
+        documento: tenant?.documento,
+      },
+    };
+    const htmlPreenchido = preencherContratoTemplate(templateHtml, ctx);
+    const win =
+      typeof window !== "undefined"
+        ? window.open("", "_blank", "width=800,height=600")
+        : null;
+    if (!win) {
+      toast({
+        title: "Popup bloqueado",
+        description:
+          "Libere popups para esta página para imprimir o contrato.",
+        variant: "destructive",
+      });
+      return;
+    }
+    const tituloPagina = `Contrato — ${cliente.nome ?? "Cliente"}`;
+    win.document.write(
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tituloPagina}</title><style>@media print { body { margin: 0; } } body { font-family: system-ui, sans-serif; padding: 2rem; line-height: 1.5; }</style></head><body>${htmlPreenchido}</body></html>`,
+    );
+    win.document.close();
+    win.focus();
+    win.print();
+    // Não chamar win.close() — deixar o usuário fechar após imprimir.
+  }
+
   function handleShortcutPDF() {
     toast({
       title: "Baixar PDF",
@@ -282,6 +370,13 @@ export function SaleReceiptModal({
       tenant?.endereco?.cidade ||
       undefined,
   };
+
+  // VUN-Onda-5: visibilidade do botão "Imprimir contrato".
+  const exibirImprimirContrato = Boolean(
+    venda?.tipo === "PLANO" &&
+      cliente &&
+      plano?.contratoTemplateHtml?.trim(),
+  );
 
   const parcelas = venda?.pagamento.parcelas;
   const total = venda?.total ?? 0;
@@ -505,6 +600,21 @@ export function SaleReceiptModal({
                   </Button>
                 </div>
               </div>
+
+              {/* VUN-Onda-5: Imprimir contrato de adesão (quando plano tem
+                  template HTML). Renderiza entre os Atalhos e o CTA final. */}
+              {exibirImprimirContrato ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleImprimirContrato}
+                  data-testid="sale-receipt-imprimir-contrato"
+                  aria-label="Imprimir contrato de adesão"
+                >
+                  <Printer className="size-4" aria-hidden />
+                  Imprimir contrato
+                </Button>
+              ) : null}
 
               {/* Contrato/auto-envio — mantido para compat com API atual */}
               {contratoAutoEnvioMensagem || plano?.contratoTemplateHtml ? (
