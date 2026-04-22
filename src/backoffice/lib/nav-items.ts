@@ -13,6 +13,7 @@ import {
   LineChart,
   MessageSquare,
   Package,
+  PlugZap,
   Rocket,
   Search,
   Settings,
@@ -134,6 +135,12 @@ export const configGroup: NavGroup = {
   items: [
     { href: "/admin/configuracoes", label: "Ajustes Gerais", icon: Settings },
     { href: "/admin/whatsapp", label: "WhatsApp API", icon: MessageSquare },
+    {
+      href: "/admin/integracoes/agregadores",
+      label: "Agregadores",
+      icon: PlugZap,
+      description: "Wellhub / TotalPass por tenant",
+    },
     { href: "/admin/importacao-evo", label: "Importação EVO", icon: Upload },
     { href: "/admin/importacao-evo-p0", label: "Importação EVO P0", icon: Upload, description: "Importação com DAG paralelo" },
     { href: "/admin/entrar-como-academia", label: "Acessar Unidade", icon: Building2, paletteOnly: true },

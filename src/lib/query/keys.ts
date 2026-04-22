@@ -90,6 +90,14 @@ export const queryKeys = {
       integrations: () => ["admin", "configuracoes", "integrations"] as const,
       config: () => ["admin", "configuracoes", "config"] as const,
     },
+    agregadores: {
+      all: () => ["admin", "agregadores"] as const,
+      schema: () => ["admin", "agregadores", "schema"] as const,
+      configs: (tenantId: string) =>
+        ["admin", "agregadores", "configs", tenantId] as const,
+      eventos: (tenantId: string, filters: Record<string, unknown>) =>
+        ["admin", "agregadores", "eventos", tenantId, filters] as const,
+    },
   },
 
   matriculas: {
