@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   FileDown,
@@ -9,6 +10,7 @@ import {
   Printer,
   RotateCcw,
   Send,
+  UserCircle,
 } from "lucide-react";
 import { z } from "zod";
 
@@ -147,6 +149,7 @@ export function SaleReceiptModal({
   voucherDescontoPercent?: number;
 }) {
   const { toast } = useToast();
+  const router = useRouter();
   const [emailOverride, setEmailOverride] = useState<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -225,6 +228,17 @@ export function SaleReceiptModal({
       title: "2ª via",
       description: "Geração de 2ª via ainda não disponível (mock).",
     });
+  }
+
+  function handleVerPerfil() {
+    // Fecha o modal e navega pro perfil do cliente da venda. Só dispara quando
+    // `cliente?.id` está presente — venda avulsa sem cliente (produto) oculta
+    // o botão pra evitar navegação quebrada.
+    if (!cliente?.id) {
+      return;
+    }
+    handleClose();
+    router.push(`/clientes/${cliente.id}`);
   }
 
   function handleNovaVenda() {
@@ -505,16 +519,31 @@ export function SaleReceiptModal({
               {/* Spacer para empurrar o CTA final para baixo em telas grandes */}
               <div className="flex-1" aria-hidden />
 
-              <Button
-                type="button"
-                onClick={handleNovaVenda}
-                className="w-full"
-                data-testid="sale-receipt-nova-venda"
-                aria-label="Iniciar nova venda"
-              >
-                <Plus className="size-4" aria-hidden />
-                Nova venda
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {cliente?.id ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleVerPerfil}
+                    className="sm:flex-1"
+                    data-testid="sale-receipt-ver-perfil"
+                    aria-label={`Fechar e abrir perfil de ${cliente.nome ?? "cliente"}`}
+                  >
+                    <UserCircle className="size-4" aria-hidden />
+                    Ver perfil do cliente
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  onClick={handleNovaVenda}
+                  className={cliente?.id ? "sm:flex-1" : "w-full"}
+                  data-testid="sale-receipt-nova-venda"
+                  aria-label="Iniciar nova venda"
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Nova venda
+                </Button>
+              </div>
 
               {/* Região aria-live para anúncios a11y (status de ações). */}
               <div

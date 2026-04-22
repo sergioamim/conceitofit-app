@@ -2,6 +2,18 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 
+const mockRouterPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockRouterPush,
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+
 import {
   FOCUS_UNIVERSAL_SEARCH_EVENT,
   SaleReceiptModal,
@@ -211,6 +223,44 @@ describe("SaleReceiptModal (VUN-4.1)", () => {
     expect(
       screen.getByTestId("sale-receipt-shortcut-segunda-via"),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("sale-receipt-nova-venda")).toBeInTheDocument();
+  });
+
+  it("botão Ver perfil aparece quando há cliente e navega + fecha modal ao clicar", async () => {
+    mockRouterPush.mockClear();
+    const onClose = vi.fn();
+    render(
+      <SaleReceiptModal
+        open
+        onClose={onClose}
+        venda={mkVenda()}
+        cliente={CLIENTE}
+        tenant={TENANT}
+      />,
+    );
+    await flushEffects();
+
+    const btn = screen.getByTestId("sale-receipt-ver-perfil");
+    expect(btn).toBeInTheDocument();
+    fireEvent.click(btn);
+    expect(mockRouterPush).toHaveBeenCalledWith(`/clientes/${CLIENTE.id}`);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("botão Ver perfil oculto quando venda não tem cliente (avulsa)", async () => {
+    render(
+      <SaleReceiptModal
+        open
+        onClose={() => {}}
+        venda={mkVenda()}
+        cliente={null}
+        tenant={TENANT}
+      />,
+    );
+    await flushEffects();
+
+    expect(screen.queryByTestId("sale-receipt-ver-perfil")).not.toBeInTheDocument();
+    // Nova venda continua presente (full-width neste caso).
     expect(screen.getByTestId("sale-receipt-nova-venda")).toBeInTheDocument();
   });
 
