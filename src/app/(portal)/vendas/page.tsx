@@ -317,7 +317,20 @@ export default function VendasPage() {
           return (
             <>
               <TableCell className="px-4 py-3 text-sm text-muted-foreground">{formatDateTime(venda.dataCriacao)}</TableCell>
-              <TableCell className="px-4 py-3 text-sm">{venda.clienteNome ?? "Consumidor não identificado"}</TableCell>
+              <TableCell className="px-4 py-3 text-sm">
+                {venda.clienteId && venda.clienteNome ? (
+                  <Link
+                    href={`/clientes/${venda.clienteId}`}
+                    className="font-medium text-foreground underline-offset-2 hover:underline hover:text-gym-accent"
+                  >
+                    {venda.clienteNome}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {venda.clienteNome ?? "Consumidor não identificado"}
+                  </span>
+                )}
+              </TableCell>
               <TableCell className="px-4 py-3 text-sm text-muted-foreground">{TIPO_LABEL[venda.tipo]}</TableCell>
               <TableCell className="max-w-[280px] px-4 py-3 text-sm text-muted-foreground" title={formatItensResumo(venda)}>
                 {formatItensResumo(venda)}
