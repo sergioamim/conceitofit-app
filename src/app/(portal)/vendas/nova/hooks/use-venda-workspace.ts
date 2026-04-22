@@ -277,11 +277,15 @@ export function useVendaWorkspace() {
         setFormaPagamentoState("PIX");
         setParcelasState(1);
         setAutorizacaoState("");
+        // VUN-Onda3: limpa `dataInicioPlano` para o próximo cockpit
+        // voltar ao default (sugestão do hook). Usa setter do flow para
+        // o state compartilhado no `useCommercialFlow`.
+        setDataInicioPlano("");
       }, 0);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro ao registrar venda");
     }
-  }, [alunos, clearCart, clienteId, flow.cupomAppliedCode, flow.cupomPercent, items, processSale, queryClient, receipt, requireCliente, selectedPlano, tenantId]);
+  }, [alunos, clearCart, clienteId, flow.cupomAppliedCode, flow.cupomPercent, items, processSale, queryClient, receipt, requireCliente, selectedPlano, setDataInicioPlano, tenantId]);
 
   return {
     ...flow,

@@ -281,6 +281,13 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
       const tipoFinal = cart.some(i => i.tipo === "PLANO") ? "PLANO" : 
                          cart.some(i => i.tipo === "SERVICO") ? "SERVICO" : "PRODUTO";
       
+      // VUN-Onda3 — só envia dataInicioPlano quando há plano no carrinho.
+      // Backend resolve o default (max(hoje, ultimoAtivo.dataFim+1)) se vier
+      // ausente; para vendas de produto/serviço puras o campo não faz sentido.
+      const hasPlano = cart.some((i) => i.tipo === "PLANO");
+      const dataInicioPlanoToSend =
+        hasPlano && dataInicioPlano ? dataInicioPlano : undefined;
+
       const venda = await createVendaService({
         tenantId,
         data: {
@@ -288,6 +295,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
           clienteId: clienteId || undefined,
           convenioId: selectedConvenio?.id || undefined,
           voucherCodigo: cupomAppliedCode || undefined,
+          dataInicioPlano: dataInicioPlanoToSend,
           itens: cart.map((i) => ({
             tipo: i.tipo,
             referenciaId: i.referenciaId,
@@ -307,7 +315,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     } finally {
       setSaving(false);
     }
-  }, [tenantId, cart, clienteId, selectedConvenio?.id, cupomAppliedCode, descontoTotal, acrescimoGeral]);
+  }, [tenantId, cart, clienteId, selectedConvenio?.id, cupomAppliedCode, dataInicioPlano, descontoTotal, acrescimoGeral]);
 
   return {
     alunos,

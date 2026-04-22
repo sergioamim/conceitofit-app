@@ -110,6 +110,11 @@ export async function createVendaService(input: {
     clienteId?: string;
     convenioId?: string;
     voucherCodigo?: string;
+    /**
+     * VUN-Onda3 — data de início do plano (ISO YYYY-MM-DD).
+     * Opcional: backend usa `max(hoje, ultimoAtivo.dataFim+1)` quando ausente.
+     */
+    dataInicioPlano?: string;
     itens: Array<{
       tipo: TipoVenda;
       referenciaId: string;

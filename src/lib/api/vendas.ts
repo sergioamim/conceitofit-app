@@ -25,6 +25,12 @@ type CreateVendaApiInput = {
   convenioId?: string;
   voucherCodigo?: string;
   codigoTransacao?: string;
+  /**
+   * VUN-Onda3 — data de início do plano (ISO YYYY-MM-DD).
+   * Opcional: quando ausente, o backend resolve como
+   * `max(hoje, ultimoContratoAtivo.dataFim + 1)`.
+   */
+  dataInicioPlano?: string;
   itens: Array<{
     tipo: TipoVenda;
     referenciaId: string;
@@ -352,14 +358,20 @@ export async function createVendaApi(input: {
       clienteId: input.data.clienteId,
       convenioId: input.data.convenioId,
       voucherCodigo: input.data.voucherCodigo,
+      dataInicioPlano: input.data.dataInicioPlano,
       descontoTotal: input.data.descontoTotal,
       acrescimoTotal: input.data.acrescimoTotal,
-      codigoTransacao: input.data.codigoTransacao ?? input.data.pagamento.codigoTransacao,
       pagamento: {
         formaPagamento: input.data.pagamento.formaPagamento,
         parcelas: input.data.pagamento.parcelas,
         valorPago: input.data.pagamento.valorPago,
         observacoes: input.data.pagamento.observacoes,
+        // Código de autorização vai nested em `pagamento` — alinhado com
+        // CreatePagamentoVendaRequest.codigoTransacao do backend (modulo-comercial).
+        // `input.data.codigoTransacao` é o legado top-level mantido só como
+        // fallback; novos callers devem setar direto em pagamento.
+        codigoTransacao:
+          input.data.pagamento.codigoTransacao ?? input.data.codigoTransacao,
       },
       itens,
     },

@@ -6,23 +6,31 @@ import { z } from "zod";
  * Regras:
  * - formaPagamento: restrito aos cinco métodos suportados pelo painel (PRD §8.1).
  * - parcelas: 1–12, obrigatório apenas quando relevante.
- * - autorizacao (NSU / RN-005): obrigatório com ≥4 dígitos numéricos APENAS para
- *   CARTAO_CREDITO e CARTAO_DEBITO. Para PIX/DINHEIRO/RECORRENTE, ausência é OK.
+ * - autorizacao (código de autorização da transação): opcional em qualquer método.
+ *   Campo aparece para CARTAO_CREDITO/CARTAO_DEBITO, mas preenchimento é livre.
  *
  * Observação: mantemos os valores canônicos do projeto (`CARTAO_CREDITO`,
  * `CARTAO_DEBITO`) ao invés de `CREDITO`/`DEBITO` citados na story, para
  * compatibilidade direta com `TipoFormaPagamento` em `src/lib/shared/types/pagamento.ts`.
  */
+// RECORRENTE não é forma de pagamento — é uma característica do plano
+// (tipoCobranca="RECORRENTE"). Removido do painel em 2026-04-22.
 export const PAYMENT_PANEL_METODOS = [
   "DINHEIRO",
   "CARTAO_CREDITO",
   "CARTAO_DEBITO",
   "PIX",
-  "RECORRENTE",
 ] as const;
 
 export type PaymentPanelMetodo = (typeof PAYMENT_PANEL_METODOS)[number];
 
+/**
+ * Padrão histórico de NSU (min 4 dígitos numéricos). Hoje o campo é opcional
+ * e o schema não usa esse regex pra bloquear submit, mas ele segue exportado
+ * porque utilitários legados (ex.: highlight visual do input, normalização de
+ * fallback em tests) ainda fazem sanity-check de formato quando um valor é
+ * informado.
+ */
 export const NSU_REGEX = /^\d{4,}$/;
 
 export const paymentPanelSchema = z
@@ -36,21 +44,6 @@ export const paymentPanelSchema = z
     autorizacao: z.string().optional().default(""),
   })
   .superRefine((data, ctx) => {
-    const requiresNsu =
-      data.formaPagamento === "CARTAO_CREDITO" ||
-      data.formaPagamento === "CARTAO_DEBITO";
-
-    if (requiresNsu) {
-      const value = (data.autorizacao ?? "").trim();
-      if (!NSU_REGEX.test(value)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["autorizacao"],
-          message: "NSU obrigatório com pelo menos 4 dígitos para crédito/débito.",
-        });
-      }
-    }
-
     if (data.formaPagamento !== "CARTAO_CREDITO" && data.parcelas !== 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

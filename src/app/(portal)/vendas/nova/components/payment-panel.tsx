@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import type { PagamentoVenda, TipoFormaPagamento } from "@/lib/types";
 
 import type { VendaWorkspace } from "../hooks/use-venda-workspace";
+import { useDataInicioSugerida } from "../hooks/use-data-inicio-sugerida";
 import {
   PAYMENT_PANEL_METODOS,
   type PaymentPanelFormValues,
@@ -94,7 +95,23 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
     autorizacao,
     setAutorizacao,
     valorParcela,
+    // VUN-Onda3 — data de início do plano (sugerida + override manual).
+    clienteId,
+    dataInicioPlano,
+    setDataInicioPlano,
   } = workspace;
+
+  // VUN-Onda3 — busca a sugestão baseada no último contrato ativo do aluno.
+  // Quando não há cliente, retorna hoje e `emSequencia=false`.
+  const { dataInicioSugerida, emSequencia } = useDataInicioSugerida({
+    tenantId: tenant?.id,
+    alunoId: clienteId || null,
+  });
+
+  const temPlanoNoCarrinho = useMemo(
+    () => cart.some((i) => i.tipo === "PLANO"),
+    [cart],
+  );
 
   const form = useForm<PaymentPanelFormValues>({
     resolver: zodResolver(paymentPanelSchema),
@@ -388,6 +405,40 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
             </p>
           ) : null}
         </fieldset>
+
+        {/* VUN-Onda3 — Início do plano (só quando há plano no carrinho).
+            Default = sugestão do hook (hoje ou dataFim+1 do último ativo).
+            Operador pode editar livremente. */}
+        {temPlanoNoCarrinho ? (
+          <div className="mt-4 space-y-1.5">
+            <label
+              htmlFor="payment-panel-data-inicio"
+              className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+            >
+              Início do plano
+            </label>
+            <Input
+              id="payment-panel-data-inicio"
+              type="date"
+              value={dataInicioPlano || dataInicioSugerida}
+              onChange={(e) => setDataInicioPlano(e.target.value)}
+              className="bg-secondary"
+              data-testid="payment-panel-data-inicio"
+            />
+            {emSequencia ? (
+              <p
+                className="text-xs text-gym-accent"
+                data-testid="payment-panel-data-inicio-hint"
+              >
+                Plano em sequência: começa{" "}
+                {new Date(dataInicioSugerida + "T00:00:00").toLocaleDateString(
+                  "pt-BR",
+                )}{" "}
+                (dia seguinte ao contrato atual).
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* Grid de parcelas (só para CARTAO_CREDITO) */}
         {mostrarParcelas ? (

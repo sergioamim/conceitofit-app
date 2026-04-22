@@ -1,6 +1,15 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+// VUN-Onda3 — mock do hook de sugestão para não exigir QueryClientProvider
+// nos testes de UI puros do PaymentPanel.
+vi.mock("@/app/(portal)/vendas/nova/hooks/use-data-inicio-sugerida", () => ({
+  useDataInicioSugerida: () => ({
+    dataInicioSugerida: "2026-04-21",
+    emSequencia: false,
+  }),
+}));
+
 import { PaymentPanel } from "@/app/(portal)/vendas/nova/components/payment-panel";
 import type { VendaWorkspace } from "@/app/(portal)/vendas/nova/hooks/use-venda-workspace";
 
@@ -12,7 +21,7 @@ import type { VendaWorkspace } from "@/app/(portal)/vendas/nova/hooks/use-venda-
  *  - seções colapsáveis (Convênio, Cupom)
  *  - total destacado (28px mono)
  *  - grid de 12 parcelas visível só para CARTAO_CREDITO
- *  - input NSU obrigatório ≥ 4 dígitos (RN-005)
+ *  - input Código Autorização opcional em crédito/débito
  *  - label dinâmico do botão Finalizar (RN-018)
  *  - botão desabilitado quando !canFinalize
  */
@@ -61,6 +70,10 @@ function makeWorkspace(overrides: Partial<VendaWorkspace> = {}): VendaWorkspace 
     setAutorizacao: overrides.setAutorizacao ?? vi.fn(),
     valorParcela: overrides.valorParcela ?? total / Math.max(1, parcelas),
     selectedPlano: overrides.selectedPlano ?? null,
+    // VUN-Onda3 — campos consumidos pelo PaymentPanel (Início do plano).
+    clienteId: overrides.clienteId ?? "",
+    dataInicioPlano: overrides.dataInicioPlano ?? "",
+    setDataInicioPlano: overrides.setDataInicioPlano ?? vi.fn(),
     ...overrides,
   } as unknown as VendaWorkspace;
 }
@@ -88,7 +101,8 @@ describe("PaymentPanel (VUN-3.2)", () => {
     expect(screen.getByTestId("payment-panel-forma-CARTAO_CREDITO")).toBeInTheDocument();
     expect(screen.getByTestId("payment-panel-forma-CARTAO_DEBITO")).toBeInTheDocument();
     expect(screen.getByTestId("payment-panel-forma-PIX")).toBeInTheDocument();
-    expect(screen.getByTestId("payment-panel-forma-RECORRENTE")).toBeInTheDocument();
+    // RECORRENTE não é forma de pagamento — é característica do plano.
+    expect(screen.queryByTestId("payment-panel-forma-RECORRENTE")).not.toBeInTheDocument();
   });
 
   it("total destacado usa fonte mono e valor 28px (estilo PRD)", async () => {
@@ -127,8 +141,8 @@ describe("PaymentPanel (VUN-3.2)", () => {
     }
   });
 
-  it("input NSU aparece só em crédito/débito e bloqueia submit com <4 dígitos (RN-005)", async () => {
-    // PIX não mostra NSU
+  it("input Código Autorização aparece só em crédito/débito e é opcional", async () => {
+    // PIX não mostra o input.
     const { rerender } = render(
       <PaymentPanel
         workspace={makeWorkspace({ formaPagamento: "PIX" })}
@@ -138,7 +152,7 @@ describe("PaymentPanel (VUN-3.2)", () => {
     await flush();
     expect(screen.queryByTestId("payment-panel-nsu")).not.toBeInTheDocument();
 
-    // Débito com NSU curto → submit bloqueado (handleConfirmPayment não é chamado)
+    // Débito com código vazio → submit passa (campo é opcional agora).
     const handleConfirmPayment = vi.fn().mockResolvedValue(undefined);
     rerender(
       <PaymentPanel
@@ -154,17 +168,21 @@ describe("PaymentPanel (VUN-3.2)", () => {
     const nsu = screen.getByTestId("payment-panel-nsu") as HTMLInputElement;
     expect(nsu).toBeInTheDocument();
 
-    fireEvent.change(nsu, { target: { value: "12" } });
-    await flush();
     const form = screen.getByTestId("payment-panel");
     await act(async () => {
       fireEvent.submit(form);
     });
-    await flush();
-    // Schema bloqueia: handleConfirmPayment NÃO deve ser chamado.
-    expect(handleConfirmPayment).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(handleConfirmPayment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          formaPagamento: "CARTAO_DEBITO",
+          codigoTransacao: undefined,
+        }),
+      );
+    });
 
-    // Agora com ≥4 dígitos → passa
+    // Quando preenchido, encaminha o valor normalizado.
+    handleConfirmPayment.mockClear();
     fireEvent.change(nsu, { target: { value: "1234" } });
     await flush();
     await act(async () => {
@@ -222,6 +240,22 @@ describe("PaymentPanel (VUN-3.2)", () => {
     await flush();
     const btn = screen.getByTestId("payment-panel-finalizar");
     expect(btn).toBeDisabled();
+  });
+
+  it("botão Finalizar inicia habilitado quando PIX já é válido no workspace", async () => {
+    render(
+      <PaymentPanel
+        workspace={makeWorkspace({
+          canFinalize: true,
+          formaPagamento: "PIX",
+          parcelas: 1,
+        })}
+        handleConfirmPayment={vi.fn()}
+      />,
+    );
+    await flush();
+    const btn = screen.getByTestId("payment-panel-finalizar");
+    expect(btn).toBeEnabled();
   });
 
   it("clicar em parcela=6 sincroniza estado do workspace via setParcelas", async () => {

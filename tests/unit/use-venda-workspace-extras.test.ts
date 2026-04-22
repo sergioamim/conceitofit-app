@@ -33,33 +33,30 @@ describe("payment-panel.schema — RN-005 NSU condicional", () => {
     expect(res.success).toBe(true);
   });
 
-  it("aceita RECORRENTE sem NSU", () => {
+  it("rejeita RECORRENTE como forma de pagamento (removido em 2026-04-22)", () => {
     const res = paymentPanelSchema.safeParse({ ...BASE, formaPagamento: "RECORRENTE" });
-    expect(res.success).toBe(true);
+    expect(res.success).toBe(false);
   });
 
-  it("rejeita CARTAO_CREDITO sem NSU", () => {
+  it("aceita CARTAO_CREDITO sem código de autorização (opcional)", () => {
     const res = paymentPanelSchema.safeParse({
       ...BASE,
       formaPagamento: "CARTAO_CREDITO",
       autorizacao: "",
     });
-    expect(res.success).toBe(false);
-    if (!res.success) {
-      expect(res.error.issues.some((i) => i.path.includes("autorizacao"))).toBe(true);
-    }
+    expect(res.success).toBe(true);
   });
 
-  it("rejeita CARTAO_CREDITO com NSU de 3 dígitos", () => {
+  it("aceita CARTAO_CREDITO com código de autorização de qualquer tamanho", () => {
     const res = paymentPanelSchema.safeParse({
       ...BASE,
       formaPagamento: "CARTAO_CREDITO",
       autorizacao: "123",
     });
-    expect(res.success).toBe(false);
+    expect(res.success).toBe(true);
   });
 
-  it("aceita CARTAO_CREDITO com NSU de 4+ dígitos", () => {
+  it("aceita CARTAO_CREDITO com código de autorização preenchido", () => {
     const res = paymentPanelSchema.safeParse({
       ...BASE,
       formaPagamento: "CARTAO_CREDITO",
@@ -68,16 +65,16 @@ describe("payment-panel.schema — RN-005 NSU condicional", () => {
     expect(res.success).toBe(true);
   });
 
-  it("rejeita CARTAO_DEBITO sem NSU", () => {
+  it("aceita CARTAO_DEBITO sem código de autorização (opcional)", () => {
     const res = paymentPanelSchema.safeParse({
       ...BASE,
       formaPagamento: "CARTAO_DEBITO",
       autorizacao: "",
     });
-    expect(res.success).toBe(false);
+    expect(res.success).toBe(true);
   });
 
-  it("aceita CARTAO_DEBITO com NSU de 6 dígitos", () => {
+  it("aceita CARTAO_DEBITO com código de autorização de 6 dígitos", () => {
     const res = paymentPanelSchema.safeParse({
       ...BASE,
       formaPagamento: "CARTAO_DEBITO",
@@ -181,10 +178,8 @@ describe("canFinalize — tabela de combos (RN-005 + RN-013)", () => {
     if (args.cartSize === 0) return false;
     if (args.total <= 0) return false;
     if (args.requireCliente && !args.clienteId) return false;
-    const requiresNsu =
-      args.formaPagamento === "CARTAO_CREDITO" ||
-      args.formaPagamento === "CARTAO_DEBITO";
-    if (requiresNsu && args.autorizacao.trim().length < 4) return false;
+    // Código de autorização é opcional em qualquer forma de pagamento —
+    // não entra no gate de canFinalize.
     return true;
   }
 
@@ -240,7 +235,7 @@ describe("canFinalize — tabela de combos (RN-005 + RN-013)", () => {
     ).toBe(true);
   });
 
-  it("crédito sem NSU → false (RN-005)", () => {
+  it("crédito sem código de autorização → true (agora opcional)", () => {
     expect(
       canFinalize({
         cartSize: 1,
@@ -250,10 +245,10 @@ describe("canFinalize — tabela de combos (RN-005 + RN-013)", () => {
         formaPagamento: "CARTAO_CREDITO",
         autorizacao: "",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("crédito com NSU=3 dígitos → false (RN-005)", () => {
+  it("crédito com código curto → true (sem min length)", () => {
     expect(
       canFinalize({
         cartSize: 1,
@@ -263,10 +258,10 @@ describe("canFinalize — tabela de combos (RN-005 + RN-013)", () => {
         formaPagamento: "CARTAO_CREDITO",
         autorizacao: "123",
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  it("crédito com NSU=4 dígitos → true", () => {
+  it("crédito com código preenchido → true", () => {
     expect(
       canFinalize({
         cartSize: 1,
@@ -279,7 +274,7 @@ describe("canFinalize — tabela de combos (RN-005 + RN-013)", () => {
     ).toBe(true);
   });
 
-  it("débito com NSU=6 dígitos → true", () => {
+  it("débito com código de autorização → true", () => {
     expect(
       canFinalize({
         cartSize: 1,
@@ -292,14 +287,17 @@ describe("canFinalize — tabela de combos (RN-005 + RN-013)", () => {
     ).toBe(true);
   });
 
-  it("recorrente em plano com cliente → true", () => {
+  it("PIX em plano com cliente → true (cenário legado de recorrência migrado)", () => {
+    // Antes deste teste validava RECORRENTE como forma de pagamento —
+    // RECORRENTE agora é característica do plano (tipoCobranca), não método.
+    // Preservada a assertiva de "plano + cliente → true" com método válido (PIX).
     expect(
       canFinalize({
         cartSize: 1,
         total: 199,
         requireCliente: true,
         clienteId: "aluno-1",
-        formaPagamento: "RECORRENTE",
+        formaPagamento: "PIX",
         autorizacao: "",
       }),
     ).toBe(true);
