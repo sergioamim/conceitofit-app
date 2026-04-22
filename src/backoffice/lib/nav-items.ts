@@ -141,6 +141,12 @@ export const configGroup: NavGroup = {
       icon: PlugZap,
       description: "Wellhub / TotalPass por tenant",
     },
+    {
+      href: "/admin/integracoes/agregadores/dashboard",
+      label: "Dashboard Agregadores",
+      icon: BarChart3,
+      description: "BI Wellhub / TotalPass — mapa de valores (AG-12)",
+    },
     { href: "/admin/importacao-evo", label: "Importação EVO", icon: Upload },
     { href: "/admin/importacao-evo-p0", label: "Importação EVO P0", icon: Upload, description: "Importação com DAG paralelo" },
     { href: "/admin/entrar-como-academia", label: "Acessar Unidade", icon: Building2, paletteOnly: true },

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Activity } from "lucide-react";
+import { Activity, ArrowLeft, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type {
   AgregadorConfigResponse,
@@ -50,19 +50,34 @@ export function AgregadoresDashboard({ tenantId }: AgregadoresDashboardProps) {
             Trocar academia
           </Link>
         </Button>
-        <Button
-          asChild
-          size="sm"
-          variant="outline"
-          data-testid="agregadores-link-eventos"
-        >
-          <Link
-            href={`/admin/integracoes/agregadores/eventos?tenantId=${encodeURIComponent(tenantId)}`}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            data-testid="agregadores-link-dashboard"
           >
-            <Activity className="mr-1 size-4" />
-            Ver eventos
-          </Link>
-        </Button>
+            <Link
+              href={`/admin/integracoes/agregadores/dashboard?tenantId=${encodeURIComponent(tenantId)}`}
+            >
+              <BarChart3 className="mr-1 size-4" />
+              Ver dashboard
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            data-testid="agregadores-link-eventos"
+          >
+            <Link
+              href={`/admin/integracoes/agregadores/eventos?tenantId=${encodeURIComponent(tenantId)}`}
+            >
+              <Activity className="mr-1 size-4" />
+              Ver eventos
+            </Link>
+          </Button>
+        </div>
       </div>
       <p className="text-xs text-muted-foreground">
         Tenant: <span className="font-mono">{tenantId}</span>

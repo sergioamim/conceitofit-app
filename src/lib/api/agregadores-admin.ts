@@ -326,3 +326,285 @@ export async function reprocessarAgregadorEventoApi(input: {
     includeContextHeader: false,
   });
 }
+
+// ─── AG-12 — Dashboard BI dos Agregadores ──────────────────────────────────
+
+/** Filtro por tipo na query de dashboard. "TODOS" ⇒ somar os dois. */
+export type DashboardAgregadorFiltro = "WELLHUB" | "TOTALPASS" | "TODOS";
+
+export interface DashboardKpis {
+  checkinsValidados: number;
+  clientesUnicosAtivos: number;
+  valorTotal: number;
+  ticketMedioPorCheckin: number;
+  ticketMedioPorCliente: number;
+  mediaCheckinsPorCliente: number;
+  webhooksRecebidos: number;
+  webhooksComPrevious: number;
+  webhooksAssinaturaInvalida: number;
+  deadLetters: number;
+}
+
+export interface DashboardPorAgregador {
+  agregador: AgregadorTipo;
+  checkins: number;
+  clientesUnicos: number;
+  valorTotal: number;
+  ticketMedioPorCheckin: number;
+  ticketMedioPorCliente: number;
+  mediaCheckinsPorCliente: number;
+}
+
+export interface DashboardSerieDiariaPonto {
+  /** ISO date "YYYY-MM-DD". */
+  data: string;
+  checkins: number;
+  valorTotal: number;
+}
+
+export interface DashboardDistribuicaoSemanaPonto {
+  /** 1=DOM, 2=SEG, ..., 7=SAB (ISO javascript `getDay()+1` ou equivalente). */
+  diaDaSemana: number;
+  label: string;
+  checkins: number;
+  valorTotal: number;
+}
+
+export interface DashboardTopCliente {
+  alunoId: string | null;
+  externalUserId: string;
+  nome: string | null;
+  agregador: AgregadorTipo;
+  checkins: number;
+  valorTotal: number;
+  /** ISO datetime. */
+  ultimaVisita: string;
+}
+
+export interface DashboardComparativo {
+  checkinsMesAnterior: number;
+  valorTotalMesAnterior: number;
+  /** Variação em pontos percentuais (ex: 12.18 ⇒ +12,18%). */
+  variacaoCheckinsPct: number;
+  variacaoValorPct: number;
+}
+
+export interface DashboardMesResponse {
+  tenantId: string;
+  ano: number;
+  /** 1-12. */
+  mes: number;
+  tipoFiltro: DashboardAgregadorFiltro;
+  kpis: DashboardKpis;
+  porAgregador: DashboardPorAgregador[];
+  serieDiaria: DashboardSerieDiariaPonto[];
+  distribuicaoSemana: DashboardDistribuicaoSemanaPonto[];
+  topClientes: DashboardTopCliente[];
+  comparativo: DashboardComparativo;
+}
+
+export interface GetAgregadoresDashboardInput {
+  tenantId: string;
+  /** Default: mês corrente (BR). */
+  ano?: number;
+  /** 1-12. Default: mês corrente (BR). */
+  mes?: number;
+  /** Default: "TODOS". */
+  tipo?: DashboardAgregadorFiltro;
+}
+
+/**
+ * GET /api/v1/admin/agregadores/dashboard?tenantId=...&ano=...&mes=...&tipo=...
+ *
+ * AG-12 (ADR-012 / AGREGADORES §11): consolida métricas do mês do tenant.
+ * Backend ainda em implementação paralela. Se o endpoint retornar 404 /
+ * backend_indisponivel, a UI cai em um fixture determinístico via
+ * {@link buildDashboardFixture} para permitir validação visual fim-a-fim.
+ *
+ * TODO AG-12.backend: remover fallback quando endpoint estiver estável.
+ */
+export async function getAgregadoresDashboardApi(
+  input: GetAgregadoresDashboardInput,
+): Promise<DashboardMesResponse> {
+  const { tenantId, ano, mes, tipo } = input;
+  const query: Record<string, string> = { tenantId };
+  if (ano != null) query.ano = String(ano);
+  if (mes != null) query.mes = String(mes);
+  if (tipo) query.tipo = tipo;
+
+  try {
+    return await apiRequest<DashboardMesResponse>({
+      path: "/api/v1/admin/agregadores/dashboard",
+      query,
+      includeContextHeader: false,
+    });
+  } catch (err) {
+    // Fallback silencioso enquanto backend AG-12 não está em produção.
+    const status = (err as { status?: number } | null)?.status;
+    if (status === 404 || status === 501 || status == null) {
+      return buildDashboardFixture({
+        tenantId,
+        ano: ano ?? new Date().getFullYear(),
+        mes: mes ?? new Date().getMonth() + 1,
+        tipo: tipo ?? "TODOS",
+      });
+    }
+    throw err;
+  }
+}
+
+// ─── Fixture para desenvolvimento ──────────────────────────────────────────
+
+function seededRandom(seed: number): () => number {
+  let state = seed || 1;
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0xffffffff;
+  };
+}
+
+/**
+ * Constroi resposta determinística para testes/dev enquanto o endpoint AG-12
+ * não está implementado no backend. Os números são derivados de um seed
+ * baseado em tenantId+ano+mes para dar estabilidade entre renders.
+ */
+export function buildDashboardFixture(params: {
+  tenantId: string;
+  ano: number;
+  mes: number;
+  tipo: DashboardAgregadorFiltro;
+}): DashboardMesResponse {
+  const { tenantId, ano, mes, tipo } = params;
+  const seed =
+    [...tenantId].reduce((acc, c) => acc + c.charCodeAt(0), 0) +
+    ano * 12 +
+    mes;
+  const rnd = seededRandom(seed);
+
+  const daysInMonth = new Date(ano, mes, 0).getDate();
+  const serieDiaria: DashboardSerieDiariaPonto[] = Array.from(
+    { length: daysInMonth },
+    (_, i) => {
+      const dia = i + 1;
+      const checkins = 20 + Math.round(rnd() * 50);
+      const valor = checkins * 10;
+      return {
+        data: `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`,
+        checkins,
+        valorTotal: valor,
+      };
+    },
+  );
+
+  const totalCheckins = serieDiaria.reduce((acc, p) => acc + p.checkins, 0);
+  const totalValor = serieDiaria.reduce((acc, p) => acc + p.valorTotal, 0);
+
+  const labelsSemana = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SAB"];
+  const distribuicaoSemana: DashboardDistribuicaoSemanaPonto[] = labelsSemana.map(
+    (label, idx) => {
+      const share = [0.09, 0.18, 0.15, 0.17, 0.16, 0.14, 0.11][idx] ?? 1 / 7;
+      const checkins = Math.round(totalCheckins * share);
+      return {
+        diaDaSemana: idx + 1,
+        label,
+        checkins,
+        valorTotal: checkins * 10,
+      };
+    },
+  );
+
+  const wellhubCheckins = Math.round(totalCheckins * 0.72);
+  const totalpassCheckins = totalCheckins - wellhubCheckins;
+  const wellhubValor = wellhubCheckins * 10;
+  const totalpassValor = totalCheckins * 10 - wellhubValor;
+
+  const porAgregador: DashboardPorAgregador[] = [
+    {
+      agregador: "WELLHUB",
+      checkins: wellhubCheckins,
+      clientesUnicos: Math.max(1, Math.round(wellhubCheckins / 2.64)),
+      valorTotal: wellhubValor,
+      ticketMedioPorCheckin: 10,
+      ticketMedioPorCliente: 26.47,
+      mediaCheckinsPorCliente: 2.64,
+    },
+    {
+      agregador: "TOTALPASS",
+      checkins: totalpassCheckins,
+      clientesUnicos: Math.max(1, Math.round(totalpassCheckins / 2.88)),
+      valorTotal: totalpassValor,
+      ticketMedioPorCheckin: totalpassCheckins === 0
+        ? 0
+        : Math.round((totalpassValor / totalpassCheckins) * 100) / 100,
+      ticketMedioPorCliente: 28.84,
+      mediaCheckinsPorCliente: 2.88,
+    },
+  ];
+
+  const clientesUnicos = porAgregador.reduce(
+    (acc, p) => acc + p.clientesUnicos,
+    0,
+  );
+
+  const topClientes: DashboardTopCliente[] = Array.from({ length: 12 }, (_, i) => {
+    const isWellhub = i % 3 !== 0;
+    const checkins = 20 - i;
+    return {
+      alunoId: i % 4 === 0 ? null : `aluno-${i + 1}-${seed}`,
+      externalUserId: `ext-${100 + i}`,
+      nome: i % 5 === 0 ? null : `Cliente ${i + 1}`,
+      agregador: (isWellhub ? "WELLHUB" : "TOTALPASS") as AgregadorTipo,
+      checkins,
+      valorTotal: checkins * 10,
+      ultimaVisita: `${ano}-${String(mes).padStart(2, "0")}-${String(Math.min(daysInMonth, 28 - i)).padStart(2, "0")}T14:30:00`,
+    };
+  });
+
+  const valorAnterior = Math.round(totalValor * 0.89);
+  const checkinsAnterior = Math.round(totalCheckins * 0.89);
+  const variacaoCheckinsPct =
+    checkinsAnterior === 0
+      ? 0
+      : Math.round(((totalCheckins - checkinsAnterior) / checkinsAnterior) * 10000) /
+        100;
+  const variacaoValorPct =
+    valorAnterior === 0
+      ? 0
+      : Math.round(((totalValor - valorAnterior) / valorAnterior) * 10000) / 100;
+
+  return {
+    tenantId,
+    ano,
+    mes,
+    tipoFiltro: tipo,
+    kpis: {
+      checkinsValidados: totalCheckins,
+      clientesUnicosAtivos: clientesUnicos,
+      valorTotal: totalValor,
+      ticketMedioPorCheckin:
+        totalCheckins === 0 ? 0 : Math.round((totalValor / totalCheckins) * 100) / 100,
+      ticketMedioPorCliente:
+        clientesUnicos === 0
+          ? 0
+          : Math.round((totalValor / clientesUnicos) * 100) / 100,
+      mediaCheckinsPorCliente:
+        clientesUnicos === 0
+          ? 0
+          : Math.round((totalCheckins / clientesUnicos) * 100) / 100,
+      webhooksRecebidos: totalCheckins + 16,
+      webhooksComPrevious: 3,
+      webhooksAssinaturaInvalida: 0,
+      deadLetters: 0,
+    },
+    porAgregador,
+    serieDiaria,
+    distribuicaoSemana,
+    topClientes,
+    comparativo: {
+      checkinsMesAnterior: checkinsAnterior,
+      valorTotalMesAnterior: valorAnterior,
+      variacaoCheckinsPct,
+      variacaoValorPct,
+    },
+  };
+}

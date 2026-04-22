@@ -8,9 +8,13 @@ import {
   type AgregadorTestConnectionResult,
   type AgregadorTipo,
   type AgregadorWebhookEventosPage,
+  type DashboardAgregadorFiltro,
+  type DashboardMesResponse,
+  type GetAgregadoresDashboardInput,
   type ListAgregadorEventosInput,
   createAgregadorConfigApi,
   deleteAgregadorConfigApi,
+  getAgregadoresDashboardApi,
   getAgregadoresSchemaApi,
   listAgregadorEventosApi,
   listAgregadoresConfigsApi,
@@ -189,6 +193,37 @@ export function useAgregadorEventos(input: ListAgregadorEventosInput) {
     ),
     queryFn: () => listAgregadorEventosApi(input),
     enabled: Boolean(tenantId),
+  });
+}
+
+/**
+ * AG-12 — Dashboard BI dos agregadores (por tenant / mês).
+ *
+ * `enabled` só quando há `tenantId`. Os parâmetros `ano`/`mes`/`tipo` fazem
+ * parte da query key para invalidar refetch ao trocar o período.
+ */
+export function useAgregadoresDashboard(input: {
+  tenantId: string | undefined;
+  ano?: number;
+  mes?: number;
+  tipo?: DashboardAgregadorFiltro;
+}) {
+  const { tenantId, ano, mes, tipo } = input;
+  return useQuery<DashboardMesResponse>({
+    queryKey: queryKeys.admin.agregadores.dashboard(tenantId ?? "", {
+      ano: ano ?? null,
+      mes: mes ?? null,
+      tipo: tipo ?? "TODOS",
+    }),
+    queryFn: () =>
+      getAgregadoresDashboardApi({
+        tenantId: tenantId!,
+        ano,
+        mes,
+        tipo,
+      } satisfies GetAgregadoresDashboardInput),
+    enabled: Boolean(tenantId),
+    staleTime: 60 * 1000,
   });
 }
 
