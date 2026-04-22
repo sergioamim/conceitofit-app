@@ -209,6 +209,23 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     setCart((prev) => [...prev, item]);
   }, []);
 
+  /**
+   * Atualiza a quantidade de um item do carrinho. Aplica-se a PRODUTO e
+   * SERVICO — PLANO ignora (quantidade sempre 1, valida no caller).
+   * Valor efetivo é clamped em [1, 999] pra evitar estado inválido.
+   */
+  const setCartItemQuantidade = useCallback((index: number, next: number) => {
+    const clamped = Math.min(999, Math.max(1, Math.floor(Number.isFinite(next) ? next : 1)));
+    setCart((prev) =>
+      prev.map((item, idx) => {
+        if (idx !== index) return item;
+        if (item.tipo === "PLANO") return item;
+        if (item.quantidade === clamped) return item;
+        return { ...item, quantidade: clamped };
+      }),
+    );
+  }, []);
+
   const removeCartItem = useCallback((index: number) => {
     setCart((prev) => {
       const target = prev[index];
@@ -351,6 +368,7 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     refreshPlanoItems,
     addItemToCart,
     removeCartItem,
+    setCartItemQuantidade,
     clearCart,
     cupomCode,
     setCupomCode,
