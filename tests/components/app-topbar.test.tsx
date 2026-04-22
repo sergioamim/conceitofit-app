@@ -1,10 +1,30 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AppTopbar } from "@/components/layout/app-topbar";
 
 const mockReplace = vi.fn();
 const mockRefresh = vi.fn();
+const mockLocationReplace = vi.fn();
 const mockSetTenant = vi.fn().mockResolvedValue(undefined);
+
+const originalLocation = window.location;
+
+beforeAll(() => {
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: {
+      ...originalLocation,
+      replace: mockLocationReplace,
+    },
+  });
+});
+
+afterAll(() => {
+  Object.defineProperty(window, "location", {
+    configurable: true,
+    value: originalLocation,
+  });
+});
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -43,6 +63,13 @@ vi.mock("@/components/layout/onboarding-status-badge", () => ({
 }));
 
 describe("AppTopbar", () => {
+  beforeEach(() => {
+    mockReplace.mockReset();
+    mockRefresh.mockReset();
+    mockLocationReplace.mockReset();
+    mockSetTenant.mockClear();
+  });
+
   it("renders the topbar with tenant selector", () => {
     render(<AppTopbar />);
     expect(screen.getByTestId("tenant-selector")).toBeInTheDocument();
@@ -61,15 +88,16 @@ describe("AppTopbar", () => {
     expect(onOpenMenu).toHaveBeenCalled();
   });
 
-  it("atualiza o tenant e força refresh quando a troca acontece no dashboard", async () => {
+  it("atualiza o tenant e recarrega o dashboard após trocar a unidade ativa", async () => {
     render(<AppTopbar />);
 
     fireEvent.click(screen.getByTestId("tenant-selector"));
 
     await waitFor(() => {
       expect(mockSetTenant).toHaveBeenCalledWith("t2");
-      expect(mockRefresh).toHaveBeenCalled();
+      expect(mockLocationReplace).toHaveBeenCalledWith("/dashboard");
     });
+    expect(mockRefresh).not.toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
   });
 });
