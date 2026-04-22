@@ -252,9 +252,21 @@ export function useVendaWorkspace() {
         voucherPercent: flow.cupomPercent,
       });
       clearCart();
-      // Invalidar cache de vendas para que a listagem reflita a nova venda
+      // Invalidar caches pra refletir a nova venda + contrato na UI.
+      // - vendas.all: listagem /vendas
+      // - matriculas.all / .byAluno: perfil do cliente (recalcula status ATIVO
+      //   a partir da nova matrícula criada pelo backend em Onda 1).
       if (tenantId) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
+        const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
+        if (criouContrato) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.matriculas.all(tenantId) });
+          if (venda.clienteId) {
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.matriculas.byAluno(tenantId, venda.clienteId),
+            });
+          }
+        }
       }
       items.setSelectedItemId("");
       items.setItemQuery("");

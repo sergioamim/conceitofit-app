@@ -97,10 +97,15 @@ export const queryKeys = {
         ["admin", "agregadores", "configs", tenantId] as const,
       eventos: (tenantId: string, filters: Record<string, unknown>) =>
         ["admin", "agregadores", "eventos", tenantId, filters] as const,
+      dashboard: (tenantId: string, params: Record<string, unknown>) =>
+        ["admin", "agregadores", "dashboard", tenantId, params] as const,
     },
   },
 
   matriculas: {
+    all: (tenantId: string) => ["matriculas", tenantId] as const,
+    byAluno: (tenantId: string, alunoId: string) =>
+      ["matriculas", tenantId, "aluno", alunoId] as const,
     dashboard: (tenantId: string, monthKey: string, page: number) =>
       ["matriculas", "dashboard", tenantId, monthKey, page] as const,
   },
