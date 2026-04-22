@@ -142,6 +142,20 @@ export interface BuildSinaisInput {
   pagamentos: Array<{ status: string; dataVencimento: string; valor?: number }>;
   saldo: number;
   recorrente: { data: string; plano: { nome: string }; valor: number } | null;
+  /**
+   * `true` quando o cliente tem pelo menos 1 avaliação física registrada.
+   * Sem dado, o sinal "Avaliação" é omitido do rail (decisão de produto
+   * 2026-04-22: não poluir com placeholder "Em breve").
+   * Backend pendente: endpoint de avaliações ainda não consumido no workspace.
+   */
+  temAvaliacoes?: boolean;
+  /**
+   * `true` quando o plano ATIVO do cliente permite convidados.
+   * Sem flag `permiteConvidados` no Plano hoje, permanece false → sinal omitido.
+   * Backend pendente: adicionar `permite_convidados` em `plano_extra` quando
+   * o produto de convidados for implementado.
+   */
+  planoPermiteConvidados?: boolean;
 }
 
 export function buildSinaisCliente(input: BuildSinaisInput): Sinal[] {
@@ -245,7 +259,9 @@ export function buildSinaisCliente(input: BuildSinaisInput): Sinal[] {
     });
   }
 
-  // 4. Próxima cobrança
+  // 4. Próxima cobrança — só aparece se o plano atual for recorrente.
+  //    Sem recorrência, o sinal é OMITIDO (decisão 2026-04-22: não poluir
+  //    com placeholder "—/sem recorrência" que não agrega ao operador).
   if (input.recorrente) {
     sinais.push({
       key: "proxima-cobranca",
@@ -258,49 +274,47 @@ export function buildSinaisCliente(input: BuildSinaisInput): Sinal[] {
       hint: formatBRL(input.recorrente.valor),
       tom: "neutro",
     });
-  } else {
-    sinais.push({
-      key: "proxima-cobranca",
-      icon: SinaisIcons.cobranca,
-      label: "Próx. cobrança",
-      valor: "—",
-      hint: "sem recorrência",
-      tom: "vazio",
-    });
   }
 
-  // 5-7. Slots reservados do design — backend ainda não expõe dados.
-  // Renderizados como placeholders desabilitados (pointer-events-none) para
-  // honrar AC3.8 do PRD sem esconder a estrutura visual completa do design.
-  sinais.push(
-    {
+  // 5. Avaliação — aparece só quando há histórico de avaliação registrada.
+  //    Até o workspace puxar `avaliacoes`, `temAvaliacoes` vem false e o
+  //    sinal é omitido. Quando habilitarmos: valor = "N avaliações" ou
+  //    "última em DD/MM" dependendo do design final.
+  if (input.temAvaliacoes) {
+    sinais.push({
       key: "avaliacao",
       icon: SinaisIcons.avaliacao,
       label: "Avaliação",
-      valor: "Em breve",
-      hint: "backend pendente",
-      tom: "vazio",
-      disabled: true,
-    },
-    {
-      key: "fidelidade",
-      icon: SinaisIcons.fidelidade,
-      label: "Fidelidade",
-      valor: "Em breve",
-      hint: "backend pendente",
-      tom: "vazio",
-      disabled: true,
-    },
-    {
+      valor: "Em dia",
+      tom: "ok",
+    });
+  }
+
+  // 6. Fidelidade — sempre visível. Dado ainda não disponível do backend,
+  //    mantido como placeholder por decisão de produto (2026-04-22:
+  //    "fidelidade pode manter assim") até o módulo de pontos ir pro ar.
+  sinais.push({
+    key: "fidelidade",
+    icon: SinaisIcons.fidelidade,
+    label: "Fidelidade",
+    valor: "Em breve",
+    hint: "backend pendente",
+    tom: "vazio",
+    disabled: true,
+  });
+
+  // 7. Convidados — aparece só se o plano ativo permite convidados.
+  //    Flag ainda não existe em `plano_extra` (backend pendente); enquanto
+  //    `planoPermiteConvidados` vier false, o sinal é omitido.
+  if (input.planoPermiteConvidados) {
+    sinais.push({
       key: "convidados",
       icon: SinaisIcons.convidados,
       label: "Convidados",
-      valor: "Em breve",
-      hint: "backend pendente",
-      tom: "vazio",
-      disabled: true,
-    }
-  );
+      valor: "Disponível",
+      tom: "ok",
+    });
+  }
 
   return sinais;
 }

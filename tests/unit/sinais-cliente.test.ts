@@ -25,24 +25,37 @@ function baseInput(overrides: Partial<BuildSinaisInput> = {}): BuildSinaisInput 
 }
 
 describe("buildSinaisCliente", () => {
-  it("retorna sempre 7 sinais: 4 ativos + 3 placeholders desabilitados", () => {
+  it("baseline (cliente com plano não-recorrente e sem avaliações/convidados): 3 ativos + Fidelidade placeholder", () => {
     const sinais = buildSinaisCliente(baseInput());
-    expect(sinais).toHaveLength(7);
-
-    const ativos = sinais.filter((s) => !s.disabled);
+    // 1 Contrato + 2 Frequência + 3 Pendência + 4 Fidelidade (placeholder)
+    // Omitidos: Próx. cobrança (sem recorrência), Avaliação (sem histórico),
+    // Convidados (plano não permite).
+    expect(sinais.map((s) => s.key)).toEqual([
+      "contrato",
+      "frequencia",
+      "pendencia",
+      "fidelidade",
+    ]);
     const desativados = sinais.filter((s) => s.disabled);
-    expect(ativos).toHaveLength(4);
-    expect(desativados).toHaveLength(3);
+    expect(desativados).toHaveLength(1);
+    expect(desativados[0].key).toBe("fidelidade");
   });
 
-  it("slots desabilitados são Avaliação, Fidelidade e Convidados", () => {
-    const sinais = buildSinaisCliente(baseInput());
-    const desativados = sinais.filter((s) => s.disabled).map((s) => s.key);
-    expect(desativados).toEqual(["avaliacao", "fidelidade", "convidados"]);
-    for (const s of sinais.filter((s) => s.disabled)) {
-      expect(s.valor).toBe("Em breve");
-      expect(s.tom).toBe("vazio");
-    }
+  it("Fidelidade permanece como placeholder 'Em breve' (decisão de produto)", () => {
+    const s = buildSinaisCliente(baseInput()).find((x) => x.key === "fidelidade")!;
+    expect(s.valor).toBe("Em breve");
+    expect(s.tom).toBe("vazio");
+    expect(s.disabled).toBe(true);
+  });
+
+  it("sinal Avaliação aparece quando temAvaliacoes=true", () => {
+    const sinais = buildSinaisCliente(baseInput({ temAvaliacoes: true }));
+    expect(sinais.some((s) => s.key === "avaliacao")).toBe(true);
+  });
+
+  it("sinal Convidados aparece quando planoPermiteConvidados=true", () => {
+    const sinais = buildSinaisCliente(baseInput({ planoPermiteConvidados: true }));
+    expect(sinais.some((s) => s.key === "convidados")).toBe(true);
   });
 
   describe("sinal de contrato", () => {
@@ -196,12 +209,11 @@ describe("buildSinaisCliente", () => {
       expect(s.tom).toBe("neutro");
     });
 
-    it("sem recorrência → placeholder vazio", () => {
+    it("sem recorrência → sinal omitido (não poluir o rail)", () => {
       const s = buildSinaisCliente(baseInput()).find(
         (x) => x.key === "proxima-cobranca"
-      )!;
-      expect(s.valor).toBe("—");
-      expect(s.tom).toBe("vazio");
+      );
+      expect(s).toBeUndefined();
     });
   });
 });

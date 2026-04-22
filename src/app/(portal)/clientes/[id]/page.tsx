@@ -111,6 +111,12 @@ export default function ClienteDetalhePage() {
     pagamentos: w.pagamentos,
     saldo: w.saldo,
     recorrente: w.recorrente,
+    // TODO(VUN-perfil): quando o workspace carregar histórico de avaliações,
+    // passar `w.avaliacoes.length > 0`. Por ora, sem dado → sinal omitido.
+    temAvaliacoes: false,
+    // TODO(VUN-perfil): depende de `plano_extra.permite_convidados` ser
+    // adicionado no backend. Por ora, sem flag → sinal omitido.
+    planoPermiteConvidados: false,
   });
 
   // Perfil v3 — Wave 2: drawer de próximas ações
