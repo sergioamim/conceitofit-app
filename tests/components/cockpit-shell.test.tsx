@@ -69,10 +69,10 @@ describe("CockpitShell (VUN-1.2)", () => {
     expect(header.className).toContain("bg-ink");
   });
 
-  it("corpo é um grid 3 colunas com larguras do PRD", () => {
+  it("corpo é um grid 3 colunas com larguras do PRD quando columnLeft presente", () => {
     render(
       <CockpitShell
-        columnLeft={null}
+        columnLeft={<div />}
         columnCenter={null}
         columnRight={null}
       />,
@@ -88,10 +88,31 @@ describe("CockpitShell (VUN-1.2)", () => {
     );
   });
 
-  it("colunas esquerda e central têm separador por border-right; a direita não", () => {
+  it("VUN-Onda-4: colapsa pra 2 colunas quando columnLeft é null/omitido", () => {
     render(
       <CockpitShell
         columnLeft={null}
+        columnCenter={null}
+        columnRight={null}
+      />,
+    );
+
+    const body = screen.getByTestId("cockpit-shell-body");
+    expect(body.className).toContain("grid");
+    expect(body.className).toContain("grid-cols-[minmax(0,1fr)_380px]");
+    expect(body.className).toContain(
+      "min-[1440px]:grid-cols-[minmax(0,1fr)_400px]",
+    );
+    // Sem columnLeft renderizada
+    expect(
+      screen.queryByTestId("cockpit-shell-column-left"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("colunas esquerda e central têm separador por border-right; a direita não", () => {
+    render(
+      <CockpitShell
+        columnLeft={<div />}
         columnCenter={null}
         columnRight={null}
       />,
@@ -109,7 +130,7 @@ describe("CockpitShell (VUN-1.2)", () => {
   it("cada coluna é independentemente rolável (overflow-y-auto)", () => {
     render(
       <CockpitShell
-        columnLeft={null}
+        columnLeft={<div />}
         columnCenter={null}
         columnRight={null}
       />,

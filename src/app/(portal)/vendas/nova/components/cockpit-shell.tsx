@@ -13,7 +13,13 @@ type CockpitShellProps = {
   headerLeft?: ReactNode;
   headerCenter?: ReactNode;
   headerRight?: ReactNode;
-  columnLeft: ReactNode;
+  /**
+   * Slot esquerdo. Opcional a partir de VUN-Onda-4 (2026-04-22): quando
+   * ausente/null, o layout colapsa pra 2 colunas (centro expandido + direita).
+   * Deprecado no cockpit novo — cliente e item search migraram pro header
+   * via UniversalSearch (⌘K).
+   */
+  columnLeft?: ReactNode;
   columnCenter: ReactNode;
   columnRight: ReactNode;
 };
@@ -26,6 +32,7 @@ export function CockpitShell({
   columnCenter,
   columnRight,
 }: CockpitShellProps) {
+  const hasLeft = columnLeft != null && columnLeft !== false;
   return (
     <div
       className="flex h-full min-h-0 flex-col bg-background"
@@ -56,15 +63,21 @@ export function CockpitShell({
       </header>
 
       <div
-        className="grid min-h-0 flex-1 grid-cols-[320px_minmax(0,1fr)_380px] min-[1440px]:grid-cols-[360px_minmax(0,1fr)_400px]"
+        className={
+          hasLeft
+            ? "grid min-h-0 flex-1 grid-cols-[320px_minmax(0,1fr)_380px] min-[1440px]:grid-cols-[360px_minmax(0,1fr)_400px]"
+            : "grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_380px] min-[1440px]:grid-cols-[minmax(0,1fr)_400px]"
+        }
         data-testid="cockpit-shell-body"
       >
-        <aside
-          className="flex h-full min-h-0 flex-col overflow-y-auto border-r border-border bg-card"
-          data-testid="cockpit-shell-column-left"
-        >
-          {columnLeft}
-        </aside>
+        {hasLeft ? (
+          <aside
+            className="flex h-full min-h-0 flex-col overflow-y-auto border-r border-border bg-card"
+            data-testid="cockpit-shell-column-left"
+          >
+            {columnLeft}
+          </aside>
+        ) : null}
         <section
           className="flex h-full min-h-0 flex-col overflow-y-auto border-r border-border"
           data-testid="cockpit-shell-column-center"
