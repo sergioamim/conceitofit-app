@@ -86,6 +86,7 @@ export interface CatracaAcesso {
   reason?: string;
   createdBy?: string;
   issuedBy?: string;
+  systemName?: string;
   occurredAt?: string;
   createdAt?: string;
   raw: Record<string, unknown>;
@@ -646,6 +647,7 @@ function normalizeAcessoItem(item: unknown, index: number): CatracaAcesso | null
       toStringByKeysInRecord(metadata, ["reason", "motivo", "justificativa", "ackMessage"]),
     createdBy,
     issuedBy,
+    systemName: toStringByKeys(record, ["systemName", "system_name"]),
     occurredAt: toStringByKeys(record, ["occurredAt", "eventAt", "dataOcorrencia"]),
     createdAt: toStringByKeys(record, [
       "createdAt",

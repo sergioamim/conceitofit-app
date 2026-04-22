@@ -106,6 +106,24 @@ function isBlockedStatus(value?: string): boolean {
   return /(BLOQUEADO|NEGADO|DENIED|RECUSADO|ERRO|FAIL)/.test(status);
 }
 
+function resolveOrigemDisplay(systemName?: string): { label: string; className: string } | null {
+  const normalized = systemName?.trim().toUpperCase();
+  if (!normalized) return null;
+  if (normalized === "AGREGADOR_WELLHUB") {
+    return { label: "Wellhub", className: "border-gym-accent/30 bg-gym-accent/10 text-gym-accent" };
+  }
+  if (normalized === "AGREGADOR_TOTALPASS") {
+    return { label: "TotalPass", className: "border-gym-accent/30 bg-gym-accent/10 text-gym-accent" };
+  }
+  if (normalized === "VISITANTE_APP") {
+    return { label: "Visitante", className: "border-gym-warning/30 bg-gym-warning/10 text-gym-warning" };
+  }
+  if (normalized === "MANUAL_OPERADOR") {
+    return { label: "Operador", className: "border-gym-warning/30 bg-gym-warning/10 text-gym-warning" };
+  }
+  return { label: normalized, className: "border-border bg-secondary text-muted-foreground" };
+}
+
 function resolveTipoExibicao(item: Pick<CatracaAcesso, "releaseType" | "issuedBy" | "status">): {
   label: "Manual" | "Liberado" | "Bloqueado";
   className: string;
@@ -723,6 +741,15 @@ export default function CatracaAcessosPage() {
                       <p className={`text-[11px] ${getStatusClass(item.status)} inline-flex rounded-full border px-2 py-0.5`}>
                         {statusLabel}
                       </p>
+                      {(() => {
+                        const origem = resolveOrigemDisplay(item.systemName);
+                        if (!origem) return null;
+                        return (
+                          <p className={`text-[11px] ${origem.className} inline-flex rounded-full border px-2 py-0.5`}>
+                            {origem.label}
+                          </p>
+                        );
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground">
