@@ -100,9 +100,12 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     loadInitialData();
   }, [loadInitialData]);
 
-  useEffect(() => {
-    setDataInicioPlano((current) => current || getBusinessTodayIso());
-  }, []);
+  // Nota: antes havia um useEffect que setava dataInicioPlano = hoje na
+  // montagem. Removido em VUN-Onda-3 (2026-04-22) porque estava sobrescrevendo
+  // a sugestão de sequência (`contratoAtivo.dataFim + 1`) calculada pelo hook
+  // `useDataInicioSugerida` no PaymentPanel. Agora dataInicioPlano começa
+  // vazio ("") e o PaymentPanel renderiza `dataInicioSugerida` como fallback
+  // tanto no input quanto no payload da venda.
 
   const selectedPlano = useMemo(
     () => planos.find((plano) => plano.id === selectedPlanoId),
@@ -130,7 +133,10 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
     if (!selectedPlano) return null;
     return planoDryRun({
       plano: selectedPlano,
-      dataInicio: dataInicioPlano,
+      // Fallback: enquanto o usuário não interage com o input e `dataInicioPlano`
+      // está vazio, o dry-run usa a data de hoje — o valor efetivo mandado ao
+      // backend continua opcional (use-venda-workspace decide).
+      dataInicio: dataInicioPlano || getBusinessTodayIso(),
       parcelasAnuidade: parseInt(parcelasAnuidade, 10) || 1,
       manualDiscount,
       motivoDesconto,
