@@ -28,6 +28,10 @@ import { Badge } from "@/components/ui/badge";
 import { FotoAvisoBadge } from "@/components/shared/foto-aviso-badge";
 import { cn } from "@/lib/utils";
 import { getHaloRingClass, type HaloStatus } from "@/lib/domain/status-helpers";
+import {
+  ClienteStatusBannersCompact,
+  type BannerData,
+} from "@/app/(portal)/clientes/[id]/cliente-status-banners";
 
 export function ClienteHeader({
   aluno,
@@ -57,6 +61,7 @@ export function ClienteHeader({
   haloStatus,
   onAcoesClick,
   acoesCount,
+  banners = [],
 }: {
   aluno: Aluno;
   planoAtivo?: { dataFim: string } | null;
@@ -85,6 +90,12 @@ export function ClienteHeader({
   haloStatus?: HaloStatus;
   onAcoesClick?: () => void;
   acoesCount?: number;
+  /**
+   * Indicadores de status do cliente (banners) — renderizados como chips
+   * compactos no canto inferior direito do hero, ordenação visual
+   * direita→esquerda. Lista calculada via `computeClienteBanners`.
+   */
+  banners?: BannerData[];
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -183,7 +194,8 @@ export function ClienteHeader({
           </div>
         </div>
       </div>
-      <div className="flex items-start gap-2">
+      <div className="flex flex-col items-end gap-2">
+        <div className="flex items-start gap-2">
         {/* W2.2 — Ações rápidas: WhatsApp */}
         {whatsappUrl && (
           <a
@@ -296,6 +308,9 @@ export function ClienteHeader({
             </div>
           )}
         </div>
+        </div>
+        {/* Indicadores de status — canto inferior direito, direita→esquerda */}
+        {banners.length > 0 ? <ClienteStatusBannersCompact banners={banners} /> : null}
       </div>
     </div>
   );

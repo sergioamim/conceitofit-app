@@ -27,7 +27,7 @@ import { bloquearAcessoApi, desbloquearAcessoApi, excluirDadosPessoaisApi, exclu
 import { useClienteWorkspace } from "./use-cliente-workspace";
 import { ClienteDialogs } from "./cliente-dialogs";
 import { ClienteSidebar } from "./cliente-sidebar";
-import { ClienteStatusBanners } from "./cliente-status-banners";
+import { computeClienteBanners } from "./cliente-status-banners";
 import { ClienteSinaisRail, buildSinaisCliente } from "./cliente-sinais-rail";
 import { ClienteAcoesDrawer } from "./cliente-acoes-drawer";
 import { ClienteFrequenciaCard } from "./cliente-frequencia-card";
@@ -102,6 +102,15 @@ export default function ClienteDetalhePage() {
     acessoBloqueado,
     pendenteFinanceiro: w.pendenteFinanceiro,
     planoAtivo: w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null,
+  });
+
+  const banners = computeClienteBanners({
+    aluno,
+    suspenso: w.suspenso,
+    pendenteFinanceiro: w.pendenteFinanceiro,
+    planoAtivo: w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null,
+    presencas: w.presencas,
+    pagamentos: w.pagamentos,
   });
 
   const sinais = buildSinaisCliente({
@@ -282,6 +291,7 @@ export default function ClienteDetalhePage() {
         }}
         acessoBloqueado={acessoBloqueado}
         haloStatus={haloStatus}
+        banners={banners}
         onAcoesClick={
           drawerAcoesEnabled
             ? () => {
@@ -330,15 +340,8 @@ export default function ClienteDetalhePage() {
         </div>
       )}
 
-      {/* Status banners */}
-      <ClienteStatusBanners
-        aluno={aluno}
-        suspenso={w.suspenso}
-        pendenteFinanceiro={w.pendenteFinanceiro}
-        planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
-        presencas={w.presencas}
-        pagamentos={w.pagamentos}
-      />
+      {/* Status banners agora ficam embutidos no ClienteHeader (canto
+          inferior direito). Bloco removido em 2026-04-22. */}
 
       {/* Suspensão ativa */}
       {w.suspenso && aluno.suspensao && (
