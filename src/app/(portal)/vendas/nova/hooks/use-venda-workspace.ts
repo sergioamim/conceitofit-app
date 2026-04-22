@@ -252,29 +252,32 @@ export function useVendaWorkspace() {
         voucherPercent: flow.cupomPercent,
       });
       clearCart();
-      // Invalidar caches pra refletir a nova venda + contrato na UI.
-      // - vendas.all: listagem /vendas
-      // - matriculas.all / .byAluno: perfil do cliente (recalcula status ATIVO
-      //   a partir da nova matrícula criada pelo backend em Onda 1).
-      if (tenantId) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
-        const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
-        if (criouContrato) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.matriculas.all(tenantId) });
-          if (venda.clienteId) {
-            void queryClient.invalidateQueries({
-              queryKey: queryKeys.matriculas.byAluno(tenantId, venda.clienteId),
-            });
+      // Defer invalidações + resets pra DEPOIS do modal de recibo montar.
+      // Razão: fazer tudo no mesmo tick (abrir modal + 10+ setStates + cache
+      // invalidations) disputa com os 6 useEffects de sync form↔workspace do
+      // PaymentPanel e gera "Maximum update depth exceeded" no DialogOverlay.
+      // O setTimeout(0) isola o "fechar venda" do "limpar cockpit".
+      setTimeout(() => {
+        if (tenantId) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
+          const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
+          if (criouContrato) {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.matriculas.all(tenantId) });
+            if (venda.clienteId) {
+              void queryClient.invalidateQueries({
+                queryKey: queryKeys.matriculas.byAluno(tenantId, venda.clienteId),
+              });
+            }
           }
         }
-      }
-      items.setSelectedItemId("");
-      items.setItemQuery("");
-      items.setQtd("1");
-      // VUN-3.3: reset dos extras do PaymentPanel após confirmação.
-      setFormaPagamentoState("PIX");
-      setParcelasState(1);
-      setAutorizacaoState("");
+        items.setSelectedItemId("");
+        items.setItemQuery("");
+        items.setQtd("1");
+        // VUN-3.3: reset dos extras do PaymentPanel após confirmação.
+        setFormaPagamentoState("PIX");
+        setParcelasState(1);
+        setAutorizacaoState("");
+      }, 0);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro ao registrar venda");
     }
