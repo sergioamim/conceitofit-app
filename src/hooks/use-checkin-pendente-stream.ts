@@ -88,8 +88,13 @@ export function useCheckinPendenteStream({
 
     function connect() {
       if (cancelled) return;
+      // URL passa pelo rewrite `/backend/:path*` definido em next.config.ts
+      // (proxy pro backend Spring). Sem o prefixo `/backend/`, Next servia
+      // 404 direto do próprio server — reconnect-backoff em loop degradava
+      // o cockpit e contribuía pra "Maximum update depth exceeded" visto no
+      // DialogOverlay quando outros componentes disputavam re-render.
       const es = new EventSource(
-        `/api/v1/cockpit/stream?tenantId=${encodeURIComponent(tenantId!)}&timeout=300000`,
+        `/backend/api/v1/cockpit/stream?tenantId=${encodeURIComponent(tenantId!)}&timeout=300000`,
       );
       eventSourceRef.current = es;
 
