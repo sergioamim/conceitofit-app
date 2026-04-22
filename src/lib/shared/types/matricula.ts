@@ -5,7 +5,7 @@ import { Aluno } from './aluno';
 import { Plano } from './plano';
 import { PagamentoResumo, TipoFormaPagamento } from './pagamento';
 
-export type StatusMatricula = "ATIVA" | "VENCIDA" | "CANCELADA" | "SUSPENSA";
+export type StatusContrato = "ATIVA" | "VENCIDA" | "CANCELADA" | "SUSPENSA";
 export type StatusFluxoComercial =
   | "AGUARDANDO_PAGAMENTO"
   | "AGUARDANDO_ASSINATURA"
@@ -13,7 +13,7 @@ export type StatusFluxoComercial =
   | "CANCELADO"
   | "VENCIDO";
 
-export interface Matricula {
+export interface Contrato {
   id: UUID;
   tenantId: UUID;
   alunoId: UUID;
@@ -27,7 +27,7 @@ export interface Matricula {
   desconto: number;
   motivoDesconto?: string;
   formaPagamento: TipoFormaPagamento;
-  status: StatusMatricula;
+  status: StatusContrato;
   renovacaoAutomatica: boolean;
   observacoes?: string;
   origemVendaId?: UUID;

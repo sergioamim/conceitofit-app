@@ -20,7 +20,7 @@ import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { listConveniosApi } from "@/lib/api/beneficios";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
-import { listMatriculasApi } from "@/lib/api/matriculas";
+import { listContratosApi } from "@/lib/api/matriculas";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import {
   type ImportarPagamentosResultado,
@@ -49,7 +49,7 @@ import type {
   StatusPagamento,
   TipoFormaPagamento,
   FormaPagamento,
-  Matricula,
+  Contrato,
   Convenio,
   NfseConfiguracao,
 } from "@/lib/types";
@@ -59,7 +59,7 @@ function PagamentosPageContent() {
   const { tenantId } = useTenantContext();
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
   const [clientes, setClientes] = useState<Aluno[]>([]);
-  const [matriculas, setMatriculas] = useState<Matricula[]>([]);
+  const [matriculas, setMatriculas] = useState<Contrato[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [filtro, setFiltro] = useState<WithFilterAll<StatusPagamento>>(FILTER_ALL);
   const [recebendo, setRecebendo] = useState<PagamentoComAluno | null>(null);
@@ -94,7 +94,7 @@ function PagamentosPageContent() {
     const [fps, cls, mats, cvs, nfseConfig] = await Promise.all([
       listFormasPagamentoApi({ tenantId, apenasAtivas: false }),
       listAlunosApi({ tenantId, page: 0, size: 500 }),
-      listMatriculasApi({ tenantId, page: 0, size: 500 }),
+      listContratosApi({ tenantId, page: 0, size: 500 }),
       listConveniosApi(),
       // Task #556: unidadeId = tenantId (modelo AIOX)
       getNfseConfiguracaoAtualApi({ tenantId, unidadeId: tenantId }).catch(

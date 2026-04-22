@@ -1,96 +1,96 @@
 "use client";
 
 import {
-  cancelarMatriculaApi,
-  createMatriculaApi,
-  listMatriculasDashboardMensalApi,
-  listMatriculasApi,
-  listMatriculasByAlunoApi,
-  listMatriculasPageApi,
-  renovarMatriculaApi,
+  cancelarContratoApi,
+  createContratoApi,
+  listContratosDashboardMensalApi,
+  listContratosApi,
+  listContratosByAlunoApi,
+  listContratosPageApi,
+  renovarContratoApi,
 } from "@/lib/api/matriculas";
 import { createAssinaturaApi, cancelarAssinaturaApi } from "@/lib/api/billing";
 import { logger } from "@/lib/shared/logger";
-import { type Contrato, contratoFromMatricula } from "./contratos";
+import { type ContratoView, contratoViewFromMatricula } from "./contratos";
 
-async function listMatriculasService(input: {
+async function listContratosService(input: {
   tenantId: string;
   status?: string;
   page?: number;
   size?: number;
 }) {
-  return listMatriculasApi(input);
+  return listContratosApi(input);
 }
 
-async function listMatriculasPageService(input: {
+async function listContratosPageService(input: {
   tenantId: string;
   status?: string;
   page?: number;
   size?: number;
 }) {
-  return listMatriculasPageApi(input);
+  return listContratosPageApi(input);
 }
 
-export async function getMatriculasDashboardMensalService(input: {
+export async function getContratosDashboardMensalService(input: {
   tenantId: string;
   mes: string;
   page?: number;
   size?: number;
 }) {
-  return listMatriculasDashboardMensalApi(input);
+  return listContratosDashboardMensalApi(input);
 }
 
-export async function listMatriculasByAlunoService(input: {
+export async function listContratosByAlunoService(input: {
   tenantId: string;
   alunoId: string;
   page?: number;
   size?: number;
 }) {
-  return listMatriculasByAlunoApi(input);
+  return listContratosByAlunoApi(input);
 }
 
-async function createMatriculaService(input: {
+async function createContratoService(input: {
   tenantId: string;
-  data: Parameters<typeof createMatriculaApi>[0]["data"];
+  data: Parameters<typeof createContratoApi>[0]["data"];
   planoRecorrente?: boolean;
   cicloPlano?: "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
 }) {
-  const matricula = await createMatriculaApi({
+  const contrato = await createContratoApi({
     tenantId: input.tenantId,
     data: input.data,
   });
 
   // Se plano recorrente, criar assinatura no gateway de billing
-  if (input.planoRecorrente && matricula.alunoId && matricula.planoId) {
+  if (input.planoRecorrente && contrato.alunoId && contrato.planoId) {
     try {
       const assinatura = await createAssinaturaApi({
         tenantId: input.tenantId,
         data: {
-          alunoId: matricula.alunoId,
-          planoId: matricula.planoId,
-          dataInicio: matricula.dataInicio,
+          alunoId: contrato.alunoId,
+          planoId: contrato.planoId,
+          dataInicio: contrato.dataInicio,
           ciclo: input.cicloPlano,
         },
       });
-      matricula.assinaturaId = assinatura.id;
-      matricula.assinaturaStatus = assinatura.status;
+      contrato.assinaturaId = assinatura.id;
+      contrato.assinaturaStatus = assinatura.status;
     } catch (error) {
-      logger.warn("[Matricula] Falha ao criar assinatura recorrente, matrícula criada sem billing", {
+      logger.warn("[Contrato] Falha ao criar assinatura recorrente, contrato criado sem billing", {
         module: "enrollments",
         error,
       });
     }
   }
 
-  return matricula;
+  return contrato;
 }
 
-export async function cancelarMatriculaService(input: {
+export async function cancelarContratoService(input: {
   tenantId: string;
   id: string;
   assinaturaId?: string;
 }): Promise<void> {
-  await cancelarMatriculaApi({ tenantId: input.tenantId, id: input.id });
+  await cancelarContratoApi({ tenantId: input.tenantId, id: input.id });
 
   // Propagar cancelamento para a assinatura se existir
   if (input.assinaturaId) {
@@ -100,7 +100,7 @@ export async function cancelarMatriculaService(input: {
         id: input.assinaturaId,
       });
     } catch (error) {
-      logger.warn("[Matricula] Falha ao cancelar assinatura vinculada", {
+      logger.warn("[Contrato] Falha ao cancelar assinatura vinculada", {
         module: "enrollments",
         error,
       });
@@ -108,30 +108,30 @@ export async function cancelarMatriculaService(input: {
   }
 }
 
-export async function renovarMatriculaService(input: {
+export async function renovarContratoService(input: {
   tenantId: string;
   id: string;
   planoId?: string;
 }): Promise<void> {
-  return renovarMatriculaApi(input);
+  return renovarContratoApi(input);
 }
 
-async function listContratosService(input: {
+async function listContratosViewService(input: {
   tenantId: string;
   status?: string;
   page?: number;
   size?: number;
-}): Promise<Contrato[]> {
-  const matriculas = await listMatriculasApi(input);
-  return matriculas.map(contratoFromMatricula);
+}): Promise<ContratoView[]> {
+  const contratos = await listContratosApi(input);
+  return contratos.map(contratoViewFromMatricula);
 }
 
-async function listContratosByAlunoService(input: {
+async function listContratosViewByAlunoService(input: {
   tenantId: string;
   alunoId: string;
   page?: number;
   size?: number;
-}): Promise<Contrato[]> {
-  const matriculas = await listMatriculasByAlunoApi(input);
-  return matriculas.map(contratoFromMatricula);
+}): Promise<ContratoView[]> {
+  const contratos = await listContratosByAlunoApi(input);
+  return contratos.map(contratoViewFromMatricula);
 }

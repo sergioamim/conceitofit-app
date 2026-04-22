@@ -1,6 +1,6 @@
 import { UUID, LocalDate, LocalDateTime, Sexo, Endereco, ContatoEmergencia } from './comum';
 import { Aluno } from './aluno';
-import { Matricula } from './matricula';
+import { Contrato } from './matricula';
 import { Pagamento, TipoFormaPagamento } from './pagamento';
 
 export type OrigemProspect =
@@ -92,7 +92,7 @@ export interface ConverterProspectInput {
 
 export interface ConverterProspectResponse {
   aluno: Aluno;
-  matricula: Matricula;
+  matricula: Contrato;
   pagamento: Pagamento;
 }
 

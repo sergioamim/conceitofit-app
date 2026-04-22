@@ -8,7 +8,7 @@ import {
   formatDateLabel,
   formatMonthLabel,
 } from "@/lib/tenant/comercial/matriculas-insights";
-import type { MatriculaDashboardMensalPlano } from "@/lib/api/matriculas";
+import type { ContratoDashboardMensalPlano } from "@/lib/api/matriculas";
 import {
   resolveContratoStatusFromPlano,
   resolveFluxoComercialStatus,
@@ -16,7 +16,7 @@ import {
   STATUS_FLUXO_COMERCIAL_LABEL,
 } from "@/lib/tenant/comercial/plano-flow";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { useMatriculas, useRenovarMatricula, useCancelarMatricula } from "@/lib/query/use-matriculas";
+import { useContratos, useRenovarContrato, useCancelarContrato } from "@/lib/query/use-matriculas";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL } from "@/lib/formatters";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
@@ -70,7 +70,7 @@ function getAssinaturaBadgeClass(status: string): string {
   return "bg-muted text-muted-foreground";
 }
 
-function buildPieGradient(groups: MatriculaDashboardMensalPlano[]) {
+function buildPieGradient(groups: ContratoDashboardMensalPlano[]) {
   if (groups.length === 0) {
     return "conic-gradient(var(--muted) 0deg 360deg)";
   }
@@ -104,7 +104,7 @@ export function MatriculasClient() {
     setSelectedMonthKey(buildMonthKeyFromDate(new Date()));
   }, []);
 
-  const { data: dashboard, isLoading: loading, error: queryError, refetch } = useMatriculas({
+  const { data: dashboard, isLoading: loading, error: queryError, refetch } = useContratos({
     tenantId,
     tenantResolved,
     monthKey: selectedMonthKey,
@@ -112,8 +112,8 @@ export function MatriculasClient() {
   });
 
   const error = queryError ? normalizeErrorMessage(queryError) : null;
-  const renovarMutation = useRenovarMatricula();
-  const cancelarMutation = useCancelarMatricula();
+  const renovarMutation = useRenovarContrato();
+  const cancelarMutation = useCancelarContrato();
 
   useEffect(() => {
     setPage(0);

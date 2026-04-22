@@ -262,10 +262,10 @@ export function useVendaWorkspace() {
           void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
           const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
           if (criouContrato) {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.matriculas.all(tenantId) });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.contratos.all(tenantId) });
             if (venda.clienteId) {
               void queryClient.invalidateQueries({
-                queryKey: queryKeys.matriculas.byAluno(tenantId, venda.clienteId),
+                queryKey: queryKeys.contratos.byAluno(tenantId, venda.clienteId),
               });
             }
           }

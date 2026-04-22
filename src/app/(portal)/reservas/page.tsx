@@ -6,7 +6,7 @@ import {
   listAlunosApi,
 } from "@/lib/api/alunos";
 import { listAtividadesApi } from "@/lib/api/administrativo";
-import { listMatriculasApi } from "@/lib/api/matriculas";
+import { listContratosApi } from "@/lib/api/matriculas";
 import {
   cancelarReservaAulaApi,
   getAulaOcupacaoApi,
@@ -22,7 +22,7 @@ import type {
   Atividade,
   AulaOcupacao,
   AulaSessao,
-  Matricula,
+  Contrato,
   ReservaAula,
 } from "@/lib/types";
 import { RESERVA_AULA_STATUS_LABEL } from "@/lib/tenant/aulas/reservas";
@@ -64,7 +64,7 @@ export default function ReservasPage() {
   const [sessions, setSessions] = useState<AulaSessao[]>([]);
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [alunos, setAlunos] = useState<Aluno[]>([]);
-  const [matriculas, setMatriculas] = useState<(Matricula & { aluno?: Aluno })[]>([]);
+  const [matriculas, setMatriculas] = useState<(Contrato & { aluno?: Aluno })[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
   const [selectedOccupancy, setSelectedOccupancy] = useState<AulaOcupacao | null>(null);
   const [backofficeAlunoId, setBackofficeAlunoId] = useState("");
@@ -94,7 +94,7 @@ export default function ReservasPage() {
         }),
         listAtividadesApi({ tenantId: tenantContext.tenantId, apenasAtivas: true }),
         listAlunosApi({ tenantId: tenantContext.tenantId, status: "ATIVO", page: 0, size: 200 }),
-        listMatriculasApi({ tenantId: tenantContext.tenantId, status: "ATIVA" }),
+        listContratosApi({ tenantId: tenantContext.tenantId, status: "ATIVA" }),
       ]);
       const alunosRows = extractAlunosFromListResponse(alunoRows);
 

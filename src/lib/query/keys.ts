@@ -102,7 +102,7 @@ export const queryKeys = {
     },
   },
 
-  matriculas: {
+  contratos: {
     all: (tenantId: string) => ["matriculas", tenantId] as const,
     byAluno: (tenantId: string, alunoId: string) =>
       ["matriculas", tenantId, "aluno", alunoId] as const,

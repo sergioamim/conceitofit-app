@@ -4,7 +4,7 @@ import type {
   Academia,
   Aluno,
   AtividadeGrade,
-  Matricula,
+  Contrato,
   Pagamento,
   Prospect,
   ReservaAula,
@@ -77,7 +77,7 @@ test.describe("BI analytics helpers", () => {
       dataCadastro: "2026-03-06T14:10:00",
     },
   ];
-  const matriculas: Matricula[] = [
+  const matriculas: Contrato[] = [
     {
       id: "mt-1",
       tenantId: "tn-1",

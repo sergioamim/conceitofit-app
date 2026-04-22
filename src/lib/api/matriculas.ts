@@ -1,7 +1,7 @@
-import type { Aluno, Matricula, PaginatedResult, PagamentoResumo, Plano, TipoFormaPagamento } from "@/lib/types";
+import type { Aluno, Contrato, PaginatedResult, PagamentoResumo, Plano, TipoFormaPagamento } from "@/lib/types";
 import { ApiRequestError, apiRequest, apiRequestWithMeta } from "./http";
 
-export type MatriculaResponse = {
+export type ContratoApiResponse = {
   id?: string;
   tenantId?: string;
   clienteId?: string | null;
@@ -14,15 +14,15 @@ export type MatriculaResponse = {
   desconto?: unknown;
   motivoDesconto?: string | null;
   formaPagamento?: TipoFormaPagamento | null;
-  status?: Matricula["status"] | null;
+  status?: Contrato["status"] | null;
   renovacaoAutomatica?: unknown;
   observacoes?: string | null;
   dataCriacao?: string;
   dataAtualizacao?: string | null;
   convenioId?: string | null;
   origemVendaId?: string | null;
-  contratoStatus?: Matricula["contratoStatus"] | null;
-  contratoAdesaoStatus?: Matricula["contratoStatus"] | null;
+  contratoStatus?: Contrato["contratoStatus"] | null;
+  contratoAdesaoStatus?: Contrato["contratoStatus"] | null;
   contratoModoAssinatura?: Plano["contratoAssinatura"] | null;
   contratoEnviadoAutomaticamente?: unknown;
   contratoUltimoEnvioEm?: string | null;
@@ -47,15 +47,15 @@ function canFallbackToLegacyMatriculas(error: unknown): boolean {
   return error instanceof ApiRequestError && [404, 405, 501].includes(error.status);
 }
 
-async function requestMatriculasList(
+async function requestContratosList(
   paths: string[],
   query: Record<string, string | number | boolean | undefined>
-): Promise<MatriculaResponse[]> {
+): Promise<ContratoApiResponse[]> {
   let lastError: unknown;
 
   for (const path of paths) {
     try {
-      return await apiRequest<MatriculaResponse[]>({
+      return await apiRequest<ContratoApiResponse[]>({
         path,
         query,
       });
@@ -71,15 +71,15 @@ async function requestMatriculasList(
   throw lastError instanceof Error ? lastError : new Error("Não foi possível carregar as adesões.");
 }
 
-async function requestMatriculasListWithMeta(
+async function requestContratosListWithMeta(
   paths: string[],
   query: Record<string, string | number | boolean | undefined>
-): Promise<{ data: MatriculaResponse[]; headers: Record<string, string> }> {
+): Promise<{ data: ContratoApiResponse[]; headers: Record<string, string> }> {
   let lastError: unknown;
 
   for (const path of paths) {
     try {
-      return await apiRequestWithMeta<MatriculaResponse[]>({
+      return await apiRequestWithMeta<ContratoApiResponse[]>({
         path,
         query,
       });
@@ -95,7 +95,7 @@ async function requestMatriculasListWithMeta(
   throw lastError instanceof Error ? lastError : new Error("Não foi possível carregar as adesões.");
 }
 
-export type CreateMatriculaApiInput = {
+export type CreateContratoApiInput = {
   alunoId: string;
   planoId: string;
   dataInicio: string;
@@ -188,7 +188,7 @@ function normalizePlanoEmbedded(input: Partial<Plano> | null | undefined, tenant
 }
 
 function normalizePagamentoResumoEmbedded(
-  input: MatriculaResponse["pagamento"]
+  input: ContratoApiResponse["pagamento"]
 ): PagamentoResumo | undefined {
   if (!input || typeof input !== "object" || typeof input.id !== "string") {
     return undefined;
@@ -213,7 +213,7 @@ function getHeaderNumber(headers: Record<string, string>, key: string): number |
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-export function normalizeMatriculaApiResponse(input: MatriculaResponse): Matricula & {
+export function normalizeContratoApiResponse(input: ContratoApiResponse): Contrato & {
   aluno?: Aluno;
   plano?: Plano;
 } {
@@ -259,9 +259,9 @@ export function normalizeMatriculaApiResponse(input: MatriculaResponse): Matricu
   };
 }
 
-export type MatriculaPageResult = PaginatedResult<Matricula & { aluno?: Aluno; plano?: Plano }>;
+export type ContratoPageResult = PaginatedResult<Contrato & { aluno?: Aluno; plano?: Plano }>;
 
-export type MatriculaDashboardMensalResumo = {
+export type ContratoDashboardMensalResumo = {
   totalContratos: number;
   contratosAtivos: number;
   percentualAtivos: number;
@@ -271,7 +271,7 @@ export type MatriculaDashboardMensalResumo = {
   insight: string;
 };
 
-export type MatriculaDashboardMensalPlano = {
+export type ContratoDashboardMensalPlano = {
   planoId?: string;
   planoNome: string;
   quantidade: number;
@@ -279,22 +279,22 @@ export type MatriculaDashboardMensalPlano = {
   percentual: number;
 };
 
-export type MatriculaDashboardMensalContratosPage = {
-  items: Array<Matricula & { aluno?: Aluno; plano?: Plano }>;
+export type ContratoDashboardMensalContratosPage = {
+  items: Array<Contrato & { aluno?: Aluno; plano?: Plano }>;
   page: number;
   size: number;
   totalItems: number;
   totalPages: number;
 };
 
-export type MatriculaDashboardMensalResult = {
+export type ContratoDashboardMensalResult = {
   mes: string;
-  resumo: MatriculaDashboardMensalResumo;
-  carteiraAtivaPorPlano: MatriculaDashboardMensalPlano[];
-  contratos: MatriculaDashboardMensalContratosPage;
+  resumo: ContratoDashboardMensalResumo;
+  carteiraAtivaPorPlano: ContratoDashboardMensalPlano[];
+  contratos: ContratoDashboardMensalContratosPage;
 };
 
-type MatriculaDashboardMensalResumoResponse = {
+type ContratoDashboardMensalResumoResponse = {
   totalContratos?: unknown;
   contratosAtivos?: unknown;
   percentualAtivos?: unknown;
@@ -304,7 +304,7 @@ type MatriculaDashboardMensalResumoResponse = {
   insight?: string | null;
 };
 
-type MatriculaDashboardMensalPlanoResponse = {
+type ContratoDashboardMensalPlanoResponse = {
   planoId?: string | null;
   planoNome?: string | null;
   quantidade?: unknown;
@@ -312,24 +312,24 @@ type MatriculaDashboardMensalPlanoResponse = {
   percentual?: unknown;
 };
 
-type MatriculaDashboardMensalContratosPageResponse = {
-  items?: MatriculaResponse[] | null;
+type ContratoDashboardMensalContratosPageResponse = {
+  items?: ContratoApiResponse[] | null;
   page?: unknown;
   size?: unknown;
   totalItems?: unknown;
   totalPages?: unknown;
 };
 
-type MatriculaDashboardMensalResponse = {
+type ContratoDashboardMensalResponse = {
   mes?: string | null;
-  resumo?: MatriculaDashboardMensalResumoResponse | null;
-  carteiraAtivaPorPlano?: MatriculaDashboardMensalPlanoResponse[] | null;
-  contratos?: MatriculaDashboardMensalContratosPageResponse | null;
+  resumo?: ContratoDashboardMensalResumoResponse | null;
+  carteiraAtivaPorPlano?: ContratoDashboardMensalPlanoResponse[] | null;
+  contratos?: ContratoDashboardMensalContratosPageResponse | null;
 };
 
-function normalizeMatriculaDashboardMensalResumo(
-  input?: MatriculaDashboardMensalResumoResponse | null
-): MatriculaDashboardMensalResumo {
+function normalizeContratoDashboardMensalResumo(
+  input?: ContratoDashboardMensalResumoResponse | null
+): ContratoDashboardMensalResumo {
   return {
     totalContratos: toNumber(input?.totalContratos),
     contratosAtivos: toNumber(input?.contratosAtivos),
@@ -341,9 +341,9 @@ function normalizeMatriculaDashboardMensalResumo(
   };
 }
 
-function normalizeMatriculaDashboardMensalPlano(
-  input: MatriculaDashboardMensalPlanoResponse
-): MatriculaDashboardMensalPlano {
+function normalizeContratoDashboardMensalPlano(
+  input: ContratoDashboardMensalPlanoResponse
+): ContratoDashboardMensalPlano {
   return {
     planoId: input.planoId?.trim() || undefined,
     planoNome: input.planoNome?.trim() || "Sem plano",
@@ -353,18 +353,18 @@ function normalizeMatriculaDashboardMensalPlano(
   };
 }
 
-function normalizeMatriculaDashboardMensalResponse(
-  input: MatriculaDashboardMensalResponse
-): MatriculaDashboardMensalResult {
+function normalizeContratoDashboardMensalResponse(
+  input: ContratoDashboardMensalResponse
+): ContratoDashboardMensalResult {
   return {
     mes: input.mes?.trim() || "",
-    resumo: normalizeMatriculaDashboardMensalResumo(input.resumo),
+    resumo: normalizeContratoDashboardMensalResumo(input.resumo),
     carteiraAtivaPorPlano: Array.isArray(input.carteiraAtivaPorPlano)
-      ? input.carteiraAtivaPorPlano.map(normalizeMatriculaDashboardMensalPlano)
+      ? input.carteiraAtivaPorPlano.map(normalizeContratoDashboardMensalPlano)
       : [],
     contratos: {
       items: Array.isArray(input.contratos?.items)
-        ? input.contratos.items.map(normalizeMatriculaApiResponse)
+        ? input.contratos.items.map(normalizeContratoApiResponse)
         : [],
       page: toNumber(input.contratos?.page),
       size: toNumber(input.contratos?.size, 20),
@@ -374,13 +374,13 @@ function normalizeMatriculaDashboardMensalResponse(
   };
 }
 
-export async function listMatriculasApi(input: {
+export async function listContratosApi(input: {
   tenantId?: string;
   status?: string;
   page?: number;
   size?: number;
-}): Promise<Array<Matricula & { aluno?: Aluno; plano?: Plano }>> {
-  const response = await requestMatriculasList(
+}): Promise<Array<Contrato & { aluno?: Aluno; plano?: Plano }>> {
+  const response = await requestContratosList(
     [LIST_ADESOES_PATH, LIST_MATRICULAS_PATH],
     {
       tenantId: input.tenantId,
@@ -389,18 +389,18 @@ export async function listMatriculasApi(input: {
       size: input.size,
     }
   );
-  return response.map(normalizeMatriculaApiResponse);
+  return response.map(normalizeContratoApiResponse);
 }
 
-export async function listMatriculasPageApi(input: {
+export async function listContratosPageApi(input: {
   tenantId?: string;
   status?: string;
   page?: number;
   size?: number;
-}): Promise<MatriculaPageResult> {
+}): Promise<ContratoPageResult> {
   const fallbackPage = input.page ?? 0;
   const fallbackSize = input.size ?? 20;
-  const response = await requestMatriculasListWithMeta(
+  const response = await requestContratosListWithMeta(
     [LIST_ADESOES_PATH, LIST_MATRICULAS_PATH],
     {
       tenantId: input.tenantId,
@@ -409,7 +409,7 @@ export async function listMatriculasPageApi(input: {
       size: input.size,
     }
   );
-  const items = response.data.map(normalizeMatriculaApiResponse);
+  const items = response.data.map(normalizeContratoApiResponse);
   const page = getHeaderNumber(response.headers, "x-page") ?? fallbackPage;
   const size = getHeaderNumber(response.headers, "x-size") ?? fallbackSize;
   const total = getHeaderNumber(response.headers, "x-total-count");
@@ -430,13 +430,13 @@ export async function listMatriculasPageApi(input: {
   };
 }
 
-export async function listMatriculasDashboardMensalApi(input: {
+export async function listContratosDashboardMensalApi(input: {
   tenantId?: string;
   mes: string;
   page?: number;
   size?: number;
-}): Promise<MatriculaDashboardMensalResult> {
-  const response = await apiRequest<MatriculaDashboardMensalResponse>({
+}): Promise<ContratoDashboardMensalResult> {
+  const response = await apiRequest<ContratoDashboardMensalResponse>({
     path: "/api/v1/comercial/matriculas/dashboard-mensal",
     query: {
       tenantId: input.tenantId,
@@ -446,16 +446,16 @@ export async function listMatriculasDashboardMensalApi(input: {
     },
   });
 
-  return normalizeMatriculaDashboardMensalResponse(response);
+  return normalizeContratoDashboardMensalResponse(response);
 }
 
-export async function listMatriculasByAlunoApi(input: {
+export async function listContratosByAlunoApi(input: {
   tenantId?: string;
   alunoId: string;
   page?: number;
   size?: number;
-}): Promise<Array<Matricula & { aluno?: Aluno; plano?: Plano }>> {
-  const response = await requestMatriculasList(
+}): Promise<Array<Contrato & { aluno?: Aluno; plano?: Plano }>> {
+  const response = await requestContratosList(
     [
       `/api/v1/comercial/alunos/${input.alunoId}/adesoes`,
       `/api/v1/comercial/alunos/${input.alunoId}/matriculas`,
@@ -466,14 +466,14 @@ export async function listMatriculasByAlunoApi(input: {
       size: input.size,
     }
   );
-  return response.map(normalizeMatriculaApiResponse);
+  return response.map(normalizeContratoApiResponse);
 }
 
-export async function createMatriculaApi(input: {
+export async function createContratoApi(input: {
   tenantId?: string;
-  data: CreateMatriculaApiInput;
-}): Promise<Matricula & { aluno?: Aluno; plano?: Plano }> {
-  const response = await apiRequest<MatriculaResponse>({
+  data: CreateContratoApiInput;
+}): Promise<Contrato & { aluno?: Aluno; plano?: Plano }> {
+  const response = await apiRequest<ContratoApiResponse>({
     path: "/api/v1/comercial/matriculas",
     method: "POST",
     query: {
@@ -494,10 +494,10 @@ export async function createMatriculaApi(input: {
       dataPagamento: input.data.dataPagamento,
     },
   });
-  return normalizeMatriculaApiResponse(response);
+  return normalizeContratoApiResponse(response);
 }
 
-export async function renovarMatriculaApi(input: {
+export async function renovarContratoApi(input: {
   tenantId?: string;
   id: string;
   planoId?: string;
@@ -512,7 +512,7 @@ export async function renovarMatriculaApi(input: {
   });
 }
 
-export async function cancelarMatriculaApi(input: {
+export async function cancelarContratoApi(input: {
   tenantId?: string;
   id: string;
 }): Promise<void> {
@@ -525,16 +525,16 @@ export async function cancelarMatriculaApi(input: {
   });
 }
 
-export async function signMatriculaContractApi(input: {
+export async function signContratoApi(input: {
   tenantId?: string;
   id: string;
-}): Promise<Matricula & { aluno?: Aluno; plano?: Plano }> {
-  const response = await apiRequest<MatriculaResponse>({
+}): Promise<Contrato & { aluno?: Aluno; plano?: Plano }> {
+  const response = await apiRequest<ContratoApiResponse>({
     path: `/api/v1/comercial/matriculas/${input.id}/contrato/assinar`,
     method: "POST",
     query: {
       tenantId: input.tenantId,
     },
   });
-  return normalizeMatriculaApiResponse(response);
+  return normalizeContratoApiResponse(response);
 }

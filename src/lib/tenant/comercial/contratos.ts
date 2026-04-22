@@ -1,8 +1,8 @@
 import type {
   Aluno,
+  Contrato,
   LocalDate,
   LocalDateTime,
-  Matricula,
   Plano,
   StatusContratoPlano,
   StatusFluxoComercial,
@@ -13,11 +13,15 @@ import type {
 import { resolveFluxoComercialStatus, resolveContratoStatusFromPlano } from "./plano-flow";
 
 /**
- * Representação unificada de um contrato/assinatura de plano.
+ * Representação unificada (view) de um contrato/assinatura de plano.
  * Normaliza dados vindos de Matricula e de Venda (tipo PLANO)
  * para que a UI trate ambas as origens de forma consistente.
+ *
+ * NOTA: originalmente chamada `Contrato`, renomeada para `ContratoView`
+ * para permitir que `Matricula` seja renomeada para `Contrato` (conceito
+ * canônico de domínio). Avaliar descontinuar esta view em iteração futura.
  */
-export interface Contrato {
+export interface ContratoView {
   id: UUID;
   tenantId: UUID;
   alunoId: UUID;
@@ -39,52 +43,52 @@ export interface Contrato {
 }
 
 /**
- * Normaliza uma Matricula em Contrato.
+ * Normaliza um Contrato (fka Matricula) em ContratoView.
  */
-export function contratoFromMatricula(
-  matricula: Matricula & { aluno?: Aluno; plano?: Plano }
-): Contrato {
+export function contratoViewFromMatricula(
+  contrato: Contrato & { aluno?: Aluno; plano?: Plano }
+): ContratoView {
   const contratoStatus = resolveContratoStatusFromPlano(
-    matricula.plano,
-    matricula.contratoStatus
+    contrato.plano,
+    contrato.contratoStatus
   );
   const fluxoStatus = resolveFluxoComercialStatus({
-    matricula,
-    pagamento: matricula.pagamento,
-    plano: matricula.plano,
+    matricula: contrato,
+    pagamento: contrato.pagamento,
+    plano: contrato.plano,
   });
 
   return {
-    id: matricula.id,
-    tenantId: matricula.tenantId,
-    alunoId: matricula.alunoId,
-    planoId: matricula.planoId,
-    aluno: matricula.aluno,
-    plano: matricula.plano,
-    dataInicioContrato: matricula.dataInicio,
-    dataFimContrato: matricula.dataFim,
-    valorContratado: matricula.valorPago,
-    desconto: matricula.desconto,
-    formaPagamento: matricula.formaPagamento,
+    id: contrato.id,
+    tenantId: contrato.tenantId,
+    alunoId: contrato.alunoId,
+    planoId: contrato.planoId,
+    aluno: contrato.aluno,
+    plano: contrato.plano,
+    dataInicioContrato: contrato.dataInicio,
+    dataFimContrato: contrato.dataFim,
+    valorContratado: contrato.valorPago,
+    desconto: contrato.desconto,
+    formaPagamento: contrato.formaPagamento,
     contratoStatus,
     fluxoStatus,
-    renovacaoAutomatica: matricula.renovacaoAutomatica,
-    origemVendaId: matricula.origemVendaId,
-    matriculaId: matricula.id,
-    dataCriacao: matricula.dataCriacao,
+    renovacaoAutomatica: contrato.renovacaoAutomatica,
+    origemVendaId: contrato.origemVendaId,
+    matriculaId: contrato.id,
+    dataCriacao: contrato.dataCriacao,
     origem: "MATRICULA",
   };
 }
 
 /**
- * Normaliza uma Venda de tipo PLANO em Contrato.
+ * Normaliza uma Venda de tipo PLANO em ContratoView.
  * Vendas de tipo SERVICO/PRODUTO não representam contratos.
  */
-function contratoFromVenda(
+function contratoViewFromVenda(
   venda: Venda,
   aluno?: Aluno | null,
   plano?: Plano | null
-): Contrato | null {
+): ContratoView | null {
   if (venda.tipo !== "PLANO") return null;
 
   const contratoStatus: StatusContratoPlano =

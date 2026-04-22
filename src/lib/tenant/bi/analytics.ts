@@ -11,7 +11,7 @@ import type {
   BiOperationalSnapshot,
   BiQualityItem,
   BiSegmento,
-  Matricula,
+  Contrato,
   Pagamento,
   Prospect,
   ReservaAula,
@@ -23,7 +23,7 @@ type BuildBiSnapshotInput = {
   tenants: Tenant[];
   prospects: Prospect[];
   alunos: Aluno[];
-  matriculas: Matricula[];
+  matriculas: Contrato[];
   pagamentos: Pagamento[];
   atividadeGrades: AtividadeGrade[];
   reservasAulas: ReservaAula[];
@@ -218,7 +218,7 @@ function getConvertedAt(prospect: Prospect) {
 
 function computeRetentionBase(
   alunos: Aluno[],
-  matriculas: Matricula[],
+  matriculas: Contrato[],
   tenantIds: string[],
   startDate: string,
   endDate: string,
@@ -252,7 +252,7 @@ function computePeriodMetrics(input: {
   endDate: string;
   prospects: Prospect[];
   alunos: Aluno[];
-  matriculas: Matricula[];
+  matriculas: Contrato[];
   pagamentos: Pagamento[];
   atividadeGrades: AtividadeGrade[];
   reservasAulas: ReservaAula[];

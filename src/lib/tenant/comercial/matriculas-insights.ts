@@ -1,17 +1,17 @@
-import type { Aluno, Matricula, Plano } from "@/lib/types";
+import type { Aluno, Contrato, Plano } from "@/lib/types";
 
-export type MatriculaInsightRow = Matricula & { aluno?: Aluno; plano?: Plano };
+export type ContratoInsightRow = Contrato & { aluno?: Aluno; plano?: Plano };
 
-export type MatriculaActiveGroup = {
+export type ContratoActiveGroup = {
   label: string;
   count: number;
   value: number;
   percentage: number;
 };
 
-export type MatriculaMonthlySnapshot = {
-  monthRows: MatriculaInsightRow[];
-  activeGroups: MatriculaActiveGroup[];
+export type ContratoMonthlySnapshot = {
+  monthRows: ContratoInsightRow[];
+  activeGroups: ContratoActiveGroup[];
   totalContracts: number;
   activeContracts: number;
   activePercentage: number;
@@ -21,11 +21,11 @@ export type MatriculaMonthlySnapshot = {
   insight: string;
 };
 
-function resolveReferenceDate(row: MatriculaInsightRow) {
+function resolveReferenceDate(row: ContratoInsightRow) {
   return row.dataCriacao || `${row.dataInicio}T00:00:00`;
 }
 
-export function sortMatriculasByRecency(rows: MatriculaInsightRow[]) {
+export function sortContratosByRecency(rows: ContratoInsightRow[]) {
   return [...rows].sort((left, right) => resolveReferenceDate(right).localeCompare(resolveReferenceDate(left)));
 }
 
@@ -69,7 +69,7 @@ export function formatDateLabel(value?: string) {
   return `${day}/${month}/${year}`;
 }
 
-function listAvailableMonthKeys(rows: MatriculaInsightRow[], fallbackMonthKey?: string) {
+function listAvailableMonthKeys(rows: ContratoInsightRow[], fallbackMonthKey?: string) {
   const keys = new Set<string>();
   if (fallbackMonthKey) {
     keys.add(fallbackMonthKey);
@@ -85,11 +85,11 @@ function listAvailableMonthKeys(rows: MatriculaInsightRow[], fallbackMonthKey?: 
   return [...keys].sort((left, right) => right.localeCompare(left));
 }
 
-function buildMatriculasMonthlySnapshot(
-  rows: MatriculaInsightRow[],
+function buildContratosMonthlySnapshot(
+  rows: ContratoInsightRow[],
   monthKey: string
-): MatriculaMonthlySnapshot {
-  const ordered = sortMatriculasByRecency(rows);
+): ContratoMonthlySnapshot {
+  const ordered = sortContratosByRecency(rows);
   const monthRows = ordered.filter((row) => extractMonthKey(resolveReferenceDate(row)) === monthKey);
   const totalContracts = monthRows.length;
   const activeRows = monthRows.filter((row) => row.status === "ATIVA");

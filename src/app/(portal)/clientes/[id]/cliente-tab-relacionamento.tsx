@@ -11,7 +11,7 @@ import {
   ShoppingCart,
   UserPlus,
 } from "lucide-react";
-import type { Aluno, Matricula, Pagamento, Presenca } from "@/lib/types";
+import type { Aluno, Contrato, Pagamento, Presenca } from "@/lib/types";
 
 type TimelineEvent = {
   id: string;
@@ -43,7 +43,7 @@ const EVENT_COLORS: Record<TimelineEvent["type"], string> = {
 
 interface ClienteTabRelacionamentoProps {
   aluno: Aluno;
-  matriculas: Matricula[];
+  matriculas: Contrato[];
   pagamentos: Pagamento[];
   presencas?: Presenca[];
 }

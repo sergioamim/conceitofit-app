@@ -2,7 +2,7 @@ import type {
   Aluno,
   StatusAluno,
   StatusContaPagar,
-  StatusMatricula,
+  StatusContrato,
   StatusPagamento,
   StatusProspect,
   StatusVenda,
@@ -77,15 +77,15 @@ function isAlunoCancelado(status: StatusAluno): boolean {
 // Matrícula
 // ---------------------------------------------------------------------------
 
-function isMatriculaAtiva(status: StatusMatricula): boolean {
+function isContratoAtivo(status: StatusContrato): boolean {
   return status === "ATIVA";
 }
 
-function isMatriculaVencida(status: StatusMatricula): boolean {
+function isContratoVencido(status: StatusContrato): boolean {
   return status === "VENCIDA";
 }
 
-function isMatriculaCancelada(status: StatusMatricula): boolean {
+function isContratoCancelado(status: StatusContrato): boolean {
   return status === "CANCELADA";
 }
 

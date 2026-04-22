@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  cancelarMatriculaApi,
-  createMatriculaApi,
-  listMatriculasApi,
-  listMatriculasByAlunoApi,
-  listMatriculasDashboardMensalApi,
-  listMatriculasPageApi,
-  normalizeMatriculaApiResponse,
-  renovarMatriculaApi,
-  signMatriculaContractApi,
+  cancelarContratoApi as cancelarMatriculaApi,
+  createContratoApi as createMatriculaApi,
+  listContratosApi as listMatriculasApi,
+  listContratosByAlunoApi as listMatriculasByAlunoApi,
+  listContratosDashboardMensalApi as listMatriculasDashboardMensalApi,
+  listContratosPageApi as listMatriculasPageApi,
+  normalizeContratoApiResponse as normalizeMatriculaApiResponse,
+  renovarContratoApi as renovarMatriculaApi,
+  signContratoApi as signMatriculaContractApi,
 } from "@/lib/api/matriculas";
 import * as http from "@/lib/api/http";
 import { ApiRequestError } from "@/lib/api/http";

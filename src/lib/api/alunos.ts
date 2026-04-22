@@ -5,7 +5,7 @@ import type {
   ClienteMigracaoUnidadePayload,
   ClienteMigracaoUnidadeResult,
   ClienteOperationalContext,
-  Matricula,
+  Contrato,
   Pagamento,
   Sexo,
   StatusAluno,
@@ -279,7 +279,7 @@ export function extractAlunosTotais(response: AlunoListPayload): AlunoTotaisStat
 
 type CreateAlunoComMatriculaResponse = {
   aluno: Aluno;
-  matricula: Matricula;
+  matricula: Contrato;
   pagamento: Pagamento;
 };
 

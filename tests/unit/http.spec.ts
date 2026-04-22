@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { listMatriculasApi, listMatriculasDashboardMensalApi } from "../../src/lib/api/matriculas";
+import { listContratosApi as listMatriculasApi, listContratosDashboardMensalApi as listMatriculasDashboardMensalApi } from "../../src/lib/api/matriculas";
 import { apiRequest } from "../../src/lib/api/http";
 import {
   clearAuthSession,

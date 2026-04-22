@@ -1,7 +1,7 @@
 import { UUID, LocalDate, LocalDateTime, Endereco } from './comum';
 import { Aluno, StatusAluno } from './aluno';
 import { OrigemProspect, Prospect } from './prospect';
-import { Matricula } from './matricula';
+import { Contrato } from './matricula';
 import { Pagamento } from './pagamento';
 import { Plano } from './plano';
 
@@ -275,7 +275,7 @@ export interface DashboardData {
   matriculasDoMes: number;
   receitaDoMes: number;
   prospectsRecentes: Prospect[];
-  matriculasVencendo: (Matricula & { aluno?: Aluno; plano?: Plano })[];
+  matriculasVencendo: (Contrato & { aluno?: Aluno; plano?: Plano })[];
   pagamentosPendentes: (Pagamento & { aluno?: Aluno })[];
   statusAlunoCount: Record<StatusAluno, number>;
   prospectsEmAberto: number;

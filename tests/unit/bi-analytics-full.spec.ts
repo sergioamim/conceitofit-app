@@ -9,7 +9,7 @@ import type {
   Academia,
   Aluno,
   AtividadeGrade,
-  Matricula,
+  Contrato,
   Pagamento,
   Prospect,
   ReservaAula,
@@ -75,7 +75,7 @@ const alunos: Aluno[] = [
   },
 ];
 
-const matriculas: Matricula[] = [
+const matriculas: Contrato[] = [
   {
     id: "mt-1",
     tenantId: "tn-1",

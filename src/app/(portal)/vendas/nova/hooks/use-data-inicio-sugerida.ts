@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { listMatriculasByAlunoService } from "@/lib/tenant/comercial/runtime";
+import { listContratosByAlunoService } from "@/lib/tenant/comercial/runtime";
 import { queryKeys } from "@/lib/query/keys";
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
 
@@ -41,9 +41,9 @@ export function useDataInicioSugerida(
   const enabled = Boolean(tenantId) && Boolean(alunoId);
 
   const query = useQuery({
-    queryKey: queryKeys.matriculas.byAluno(tenantId, alunoId),
+    queryKey: queryKeys.contratos.byAluno(tenantId, alunoId),
     queryFn: () =>
-      listMatriculasByAlunoService({
+      listContratosByAlunoService({
         tenantId,
         alunoId,
         page: 0,
@@ -59,8 +59,8 @@ export function useDataInicioSugerida(
       return { dataInicioSugerida: hojeIso, emSequencia: false };
     }
 
-    const matriculas = query.data ?? [];
-    const ativas = matriculas.filter((m) => m.status === "ATIVA" && m.dataFim);
+    const contratos = query.data ?? [];
+    const ativas = contratos.filter((c) => c.status === "ATIVA" && c.dataFim);
     if (ativas.length === 0) {
       return { dataInicioSugerida: hojeIso, emSequencia: false };
     }

@@ -8,7 +8,7 @@ import type {
   AcademiaHealthLevel,
   StatusProspect,
   StatusAluno,
-  StatusMatricula,
+  StatusContrato,
   StatusPagamento,
   StatusContaPagar,
 } from "@/lib/types";
@@ -16,7 +16,7 @@ import type {
 type AnyStatus =
   | StatusProspect
   | StatusAluno
-  | StatusMatricula
+  | StatusContrato
   | StatusPagamento
   | StatusContaPagar
   | AcademiaHealthLevel;

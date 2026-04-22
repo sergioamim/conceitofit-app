@@ -21,8 +21,8 @@ import {
 } from "@/lib/api/contexto-unidades";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import {
-  listMatriculasByAlunoApi,
-  signMatriculaContractApi,
+  listContratosByAlunoApi,
+  signContratoApi,
 } from "@/lib/api/matriculas";
 import { listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { getVendaApi, createVendaApi } from "@/lib/api/vendas";
@@ -41,7 +41,7 @@ import {
 import type {
   Academia,
   Aluno,
-  Matricula,
+  Contrato,
   Pagamento,
   Plano,
   Prospect,
@@ -366,7 +366,7 @@ function buildCheckoutSummary(params: {
   plano: Plano;
   venda: Venda;
   aluno: Aluno;
-  matricula?: Matricula;
+  matricula?: Contrato;
   pagamento?: Pagamento;
   academia: Academia;
 }): PublicCheckoutSummary {
@@ -414,7 +414,7 @@ function buildCheckoutSummary(params: {
   };
 }
 
-function sortMatriculas(rows: Array<Matricula & { aluno?: Aluno; plano?: Plano }>): Array<Matricula & { aluno?: Aluno; plano?: Plano }> {
+function sortMatriculas(rows: Array<Contrato & { aluno?: Aluno; plano?: Plano }>): Array<Contrato & { aluno?: Aluno; plano?: Plano }> {
   return [...rows].sort((left, right) =>
     (right.dataCriacao ?? right.dataInicio ?? "").localeCompare(left.dataCriacao ?? left.dataInicio ?? "")
   );
@@ -422,8 +422,8 @@ function sortMatriculas(rows: Array<Matricula & { aluno?: Aluno; plano?: Plano }
 
 function selectCheckoutMatricula(params: {
   venda: Venda;
-  matriculas: Array<Matricula & { aluno?: Aluno; plano?: Plano }>;
-}): (Matricula & { aluno?: Aluno; plano?: Plano }) | undefined {
+  matriculas: Array<Contrato & { aluno?: Aluno; plano?: Plano }>;
+}): (Contrato & { aluno?: Aluno; plano?: Plano }) | undefined {
   const ordered = sortMatriculas(params.matriculas);
   return (
     ordered.find((item) => item.id === params.venda.matriculaId) ??
@@ -434,7 +434,7 @@ function selectCheckoutMatricula(params: {
 
 function selectCheckoutPagamento(params: {
   venda: Venda;
-  matricula?: Matricula;
+  matricula?: Contrato;
   pagamentos: Pagamento[];
 }): Pagamento | undefined {
   const ordered = [...params.pagamentos].sort((left, right) =>
@@ -473,7 +473,7 @@ async function buildCheckoutSummaryFromVenda(params: {
   const [plano, aluno, matriculas, pagamentos] = await Promise.all([
     getPlanoApi({ tenantId: params.tenant.id, id: planoId }),
     getAlunoApi({ tenantId: params.tenant.id, id: alunoId }),
-    listMatriculasByAlunoApi({ tenantId: params.tenant.id, alunoId }),
+    listContratosByAlunoApi({ tenantId: params.tenant.id, alunoId }),
     listPagamentosApi({ tenantId: params.tenant.id, alunoId }),
   ]);
 

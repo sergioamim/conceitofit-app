@@ -13,7 +13,7 @@ import {
   listCartoesClienteService,
   listConveniosService,
   listFormasPagamentoService,
-  listMatriculasByAlunoService,
+  listContratosByAlunoService,
   listPagamentosService,
   listPlanosService,
   listPresencasByAlunoService,
@@ -34,7 +34,7 @@ import type {
   ClienteExclusaoBlockedBy,
   ClienteMigracaoUnidadeResult,
   ClienteOperationalContext,
-  Matricula,
+  Contrato,
   Plano,
   Pagamento,
   Presenca,
@@ -140,7 +140,7 @@ export function useClienteWorkspace() {
   } = useTenantContext();
   const [aluno, setAluno] = useState<Aluno | null>(null);
   const [clienteContexto, setClienteContexto] = useState<ClienteOperationalContext | null>(null);
-  const [matriculas, setMatriculas] = useState<Matricula[]>([]);
+  const [matriculas, setMatriculas] = useState<Contrato[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [formasPagamento, setFormasPagamento] = useState<FormaPagamento[]>([]);
@@ -357,7 +357,7 @@ export function useClienteWorkspace() {
       }
       const currentTenantId = resolved.tenantId;
       const [ms, ps, pres, fps, cvs, pags] = await Promise.all([
-        listMatriculasByAlunoService({
+        listContratosByAlunoService({
           tenantId: currentTenantId,
           alunoId: id,
           page: 0,

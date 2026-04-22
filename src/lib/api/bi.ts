@@ -8,7 +8,7 @@ import type {
   BiEscopo,
   BiOperationalSnapshot,
   BiSegmento,
-  Matricula,
+  Contrato,
   Pagamento,
   Prospect,
   Tenant,
@@ -19,7 +19,7 @@ import { getActiveTenantIdFromSession, getAvailableTenantsFromSession, getPrefer
 import { ApiRequestError, apiRequest } from "./http";
 import { listAcademiasApi, listUnidadesApi, setTenantContextApi } from "./contexto-unidades";
 import { listProspectsApi } from "./crm";
-import { listMatriculasApi } from "./matriculas";
+import { listContratosApi } from "./matriculas";
 import { listReservasAulaApi } from "./reservas";
 
 // ---------------------------------------------------------------------------
@@ -126,7 +126,7 @@ type GetBiOperacionalSnapshotInput = {
 
 type TenantBiDataset = {
   prospects: Prospect[];
-  matriculas: Matricula[];
+  matriculas: Contrato[];
   pagamentos: Pagamento[];
   atividadeGrades: AtividadeGrade[];
   reservasAulas: Awaited<ReturnType<typeof listReservasAulaApi>>;
@@ -235,7 +235,7 @@ async function loadTenantDataset(tenantId: string): Promise<TenantBiDataset> {
   const [prospects, alunosResponse, matriculas, pagamentosPagos, pagamentosPendentes, pagamentosVencidos, atividadeGrades, reservasAulas] = await Promise.all([
     listProspectsApi({ tenantId }),
     listAlunosApi({ tenantId, page: 0, size: 1000 }),
-    listMatriculasApi({ tenantId, status: "ATIVA" }),
+    listContratosApi({ tenantId, status: "ATIVA" }),
     listContasReceberOperacionais({ tenantId, status: "PAGO" }),
     listContasReceberOperacionais({ tenantId, status: "PENDENTE" }),
     listContasReceberOperacionais({ tenantId, status: "VENCIDO" }),

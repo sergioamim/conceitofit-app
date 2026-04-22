@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  getMatriculasDashboardMensalService,
-  cancelarMatriculaService,
-  renovarMatriculaService,
+  getContratosDashboardMensalService,
+  cancelarContratoService,
+  renovarContratoService,
 } from "@/lib/tenant/comercial/runtime";
-import type { MatriculaDashboardMensalResult } from "@/lib/api/matriculas";
+import type { ContratoDashboardMensalResult } from "@/lib/api/matriculas";
 import { ApiRequestError } from "@/lib/api/http";
 import { isTenantContextErrorMessage } from "@/lib/utils/error-codes";
 import { queryKeys } from "./keys";
@@ -21,20 +21,20 @@ function isTenantContextError(error: unknown): boolean {
   return false;
 }
 
-export function useMatriculas(input: {
+export function useContratos(input: {
   tenantId: string | undefined;
   tenantResolved: boolean;
   monthKey: string;
   page: number;
 }) {
-  return useQuery<MatriculaDashboardMensalResult>({
-    queryKey: queryKeys.matriculas.dashboard(
+  return useQuery<ContratoDashboardMensalResult>({
+    queryKey: queryKeys.contratos.dashboard(
       input.tenantId ?? "",
       input.monthKey,
       input.page,
     ),
     queryFn: () =>
-      getMatriculasDashboardMensalService({
+      getContratosDashboardMensalService({
         tenantId: input.tenantId!,
         mes: input.monthKey,
         page: input.page,
@@ -48,24 +48,24 @@ export function useMatriculas(input: {
   });
 }
 
-export function useRenovarMatricula() {
+export function useRenovarContrato() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: { tenantId: string; id: string }) =>
-      renovarMatriculaService(input),
+      renovarContratoService(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["matriculas"] });
     },
   });
 }
 
-export function useCancelarMatricula() {
+export function useCancelarContrato() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (input: { tenantId: string; id: string; assinaturaId?: string }) =>
-      cancelarMatriculaService(input),
+      cancelarContratoService(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["matriculas"] });
     },

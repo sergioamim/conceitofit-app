@@ -1,7 +1,7 @@
 import { formatBRL } from "@/lib/formatters";
 import type {
+  Contrato,
   Convenio,
-  Matricula,
   Pagamento,
   PagamentoResumo,
   PagamentoVenda,
@@ -186,7 +186,7 @@ export function resolveContratoStatusFromPlano(
 }
 
 export function resolveFluxoComercialStatus(params: {
-  matricula?: Matricula | null;
+  matricula?: Contrato | null;
   pagamento?: Pagamento | PagamentoResumo | null;
   plano?: Plano | null;
 }): StatusFluxoComercial | undefined {
