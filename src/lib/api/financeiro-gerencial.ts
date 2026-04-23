@@ -12,7 +12,7 @@ import type {
   TerminoRecorrenciaContaPagar,
   TipoFormaPagamento,
 } from "@/lib/types";
-import { apiRequest } from "./http";
+import { apiRequest, apiRequestWithMeta } from "./http";
 
 type ListContasPagarApiInput = {
   tenantId: string;
@@ -408,6 +408,96 @@ export async function listContasPagarApi(input: ListContasPagarApiInput): Promis
     },
   });
   return response.map(normalizeContaPagar);
+}
+
+/**
+ * F4 redesign (2026-04-23): variante paginada de `listContasPagarApi` que
+ * lê os headers `X-Total-Count` / `X-Page` / `X-Total-Pages` emitidos pelo
+ * backend e retorna envelope `{ items, total, page, size, hasNext }`.
+ * Espelho de `listContasReceberPageApi`.
+ */
+export async function listContasPagarPageApi(input: ListContasPagarApiInput & {
+  documentoFornecedor?: string;
+}): Promise<{
+  items: ContaPagar[];
+  total: number;
+  page: number;
+  size: number;
+  hasNext: boolean;
+}> {
+  const response = await apiRequestWithMeta<ContaPagarApiResponse[]>({
+    path: "/api/v1/gerencial/financeiro/contas-pagar",
+    query: {
+      tenantId: input.tenantId,
+      status: input.status,
+      categoria: input.categoria,
+      tipoContaId: input.tipoContaId,
+      grupoDre: input.grupoDre,
+      origem: input.origem,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      documentoFornecedor: input.documentoFornecedor,
+      page: input.page,
+      size: input.size,
+    },
+  });
+  const items = response.data.map(normalizeContaPagar);
+  const total = Number(response.headers["x-total-count"] ?? items.length);
+  const currentPage = Number(response.headers["x-page"] ?? input.page ?? 0);
+  const currentSize = Number(response.headers["x-size"] ?? input.size ?? items.length);
+  const totalPages = Number(response.headers["x-total-pages"] ?? 1);
+  const hasNext = Number.isFinite(totalPages) ? currentPage + 1 < totalPages : false;
+  return { items, total, page: currentPage, size: currentSize, hasNext };
+}
+
+export interface SumarioOperacionalContaPagarResponse {
+  totalPago: number;
+  totalPendente: number;
+  totalVencido: number;
+  countPago: number;
+  countPendente: number;
+  countVencido: number;
+  countTotal: number;
+}
+
+/**
+ * F4 redesign (2026-04-23): consome o endpoint
+ * `GET /contas-pagar/sumario-operacional` introduzido na F1 do backend.
+ * Retorna totais por status agregados via GROUP BY no DB — alimenta os
+ * 4 KPIs do dashboard de /gerencial/contas-a-pagar.
+ *
+ * Regra de soma (definida no backend): totalPago usa `valorPago`
+ * (desembolso efetivo); totalPendente/totalVencido usam
+ * `valorOriginal - desconto + jurosMulta`. CANCELADAs sao excluidas.
+ */
+export async function getSumarioOperacionalContaPagarApi(input: {
+  tenantId: string;
+  startDate?: string;
+  endDate?: string;
+  documentoFornecedor?: string;
+}): Promise<SumarioOperacionalContaPagarResponse> {
+  const response = await apiRequest<SumarioOperacionalContaPagarResponse>({
+    path: "/api/v1/gerencial/financeiro/contas-pagar/sumario-operacional",
+    query: {
+      tenantId: input.tenantId,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      documentoFornecedor: input.documentoFornecedor,
+    },
+  });
+  const toNum = (v: unknown): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return {
+    totalPago: toNum(response.totalPago),
+    totalPendente: toNum(response.totalPendente),
+    totalVencido: toNum(response.totalVencido),
+    countPago: toNum(response.countPago),
+    countPendente: toNum(response.countPendente),
+    countVencido: toNum(response.countVencido),
+    countTotal: toNum(response.countTotal),
+  };
 }
 
 export async function createContaPagarApi(input: {
