@@ -57,12 +57,14 @@ function extractPageMeta(response: ClienteListEnvelopeResponse, fallbackPage: nu
 export async function listAlunosPageService(input: {
   tenantId: string;
   status?: StatusAluno;
+  search?: string;
   page?: number;
   size?: number;
 }): Promise<ListAlunosPageServiceResult> {
   const response = await listAlunosApi({
     tenantId: input.tenantId,
     status: input.status,
+    search: input.search,
     page: input.page,
     size: input.size,
   });

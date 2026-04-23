@@ -11,6 +11,8 @@ interface UseClientesDataInput {
   tenantResolved: boolean;
   setTenant: (tenantId: string) => Promise<void>;
   filtro: WithFilterAll<StatusAluno>;
+  /** Termo de busca server-side (propagado da URL pelo workspace). P0-B. */
+  search?: string;
   page: number;
   pageSize: number;
 }
@@ -19,6 +21,7 @@ export function useClientesData({
   tenantId,
   tenantResolved,
   filtro,
+  search,
   page,
   pageSize,
 }: UseClientesDataInput) {
@@ -28,6 +31,7 @@ export function useClientesData({
     tenantId,
     tenantResolved,
     status: statusFilter,
+    search,
     page,
     size: pageSize,
   });

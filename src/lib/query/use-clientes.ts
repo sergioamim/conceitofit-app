@@ -7,11 +7,14 @@ export function useClientes(input: {
   tenantId: string | undefined;
   tenantResolved: boolean;
   status?: StatusAluno;
+  /** Termo de busca server-side (nome/email/CPF/telefone). P0-B 2026-04-23. */
+  search?: string;
   page?: number;
   size?: number;
 }) {
   const filters = {
     status: input.status,
+    search: input.search,
     page: input.page ?? 0,
     size: input.size ?? 20,
   };
@@ -22,6 +25,7 @@ export function useClientes(input: {
       listAlunosPageService({
         tenantId: input.tenantId!,
         status: input.status,
+        search: input.search,
         page: input.page,
         size: input.size,
       }),
