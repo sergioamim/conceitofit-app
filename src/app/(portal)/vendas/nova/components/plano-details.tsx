@@ -2,7 +2,6 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { PlanoSelectorCard } from "@/components/shared/plano-selector-card";
 import { formatBRL } from "@/lib/formatters";
 import { VendaWorkspace } from "../hooks/use-venda-workspace";
 
@@ -23,9 +22,6 @@ export function PlanoDetails({ workspace }: PlanoDetailsProps) {
     setConvenioPlanoId,
     renovacaoAutomaticaPlano,
     setRenovacaoAutomaticaPlano,
-    planos,
-    selectedPlanoId,
-    handleAddPlano,
   } = workspace;
 
   if (tipoVenda !== "PLANO") return null;
@@ -126,22 +122,6 @@ export function PlanoDetails({ workspace }: PlanoDetailsProps) {
           </div>
         </div>
       )}
-
-      <div
-        role="radiogroup"
-        aria-label="Planos disponíveis para a venda"
-        className="grid gap-3 md:grid-cols-2"
-      >
-        {planos.map((plano) => (
-          <PlanoSelectorCard
-            key={plano.id}
-            plano={plano}
-            selected={selectedPlanoId === plano.id}
-            onSelect={handleAddPlano}
-            variant="compact"
-          />
-        ))}
-      </div>
     </div>
   );
 }
