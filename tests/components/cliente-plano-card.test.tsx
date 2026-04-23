@@ -6,13 +6,16 @@ const HOJE = new Date(2026, 3, 20); // 2026-04-20
 
 describe("ClientePlanoCard", () => {
   describe("sem plano ativo", () => {
-    it("renderiza CTA 'Nova contratação' quando onRenovar é provido", () => {
+    // Nota (2026-04-23): o CTA "Nova contratação" inline no card foi
+    // removido com o refactor que moveu "Nova Venda" pro header/topbar
+    // (commit 0be7df5). O card agora só exibe a mensagem de status; a
+    // ação de venda vive no header via `onNovaVenda`.
+    it("exibe mensagem de estado vazio e nao renderiza botao inline", () => {
       const onRenovar = vi.fn();
       render(<ClientePlanoCard planoAtivo={null} hoje={HOJE} onRenovar={onRenovar} />);
       expect(screen.getByText(/sem contrato ativo/i)).toBeInTheDocument();
-      const btn = screen.getByRole("button", { name: /nova contratação/i });
-      fireEvent.click(btn);
-      expect(onRenovar).toHaveBeenCalled();
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      expect(onRenovar).not.toHaveBeenCalled();
     });
 
     it("omite CTA quando onRenovar não é provido", () => {

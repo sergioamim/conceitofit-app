@@ -60,8 +60,9 @@ describe("ClienteHeader", () => {
 
   it("renders actions for active client", () => {
     render(<ClienteHeader {...defaultProps} />);
-    // Texto sem cedilha é intencional desde Perfil v2 Wave 2 (commit debefb6).
-    expect(screen.getByText("Nova contratacao")).toBeInTheDocument();
+    // "Nova contratacao" foi renomeado pra "Venda" em 0be7df5 (2026-04-23),
+    // parte do refactor que moveu "Nova Venda" do menu pro header/topbar.
+    expect(screen.getByText("Venda")).toBeInTheDocument();
 
     const buttons = screen.getAllByRole("button");
     const menuBtn = buttons.find(b => b.querySelector(".lucide-ellipsis-vertical"));
