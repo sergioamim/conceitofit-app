@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, memo } from "react";
-import { 
+import {
   ArrowLeft,
-  ChevronRight, 
-  Search, 
+  ChevronRight,
   Zap,
   LogOut,
   Star,
@@ -43,7 +42,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useIsMac } from "@/hooks/use-is-mac";
 import { LogoutDialog } from "@/components/shared/logout-dialog";
 
 type SidebarFavoriteItem = NavItem;
@@ -184,8 +182,6 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
   const pathname = usePathname();
   const { tenant, academia, brandingSnapshot, displayName } = useTenantContext();
   const { favorites } = useUserPreferences();
-  const isMac = useIsMac();
-  const cmdText = isMac === null ? "" : isMac ? "⌘K" : "Ctrl+K";
 
   const favoriteItems = favorites
     .map((href) => allNavItems.find((i) => i.href === href))
@@ -262,24 +258,6 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
               </div>
             )}
           </div>
-        </div>
-
-        <div className="px-4 mb-6">
-          <button 
-            onClick={() => document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }))}
-            className={cn(
-              "flex items-center gap-3 w-full h-11 px-3 rounded-xl bg-muted/40 border border-border/40 text-muted-foreground hover:bg-muted/60 transition-colors group",
-              collapsed && "justify-center"
-            )}
-          >
-            <Search size={18} className="group-hover:text-primary transition-colors" />
-            {!collapsed && <span className="text-sm font-medium text-left flex-1">Buscar...</span>}
-            {!collapsed && cmdText && (
-              <kbd className="text-[10px] font-mono opacity-40 bg-background/50 px-1.5 py-0.5 rounded border border-border/40">
-                {cmdText}
-              </kbd>
-            )}
-          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 scrollbar-none">
