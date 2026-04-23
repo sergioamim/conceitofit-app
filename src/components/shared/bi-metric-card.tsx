@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon, TrendingUp } from "lucide-react";
+import { Sparkline } from "@/components/shared/financeiro-viz/sparkline";
 
 type BiMetricCardProps = {
   label: string;
@@ -13,6 +14,8 @@ type BiMetricCardProps = {
   extra?: ReactNode;
   icon?: LucideIcon;
   trend?: string;
+  /** Série histórica (>=2 pontos) para renderizar mini gráfico no card. */
+  sparkline?: number[];
 };
 
 /**
@@ -37,6 +40,7 @@ export function BiMetricCard({
   extra,
   icon: Icon,
   trend,
+  sparkline,
 }: BiMetricCardProps) {
   const tones = {
     accent: "text-gym-accent border-gym-accent/20 bg-gym-accent/10",
@@ -50,6 +54,13 @@ export function BiMetricCard({
     teal: "bg-gym-teal",
     warning: "bg-gym-warning",
     danger: "bg-gym-danger",
+  };
+
+  const sparklineColors: Record<NonNullable<BiMetricCardProps["tone"]>, string> = {
+    accent: "#6b8c1a",
+    teal: "#1ea06a",
+    warning: "#e09020",
+    danger: "#dc3545",
   };
 
   return (
@@ -89,6 +100,12 @@ export function BiMetricCard({
             </p>
           )}
         </div>
+
+        {sparkline && sparkline.length >= 2 ? (
+          <div className="mt-3 flex justify-end">
+            <Sparkline data={sparkline} color={sparklineColors[tone]} width={80} height={28} />
+          </div>
+        ) : null}
 
         {extra && <div className="mt-4 pt-4 border-t border-border/20">{extra}</div>}
 
