@@ -32,6 +32,7 @@ import {
   useReceberPagamento,
   useEmitirNfse,
   useImportarPagamentos,
+  useSumarioOperacionalPagamentos,
 } from "@/lib/query/use-pagamentos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getNfseBloqueioMensagem } from "@/lib/domain/financeiro";
@@ -94,6 +95,23 @@ function PagamentosPageContent() {
   const pagamentosTruncated = pagamentosPage?.hasNext ?? false;
   const pagamentosTotal = pagamentosPage?.total ?? pagamentos.length;
 
+  // P0-A (2026-04-23): sumário do período via GROUP BY no DB — cards
+  // exibem totais corretos mesmo quando a listagem vem truncada. Janela
+  // = mês selecionado via `mes/ano`, filtrando por `dataVencimento`
+  // (mesma semântica do filtro atual em memória). Quando indisponível
+  // (loading/erro), cai no reduce local como fallback.
+  const periodoStart = `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
+  const periodoEnd = (() => {
+    const lastDay = new Date(ano, mes + 1, 0).getDate();
+    return `${ano}-${String(mes + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  })();
+  const { data: sumarioPeriodo } = useSumarioOperacionalPagamentos({
+    tenantId,
+    tenantResolved: Boolean(tenantId),
+    startDate: periodoStart,
+    endDate: periodoEnd,
+  });
+
   const receberMutation = useReceberPagamento();
   const emitirNfseMutation = useEmitirNfse();
   const importarMutation = useImportarPagamentos();
@@ -134,13 +152,18 @@ function PagamentosPageContent() {
     return d.getMonth() === mes && d.getFullYear() === ano;
   });
 
-  const totalRecebido = filtered
-    .filter((p) => p.status === "PAGO")
-    .reduce((s, p) => s + p.valorFinal, 0);
+  // Totais do período: preferimos o sumário server-side (correto mesmo
+  // truncado). Fallback pro reduce local quando o sumário ainda não
+  // respondeu — mantém comportamento legado enquanto carrega.
+  const totalRecebido = sumarioPeriodo
+    ? sumarioPeriodo.totalRecebido
+    : filtered.filter((p) => p.status === "PAGO").reduce((s, p) => s + p.valorFinal, 0);
 
-  const totalPendente = filtered
-    .filter((p) => isPagamentoEmAberto(p.status))
-    .reduce((s, p) => s + p.valorFinal, 0);
+  const totalPendente = sumarioPeriodo
+    ? sumarioPeriodo.totalPendente + sumarioPeriodo.totalVencido
+    : filtered.filter((p) => isPagamentoEmAberto(p.status)).reduce((s, p) => s + p.valorFinal, 0);
+
+  const totalCount = sumarioPeriodo?.countTotal ?? filtered.length;
   const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
 
   async function handleConfirmRecebimento(data: {
@@ -399,15 +422,17 @@ function PagamentosPageContent() {
 
       {pagamentosTruncated ? (
         <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
-          <strong>Lista truncada:</strong> exibindo {pagamentos.length.toLocaleString("pt-BR")} de {pagamentosTotal.toLocaleString("pt-BR")} pagamentos do período.
-          Os totais e filtros abaixo consideram apenas os itens exibidos — use filtros mais restritos (ex.: mês específico, status) pra ver números completos.
+          <strong>Lista truncada:</strong> exibindo {pagamentos.length.toLocaleString("pt-BR")} de {pagamentosTotal.toLocaleString("pt-BR")} pagamentos carregados.
+          {sumarioPeriodo
+            ? " Os cards de total abaixo mostram o período completo — só a tabela está truncada."
+            : " Os totais abaixo consideram apenas os itens exibidos enquanto o sumário do período carrega."}
         </div>
       ) : null}
 
       <PagamentosSummaryCards
         totalRecebido={totalRecebido}
         totalPendente={totalPendente}
-        totalCount={filtered.length}
+        totalCount={totalCount}
       />
 
       <PagamentosImportSection

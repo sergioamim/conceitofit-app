@@ -12,6 +12,10 @@ import {
   type RecebimentoAvulsoInput,
 } from "@/lib/tenant/financeiro/recebimentos";
 import { emitirNfsePagamentoApi } from "@/lib/api/pagamentos";
+import {
+  getSumarioOperacionalContaReceberApi,
+  type SumarioOperacionalContaReceberResponse,
+} from "@/lib/api/contas-receber";
 import type { StatusPagamento } from "@/lib/types";
 import { queryKeys } from "./keys";
 
@@ -94,6 +98,38 @@ export function usePagamentosPage(input: {
         endDate: input.endDate,
         page: input.page ?? 0,
         size: input.size ?? 200,
+      }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 30_000,
+    gcTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * P0-A (2026-04-23): sumário operacional por período. Complemento de
+ * `usePagamentosPage` — serve pros cards de total na tela `/pagamentos`
+ * ficarem corretos mesmo quando a listagem não consegue carregar todos
+ * os itens (paginação ou truncamento). Totais vêm via GROUP BY no DB.
+ */
+export function useSumarioOperacionalPagamentos(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return useQuery<SumarioOperacionalContaReceberResponse>({
+    queryKey: [
+      "pagamentos",
+      "sumario-operacional",
+      input.tenantId ?? "",
+      input.startDate ?? null,
+      input.endDate ?? null,
+    ],
+    queryFn: () =>
+      getSumarioOperacionalContaReceberApi({
+        tenantId: input.tenantId!,
+        startDate: input.startDate,
+        endDate: input.endDate,
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved,
     staleTime: 30_000,

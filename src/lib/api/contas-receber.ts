@@ -156,6 +156,52 @@ export async function listContasReceberPageApi(input: {
   return { items, total, page: currentPage, size: currentSize, hasNext };
 }
 
+export interface SumarioOperacionalContaReceberResponse {
+  totalRecebido: number;
+  totalPendente: number;
+  totalVencido: number;
+  countRecebido: number;
+  countPendente: number;
+  countVencido: number;
+  countTotal: number;
+}
+
+/**
+ * P0-A (2026-04-23): sumário operacional por período.
+ *
+ * Complementa `listContasReceberPageApi` — o endpoint de sumário roda
+ * `GROUP BY status` no banco e devolve totais corretos do período
+ * independente de paginação. Usado na tela `/pagamentos` pra exibir
+ * valores consolidados mesmo quando a listagem vem truncada.
+ *
+ * Filtro: dataVencimento BETWEEN startDate AND endDate (nulls = sem limite).
+ * Contas CANCELADAs são excluídas. valorFinal = valorOriginal - desconto
+ * + jurosMulta.
+ */
+export async function getSumarioOperacionalContaReceberApi(input: {
+  tenantId: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<SumarioOperacionalContaReceberResponse> {
+  const response = await apiRequest<SumarioOperacionalContaReceberResponse>({
+    path: "/api/v1/gerencial/financeiro/contas-receber/sumario-operacional",
+    query: {
+      tenantId: input.tenantId,
+      startDate: input.startDate,
+      endDate: input.endDate,
+    },
+  });
+  return {
+    totalRecebido: toNumber(response.totalRecebido),
+    totalPendente: toNumber(response.totalPendente),
+    totalVencido: toNumber(response.totalVencido),
+    countRecebido: toNumber(response.countRecebido),
+    countPendente: toNumber(response.countPendente),
+    countVencido: toNumber(response.countVencido),
+    countTotal: toNumber(response.countTotal),
+  };
+}
+
 export async function createContaReceberApi(input: {
   tenantId: string;
   data: CreateContaReceberApiInput;
