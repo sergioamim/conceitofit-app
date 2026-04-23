@@ -394,6 +394,19 @@ export interface AdminCatracaSyncFacesResponse {
   mode: string;
 }
 
+/**
+ * Resposta 202 ACCEPTED do sync facial completo (desde 2026-04-23 roda
+ * em background). Operador consulta métricas/logs pra ver o resultado
+ * final — o backend não devolve contadores aqui porque a sync ainda
+ * não executou quando a request retorna.
+ */
+export interface AdminCatracaSyncFacesAcceptedResponse {
+  tenantId: string;
+  deviceId: string;
+  agentId?: string;
+  status: "ENQUEUED";
+}
+
 export interface AdminCatracaRemoteCommandResponse {
   requestId: string;
   agentId: string;
@@ -439,8 +452,8 @@ export async function sincronizarAdminCatracaFacesApi(input: {
   tenantId: string;
   deviceId: string;
   agentId?: string;
-}): Promise<AdminCatracaSyncFacesResponse> {
-  return apiRequest<AdminCatracaSyncFacesResponse>({
+}): Promise<AdminCatracaSyncFacesAcceptedResponse> {
+  return apiRequest<AdminCatracaSyncFacesAcceptedResponse>({
     path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos/${input.deviceId}/sync-faces`,
     method: "POST",
     body: {

@@ -45,7 +45,7 @@ import {
   type AdminCatracaCredentialResponse,
   type AdminCatracaDeviceResponse,
   type AdminCatracaRemoteCommandResponse,
-  type AdminCatracaSyncFacesResponse,
+  type AdminCatracaSyncFacesAcceptedResponse,
   type AdminCatracaUpsertDeviceInput,
 } from "@/lib/api/catraca";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
@@ -179,7 +179,7 @@ export function CatracaStatusContent() {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [deviceForm, setDeviceForm] = useState<DeviceFormState>(createEmptyDeviceForm());
-  const [lastSyncResult, setLastSyncResult] = useState<AdminCatracaSyncFacesResponse | null>(null);
+  const [lastSyncResult, setLastSyncResult] = useState<AdminCatracaSyncFacesAcceptedResponse | null>(null);
   const [lastConfigCommand, setLastConfigCommand] = useState<AdminCatracaRemoteCommandResponse | null>(null);
 
   const academiasQuery = useQuery<Academia[]>({
@@ -899,25 +899,19 @@ export function CatracaStatusContent() {
 
             {lastSyncResult ? (
               <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                <p className="text-sm font-semibold text-emerald-300">Sync enfileirado</p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Preloads</p>
-                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.queuedPreloads}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Invalidações</p>
-                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.queuedInvalidations}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Ignorados por capacidade</p>
-                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.skippedByCapacity}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Modo</p>
-                    <p className="mt-1 text-xl font-semibold text-emerald-50">{lastSyncResult.mode}</p>
-                  </div>
-                </div>
+                <p className="text-sm font-semibold text-emerald-300">Sync enfileirado em background</p>
+                <p className="mt-2 text-sm text-emerald-50/90">
+                  Status: <span className="font-mono">{lastSyncResult.status}</span> · Dispositivo{" "}
+                  <span className="font-mono">{lastSyncResult.deviceId}</span>
+                  {lastSyncResult.agentId ? (
+                    <>
+                      {" "}· Agente <span className="font-mono">{lastSyncResult.agentId}</span>
+                    </>
+                  ) : null}
+                </p>
+                <p className="mt-1 text-xs text-emerald-200/70">
+                  O resultado final (preloads / invalidações / ignorados) fica nas métricas e logs do job.
+                </p>
               </div>
             ) : null}
 

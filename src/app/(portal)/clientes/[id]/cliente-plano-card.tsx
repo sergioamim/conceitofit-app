@@ -35,11 +35,6 @@ export function ClientePlanoCard({
           Plano ativo
         </p>
         <p className="mt-3 text-sm text-muted-foreground">Cliente sem contrato ativo</p>
-        {onRenovar ? (
-          <Button size="sm" className="mt-3 h-8 w-full text-xs" onClick={onRenovar}>
-            Nova contratação
-          </Button>
-        ) : null}
       </div>
     );
   }

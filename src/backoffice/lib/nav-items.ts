@@ -125,6 +125,7 @@ export const governanceGroup: NavGroup = {
     { href: "/admin/seguranca/usuarios", label: "Usuários", icon: Users },
     { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield },
     { href: "/admin/audit-log", label: "Audit Log", icon: FileText },
+    { href: "/admin/observability/jobs", label: "Jobs & Async", icon: Activity },
   ],
 };
 
