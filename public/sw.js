@@ -3,7 +3,12 @@
  * NÃO cacheia dados de API para garantir dados sempre atualizados.
  */
 
-const CACHE_NAME = "conceito-fit-shell-v2";
+// Bump de versão (v2 → v3) pra forçar reinstall em clients que estão com SW
+// antigo carregado. O v2 tinha bug em respondWith devolvendo undefined quando
+// fetch falhava e o asset nao estava em cache — quebrava fluxos de auth em
+// stg/prod atras de Cloudflare (fetches intermitentes nos scripts do CF
+// Insights caiam no catch → TypeError: Failed to convert value to 'Response').
+const CACHE_NAME = "conceito-fit-shell-v3";
 
 const SHELL_ASSETS = [
   "/icon.svg",
@@ -11,6 +16,15 @@ const SHELL_ASSETS = [
   "/pwa-icon-512.png",
   "/offline.html",
 ];
+
+/**
+ * Garante que uma Response sempre seja devolvida ao respondWith.
+ * Se `cached` for undefined, devolve Response.error() — que propaga o erro
+ * pro network layer em vez de explodir com TypeError no respondWith.
+ */
+function respondOrFallback(promise) {
+  return promise.then((response) => response || Response.error());
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -56,7 +70,9 @@ self.addEventListener("fetch", (event) => {
     request.url.endsWith(".png")
   ) {
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request))
+      respondOrFallback(
+        caches.match(request).then((cached) => cached || fetch(request))
+      )
     );
     return;
   }
@@ -64,13 +80,17 @@ self.addEventListener("fetch", (event) => {
   // Network-first for navigation (HTML pages) — offline fallback
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/offline.html"))
+      respondOrFallback(
+        fetch(request).catch(() => caches.match("/offline.html"))
+      )
     );
     return;
   }
 
-  // Network-first for everything else (JS, CSS)
+  // Network-first for everything else (JS, CSS). Se fetch falhar E o asset
+  // não estiver em cache, respondOrFallback devolve Response.error() em vez
+  // de undefined — deixa o consumidor tratar como network error normal.
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    respondOrFallback(fetch(request).catch(() => caches.match(request)))
   );
 });

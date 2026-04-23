@@ -36,9 +36,13 @@ const connectSrc = Array.from(
 // Task 460: 'unsafe-inline' mantido em produção — Next.js pode precisar para
 // scripts inline gerados pelo build. Reavaliar após corrigir erros de build.
 // SameSite=Lax nos cookies + CSP sem unsafe-eval já reduzem superfície XSS.
+//
+// static.cloudflareinsights.com: beacon injetado automaticamente pelo proxy
+// Cloudflare em stg/prod. Sem isso o script de analytics é bloqueado e
+// polui o console (não quebra funcionalidade, mas confunde o debug).
 const scriptSrc = isDev
-  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-  : "script-src 'self' 'unsafe-inline'";
+  ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com"
+  : "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com";
 
 const securityHeaders = [
   {
