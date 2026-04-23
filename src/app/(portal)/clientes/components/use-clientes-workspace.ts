@@ -11,7 +11,6 @@ import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { Download } from "lucide-react";
 import type { Aluno } from "@/lib/types";
-import { FILTER_ALL } from "@/lib/shared/constants/filters";
 
 import { useClientesData } from "./use-clientes-data";
 
@@ -40,11 +39,16 @@ export function useClientesWorkspace() {
     () => null,
   );
 
+  // P0-B (2026-04-23): `busca` agora é propagada server-side como `search`
+  // pro endpoint `/api/v1/comercial/alunos`. A query backend foi estendida
+  // pra cobrir nome/email/CPF/telefone (antes só nome+CPF). O filter()
+  // abaixo virou só sort local — busca de verdade acontece no DB.
   const data = useClientesData({
     tenantId,
     tenantResolved,
     setTenant,
     filtro,
+    search: q || undefined,
     page,
     pageSize,
   });
@@ -69,23 +73,20 @@ export function useClientesWorkspace() {
     return () => clearTimeout(timer);
   }, [buscaInput, q, setParams]);
 
-  // Client-side search filter + sort
-  const buscaDigits = busca.replace(/\D/g, "");
+  // Sort local (busca e status já filtrados pelo backend via P0-B).
+  // Mantido client-side porque o backend hoje só ordena por `nome ASC`
+  // no endpoint de lista; sort por `cadastro` continua sendo derivação
+  // frontend sobre os itens da página atual.
   const filtered = useMemo(() => {
-    const result = data.alunos.filter((a) => {
-      const matchStatus = filtro === FILTER_ALL || a.status === filtro;
-      const matchBusca = !busca
-        || a.nome?.toLowerCase().includes(busca.toLowerCase())
-        || a.email?.toLowerCase().includes(busca.toLowerCase())
-        || (buscaDigits && a.cpf?.replace(/\D/g, "").includes(buscaDigits))
-        || (buscaDigits && a.telefone?.replace(/\D/g, "").includes(buscaDigits));
-      return matchStatus && matchBusca;
-    });
     if (sortBy === "nome") {
-      return [...result].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }));
+      return [...data.alunos].sort((a, b) =>
+        a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }),
+      );
     }
-    return [...result].sort((a, b) => (b.dataCadastro ?? "").localeCompare(a.dataCadastro ?? ""));
-  }, [data.alunos, filtro, busca, buscaDigits, sortBy]);
+    return [...data.alunos].sort((a, b) =>
+      (b.dataCadastro ?? "").localeCompare(a.dataCadastro ?? ""),
+    );
+  }, [data.alunos, sortBy]);
   const isSearchFiltered = busca.trim().length > 0;
 
   // Metrics
