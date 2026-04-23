@@ -1,5 +1,5 @@
 import type { TipoFormaPagamento } from "@/lib/types";
-import { apiRequest } from "./http";
+import { apiRequest, apiRequestWithMeta } from "./http";
 
 export type CategoriaContaReceberApi =
   | "MENSALIDADE"
@@ -106,6 +106,54 @@ export async function listContasReceberApi(input: {
     },
   });
   return response.map(normalizeContaReceber);
+}
+
+/**
+ * Variante com metadados de paginação (P0-A 2026-04-23).
+ *
+ * Retorna `items` + `total` + `hasNext` lidos dos headers
+ * `X-Total-Count` / `X-Total-Pages` que o backend já emite em
+ * `/gerencial/financeiro/contas-receber`. Serve pra detectar
+ * truncamento silencioso quando o caller fixa `size` (até agora
+ * era hardcoded 500 em `listContasReceberOperacionais`, deixava
+ * escapar pagamentos em tenants grandes).
+ */
+export async function listContasReceberPageApi(input: {
+  tenantId: string;
+  status?: StatusContaReceberApi;
+  categoria?: CategoriaContaReceberApi;
+  origem?: OrigemLancamentoContaReceberApi;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}): Promise<{
+  items: ContaReceberApiResponse[];
+  total: number;
+  page: number;
+  size: number;
+  hasNext: boolean;
+}> {
+  const response = await apiRequestWithMeta<ContaReceberApiResponse[]>({
+    path: "/api/v1/gerencial/financeiro/contas-receber",
+    query: {
+      tenantId: input.tenantId,
+      status: input.status,
+      categoria: input.categoria,
+      origem: input.origem,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      page: input.page,
+      size: input.size,
+    },
+  });
+  const items = response.data.map(normalizeContaReceber);
+  const total = Number(response.headers["x-total-count"] ?? items.length);
+  const currentPage = Number(response.headers["x-page"] ?? input.page ?? 0);
+  const currentSize = Number(response.headers["x-size"] ?? input.size ?? items.length);
+  const totalPages = Number(response.headers["x-total-pages"] ?? 1);
+  const hasNext = Number.isFinite(totalPages) ? currentPage + 1 < totalPages : false;
+  return { items, total, page: currentPage, size: currentSize, hasNext };
 }
 
 export async function createContaReceberApi(input: {

@@ -28,7 +28,7 @@ import {
 } from "@/lib/tenant/financeiro/recebimentos";
 import { parseImportPayload } from "@/lib/tenant/financeiro/pagamento-import-parser";
 import {
-  usePagamentos,
+  usePagamentosPage,
   useReceberPagamento,
   useEmitirNfse,
   useImportarPagamentos,
@@ -79,11 +79,20 @@ function PagamentosPageContent() {
   const [importResultado, setImportResultado] = useState<ImportarPagamentosResultado | null>(null);
   const [importErro, setImportErro] = useState<string | null>(null);
 
-  const { data: pagamentosData } = usePagamentos({
+  // P0-A (2026-04-23): migrado pra `usePagamentosPage` — expõe `hasNext`
+  // e `total` pra renderizar banner quando há mais dados que o `size`
+  // pode mostrar. Antes carregava hardcoded `size=500` e cortava silenciosamente.
+  const { data: pagamentosPage } = usePagamentosPage({
     tenantId,
     tenantResolved: Boolean(tenantId),
+    // `size=500` preserva o comportamento atual como baseline; a UI
+    // detecta truncamento via `hasNext`. Num próximo passo ativamos
+    // paginação/scroll real + filtros backend (status/período).
+    size: 500,
   });
-  const pagamentos = pagamentosData ?? [];
+  const pagamentos = pagamentosPage?.items ?? [];
+  const pagamentosTruncated = pagamentosPage?.hasNext ?? false;
+  const pagamentosTotal = pagamentosPage?.total ?? pagamentos.length;
 
   const receberMutation = useReceberPagamento();
   const emitirNfseMutation = useEmitirNfse();
@@ -385,6 +394,13 @@ function PagamentosPageContent() {
       {nfseBloqueio ? (
         <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
           {nfseBloqueio}
+        </div>
+      ) : null}
+
+      {pagamentosTruncated ? (
+        <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
+          <strong>Lista truncada:</strong> exibindo {pagamentos.length.toLocaleString("pt-BR")} de {pagamentosTotal.toLocaleString("pt-BR")} pagamentos do período.
+          Os totais e filtros abaixo consideram apenas os itens exibidos — use filtros mais restritos (ex.: mês específico, status) pra ver números completos.
         </div>
       ) : null}
 
