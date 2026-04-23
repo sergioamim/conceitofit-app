@@ -19,10 +19,11 @@ export interface CatalogServicosProps {
 }
 
 /**
- * Lista vertical de serviços com botão `+` à direita (AC2).
+ * Grid de serviços com botão `+` à direita (AC2).
  *
  * Puro: sem fetch (AC4). Preço em `font-mono` (AC5).
- * Responsivo (AC6): lista vertical fluida em qualquer largura.
+ * Responsivo (AC6): 1 coluna em mobile, 2 em sm+, 3 em lg+ — serviços têm
+ * pouca info e o layout em coluna única desperdiçava espaço horizontal.
  */
 export function CatalogServicos({ servicos, onAdd, className }: CatalogServicosProps) {
   if (servicos.length === 0) {
@@ -42,7 +43,7 @@ export function CatalogServicos({ servicos, onAdd, className }: CatalogServicosP
   return (
     <ul
       aria-label="Catálogo de serviços"
-      className={cn("flex flex-col gap-2", className)}
+      className={cn("grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3", className)}
     >
       {servicos.map((servico) => (
         <li

@@ -149,27 +149,16 @@ function NovaVendaPageContent() {
 
       <CockpitShell
         headerLeft={
-          <div className="flex items-center gap-4 leading-tight">
-            <div className="flex flex-col">
-              <span className="font-display text-[15px] font-bold tracking-tight">
-                Nova Venda
-              </span>
-              <span className="font-mono text-[11px] text-[color:oklch(0.72_0_0)]">
-                ponto de venda · carrinho unificado
-              </span>
-            </div>
-            <div className="hidden h-8 w-px bg-white/10 md:block" />
-            <div className="hidden flex-col md:flex">
-              <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-[color:oklch(0.72_0_0)]">
-                Unidade
-              </span>
-              <span
-                className="text-[12px] font-semibold text-[color:oklch(0.98_0_0)]"
-                suppressHydrationWarning
-              >
-                {hasMounted ? (tenant?.nome ?? "—") : "—"}
-              </span>
-            </div>
+          <div className="flex flex-col leading-tight">
+            <span className="font-mono text-[10px] uppercase tracking-[0.06em] text-[color:oklch(0.72_0_0)]">
+              Unidade
+            </span>
+            <span
+              className="text-[13px] font-semibold text-[color:oklch(0.98_0_0)]"
+              suppressHydrationWarning
+            >
+              {hasMounted ? (tenant?.nome ?? "—") : "—"}
+            </span>
           </div>
         }
         headerCenter={
