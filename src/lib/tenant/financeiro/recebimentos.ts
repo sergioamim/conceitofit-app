@@ -4,6 +4,7 @@ import {
   cancelarContaReceberApi,
   createContaReceberApi,
   listContasReceberApi,
+  listContasReceberPageApi,
   receberContaReceberApi,
   updateContaReceberApi,
 } from "@/lib/api/contas-receber";
@@ -311,6 +312,60 @@ export async function listContasReceberOperacionais(input: {
   ]);
 
   return contas.map((item) => mapContaReceberToPagamento(item, alunos));
+}
+
+/**
+ * Variante com paginação server-side (P0-A 2026-04-23). Retorna o
+ * `PagamentoComAluno[]` da página + meta (`total`, `hasNext`) lidos
+ * dos headers `X-Total-Count` / `X-Total-Pages` que o endpoint já
+ * emite. Substitui a versão legada no `/pagamentos` pra eliminar o
+ * truncamento silencioso quando o caller fixava `size=500`.
+ *
+ * Os outros callers (BI, emitir-em-lote) continuam na versão sem
+ * paginação porque trabalham com agregados/lotes pequenos.
+ */
+export async function listContasReceberOperacionaisPage(input: {
+  tenantId: string;
+  status?: Pagamento["status"];
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}): Promise<{
+  items: PagamentoComAluno[];
+  total: number;
+  page: number;
+  size: number;
+  hasNext: boolean;
+}> {
+  const [pageResult, alunos] = await Promise.all([
+    listContasReceberPageApi({
+      tenantId: input.tenantId,
+      status:
+        input.status === "PAGO"
+          ? "RECEBIDA"
+          : input.status === "VENCIDO"
+            ? "VENCIDA"
+            : input.status === "CANCELADO"
+              ? "CANCELADA"
+              : input.status === "PENDENTE"
+                ? "PENDENTE"
+                : undefined,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      page: input.page ?? 0,
+      size: input.size ?? 200,
+    }),
+    listAlunosTenant(input.tenantId),
+  ]);
+
+  return {
+    items: pageResult.items.map((item) => mapContaReceberToPagamento(item, alunos)),
+    total: pageResult.total,
+    page: pageResult.page,
+    size: pageResult.size,
+    hasNext: pageResult.hasNext,
+  };
 }
 
 export async function createRecebimentoAvulsoService(input: {

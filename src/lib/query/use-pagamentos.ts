@@ -4,6 +4,7 @@ import {
   createRecebimentoAvulsoService,
   importarPagamentosEmLoteService,
   listContasReceberOperacionais,
+  listContasReceberOperacionaisPage,
   type AjustarPagamentoInput,
   type ImportarPagamentosResultado,
   type PagamentoComAluno,
@@ -44,6 +45,57 @@ export function usePagamentos(input: {
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved,
     // Task 485: pagamentos — 30s staleTime, 5min gcTime
+    staleTime: 30_000,
+    gcTime: 5 * 60 * 1000,
+  });
+}
+
+export interface UsePagamentosPageResult {
+  items: PagamentoComAluno[];
+  total: number;
+  page: number;
+  size: number;
+  hasNext: boolean;
+}
+
+/**
+ * P0-A (2026-04-23): versão paginada do `usePagamentos`. Substitui o uso
+ * no `/pagamentos` pra eliminar o bug de truncamento silencioso em
+ * `size=500` — agora `hasNext` permite detectar quando há mais dados
+ * e o caller pode render de banner "exibindo N de M" ou pagerar.
+ *
+ * Mantém o hook legado `usePagamentos` intacto pros callers que só
+ * precisam de lista simples (BI, emitir-em-lote).
+ */
+export function usePagamentosPage(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+  status?: StatusPagamento;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}) {
+  const filters = {
+    status: input.status,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    page: input.page ?? 0,
+    size: input.size ?? 200,
+  };
+
+  return useQuery<UsePagamentosPageResult>({
+    queryKey: [...queryKeys.pagamentos.list(input.tenantId ?? "", filters), "paged"],
+    queryFn: () =>
+      listContasReceberOperacionaisPage({
+        tenantId: input.tenantId!,
+        status: input.status,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        page: input.page ?? 0,
+        size: input.size ?? 200,
+      }),
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
     staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
   });
