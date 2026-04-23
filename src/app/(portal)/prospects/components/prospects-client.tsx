@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { formatDateBR } from "@/lib/formatters";
 import Link from "next/link";
 import { Search, Plus, ChevronDown, Users, Target, ArrowRight } from "lucide-react";
@@ -11,7 +11,8 @@ import { getBusinessCurrentMonthYear } from "@/lib/business-date";
 import { canAdvanceProspect, getNextProspectStatus } from "@/lib/tenant/crm/prospect-status";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
-  useProspects,
+  useProspectsPage,
+  useSumarioProspects,
   useCreateProspect,
   useUpdateProspect,
   useUpdateProspectStatus,
@@ -164,11 +165,6 @@ export function ProspectsClient() {
   const tenantContext = useTenantContext();
   const tenantId = tenantContext.tenantId ?? "";
 
-  const { data: prospects = [], isLoading: loading, error: queryError, refetch } = useProspects({
-    tenantId: tenantId || undefined,
-    tenantResolved: tenantContext.tenantResolved,
-  });
-
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   useEffect(() => {
     void listFuncionariosApi(true).then(setFuncionarios).catch(() => {});
@@ -191,51 +187,62 @@ export function ProspectsClient() {
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
   const [page, setPage] = useState(1);
 
+  // P1 (2026-04-23): filtros + paginacao todos server-side.
+  // `mes/ano` → startDate/endDate; `filtroStatus`, `filtroOrigem`, `busca`
+  // viram params do backend. Tabela consome items da pagina direto; cards
+  // de totais leem sumário (GROUP BY por status no DB).
+  const periodoStart = `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
+  const periodoEnd = (() => {
+    const lastDay = new Date(ano, mes + 1, 0).getDate();
+    return `${ano}-${String(mes + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  })();
+
+  const backendStatus = filtroStatus === FILTER_ALL ? undefined : filtroStatus;
+  const backendOrigem = filtroOrigem === "TODAS" ? undefined : filtroOrigem;
+  const backendSearch = busca.trim() || undefined;
+
+  const {
+    data: prospectsPage,
+    isLoading: loading,
+    error: queryError,
+    refetch,
+  } = useProspectsPage({
+    tenantId: tenantId || undefined,
+    tenantResolved: tenantContext.tenantResolved,
+    status: backendStatus,
+    origem: backendOrigem,
+    search: backendSearch,
+    startDate: periodoStart,
+    endDate: periodoEnd,
+    page: page - 1, // backend 0-indexed, UI 1-indexed
+    size: pageSize,
+  });
+
+  const { data: sumario } = useSumarioProspects({
+    tenantId: tenantId || undefined,
+    tenantResolved: tenantContext.tenantResolved,
+    startDate: periodoStart,
+    endDate: periodoEnd,
+  });
+
   const error = queryError ? normalizeErrorMessage(queryError) : "";
 
-  const prospectsByMonth = useMemo(() => {
-    return prospects.filter((p) => {
-      const d = new Date(p.dataCriacao);
-      return d.getFullYear() === ano && d.getMonth() === mes;
-    });
-  }, [prospects, ano, mes]);
-
-  const filtered = useMemo(() => {
-    const buscaDigits = busca.replace(/\D/g, "");
-    const buscaTermo = busca.toLowerCase();
-
-    return prospectsByMonth.filter((p) => {
-      const matchStatus = filtroStatus === FILTER_ALL || p.status === filtroStatus;
-      const matchOrigem = filtroOrigem === "TODAS" || p.origem === filtroOrigem;
-      const matchBusca =
-        !busca ||
-        p.nome.toLowerCase().includes(buscaTermo) ||
-        (buscaDigits && p.telefone.replace(/\D/g, "").includes(buscaDigits));
-      return matchStatus && matchOrigem && matchBusca;
-    });
-  }, [busca, filtroOrigem, filtroStatus, prospectsByMonth]);
-
+  const displayed = prospectsPage?.items ?? [];
+  const totalFiltrado = prospectsPage?.total ?? 0;
   const startIndex = (page - 1) * pageSize;
-  const displayed = filtered.slice(startIndex, startIndex + pageSize);
   const endIndex = displayed.length === 0 ? 0 : startIndex + displayed.length;
-  const hasNextPage = endIndex < filtered.length;
+  const hasNextPage = prospectsPage?.hasNext ?? false;
 
-  const statusTotals = useMemo(
-    () =>
-      prospectsByMonth.reduce<Record<StatusProspect, number>>(
-        (acc, p) => {
-          acc[p.status] += 1;
-          return acc;
-        },
-        { NOVO: 0, EM_CONTATO: 0, AGENDOU_VISITA: 0, VISITOU: 0, CONVERTIDO: 0, PERDIDO: 0 }
-      ),
-    [prospectsByMonth]
-  );
+  const statusTotals: Record<StatusProspect, number> = {
+    NOVO: sumario?.novos ?? 0,
+    EM_CONTATO: sumario?.emContato ?? 0,
+    AGENDOU_VISITA: sumario?.agendouVisita ?? 0,
+    VISITOU: sumario?.visitou ?? 0,
+    CONVERTIDO: sumario?.convertidos ?? 0,
+    PERDIDO: sumario?.perdidos ?? 0,
+  };
 
-  const ativosCount = useMemo(
-    () => prospectsByMonth.filter((p) => p.status !== "CONVERTIDO" && p.status !== "PERDIDO").length,
-    [prospectsByMonth]
-  );
+  const ativosCount = sumario?.ativos ?? 0;
 
   const handleSearchChange = useCallback((value: string) => {
     const hasLetters = /[a-zA-Z@]/.test(value);
@@ -496,7 +503,7 @@ export function ProspectsClient() {
 
         <div className="p-4 border-t border-border/40 bg-muted/5 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-xs text-muted-foreground font-medium">
-            Exibindo <span className="text-foreground font-bold">{filtered.length === 0 ? 0 : startIndex + 1}-{endIndex}</span> de <span className="text-foreground font-bold">{filtered.length}</span> leads
+            Exibindo <span className="text-foreground font-bold">{totalFiltrado === 0 ? 0 : startIndex + 1}-{endIndex}</span> de <span className="text-foreground font-bold">{totalFiltrado}</span> leads
           </p>
           <div className="flex items-center gap-2">
             <Button
