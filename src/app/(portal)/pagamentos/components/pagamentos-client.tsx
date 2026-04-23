@@ -11,7 +11,8 @@
 
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,6 @@ import { PagamentosFilters } from "./pagamentos-filters/pagamentos-filters";
 import { PagamentosTable } from "./pagamentos-table/pagamentos-table";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDate } from "@/lib/formatters";
-import { isPagamentoEmAberto } from "@/lib/domain/status-helpers";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import type {
   Aluno,
@@ -75,41 +75,64 @@ function PagamentosPageContent() {
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [clienteFiltro, setClienteFiltro] = useState<string>(FILTER_ALL);
+  const [page, setPage] = useState(0);
   const [importPayload, setImportPayload] = useState(IMPORTAR_PAGAMENTOS_EXEMPLO_CSV);
   const [importandoPagamentos, setImportandoPagamentos] = useState(false);
   const [importResultado, setImportResultado] = useState<ImportarPagamentosResultado | null>(null);
   const [importErro, setImportErro] = useState<string | null>(null);
 
-  // P0-A (2026-04-23): migrado pra `usePagamentosPage` — expõe `hasNext`
-  // e `total` pra renderizar banner quando há mais dados que o `size`
-  // pode mostrar. Antes carregava hardcoded `size=500` e cortava silenciosamente.
-  const { data: pagamentosPage } = usePagamentosPage({
-    tenantId,
-    tenantResolved: Boolean(tenantId),
-    // `size=500` preserva o comportamento atual como baseline; a UI
-    // detecta truncamento via `hasNext`. Num próximo passo ativamos
-    // paginação/scroll real + filtros backend (status/período).
-    size: 500,
-  });
-  const pagamentos = pagamentosPage?.items ?? [];
-  const pagamentosTruncated = pagamentosPage?.hasNext ?? false;
-  const pagamentosTotal = pagamentosPage?.total ?? pagamentos.length;
+  const PAGE_SIZE = 50;
 
-  // P0-A (2026-04-23): sumário do período via GROUP BY no DB — cards
-  // exibem totais corretos mesmo quando a listagem vem truncada. Janela
-  // = mês selecionado via `mes/ano`, filtrando por `dataVencimento`
-  // (mesma semântica do filtro atual em memória). Quando indisponível
-  // (loading/erro), cai no reduce local como fallback.
+  // P0-A passo 3 (2026-04-23): filtros todos server-side. `mes/ano` viram
+  // `startDate/endDate`; `filtro` (status) e `clienteFiltro` (→ CPF) também
+  // são repassados ao backend. Listagem paginada real (size=50 + page),
+  // cards leem totais do sumário operacional (GROUP BY no DB).
   const periodoStart = `${ano}-${String(mes + 1).padStart(2, "0")}-01`;
   const periodoEnd = (() => {
     const lastDay = new Date(ano, mes + 1, 0).getDate();
     return `${ano}-${String(mes + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
   })();
+
+  // URL ?clienteId=...|?alunoId=... sobrepõe o select de cliente quando presente.
+  const alunoUrlParam = searchParams.get("clienteId") ?? searchParams.get("alunoId");
+  const clienteSelecionadoId =
+    alunoUrlParam ?? (clienteFiltro === FILTER_ALL ? undefined : clienteFiltro);
+
+  const documentoCliente = useMemo(() => {
+    if (!clienteSelecionadoId) return undefined;
+    const aluno = clientes.find((c) => c.id === clienteSelecionadoId);
+    const digits = (aluno?.cpf ?? "").replace(/\D/g, "");
+    return digits || undefined;
+  }, [clienteSelecionadoId, clientes]);
+
+  // Resetar pra primeira página quando filtros mudam — evita cair numa página
+  // vazia (ex.: mes novo com menos de `page * PAGE_SIZE` itens).
+  useEffect(() => {
+    setPage(0);
+  }, [filtro, mes, ano, clienteFiltro, alunoUrlParam, documentoCliente]);
+
+  const statusBackend = filtro === FILTER_ALL ? undefined : filtro;
+
+  const { data: pagamentosPage, isFetching } = usePagamentosPage({
+    tenantId,
+    tenantResolved: Boolean(tenantId),
+    status: statusBackend,
+    startDate: periodoStart,
+    endDate: periodoEnd,
+    documentoCliente,
+    page,
+    size: PAGE_SIZE,
+  });
+  const pagamentos = pagamentosPage?.items ?? [];
+  const pagamentosTotal = pagamentosPage?.total ?? 0;
+  const hasNextPage = pagamentosPage?.hasNext ?? false;
+
   const { data: sumarioPeriodo } = useSumarioOperacionalPagamentos({
     tenantId,
     tenantResolved: Boolean(tenantId),
     startDate: periodoStart,
     endDate: periodoEnd,
+    documentoCliente,
   });
 
   const receberMutation = useReceberPagamento();
@@ -139,31 +162,12 @@ function PagamentosPageContent() {
     void loadAuxData();
   }, [loadAuxData]);
 
-  const alunoId = searchParams.get("clienteId") ?? searchParams.get("alunoId");
-  const filteredBase =
-    filtro === FILTER_ALL
-      ? pagamentos
-      : pagamentos.filter((p) => p.status === filtro);
-
-  const filtered = filteredBase.filter((p) => {
-    if (alunoId && p.alunoId !== alunoId) return false;
-    if (clienteFiltro !== FILTER_ALL && p.alunoId !== clienteFiltro) return false;
-    const d = new Date(p.dataVencimento + "T00:00:00");
-    return d.getMonth() === mes && d.getFullYear() === ano;
-  });
-
-  // Totais do período: preferimos o sumário server-side (correto mesmo
-  // truncado). Fallback pro reduce local quando o sumário ainda não
-  // respondeu — mantém comportamento legado enquanto carrega.
-  const totalRecebido = sumarioPeriodo
-    ? sumarioPeriodo.totalRecebido
-    : filtered.filter((p) => p.status === "PAGO").reduce((s, p) => s + p.valorFinal, 0);
-
-  const totalPendente = sumarioPeriodo
-    ? sumarioPeriodo.totalPendente + sumarioPeriodo.totalVencido
-    : filtered.filter((p) => isPagamentoEmAberto(p.status)).reduce((s, p) => s + p.valorFinal, 0);
-
-  const totalCount = sumarioPeriodo?.countTotal ?? filtered.length;
+  // Totais do período vêm SEMPRE do sumário server-side (GROUP BY). Cards
+  // refletem o período inteiro independente da página atual. `totalPendente`
+  // agrega PENDENTE + VENCIDA pra bater com o conceito frontend de "em aberto".
+  const totalRecebido = sumarioPeriodo?.totalRecebido ?? 0;
+  const totalPendente = (sumarioPeriodo?.totalPendente ?? 0) + (sumarioPeriodo?.totalVencido ?? 0);
+  const totalCount = sumarioPeriodo?.countTotal ?? pagamentosTotal;
   const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
 
   async function handleConfirmRecebimento(data: {
@@ -420,15 +424,6 @@ function PagamentosPageContent() {
         </div>
       ) : null}
 
-      {pagamentosTruncated ? (
-        <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
-          <strong>Lista truncada:</strong> exibindo {pagamentos.length.toLocaleString("pt-BR")} de {pagamentosTotal.toLocaleString("pt-BR")} pagamentos carregados.
-          {sumarioPeriodo
-            ? " Os cards de total abaixo mostram o período completo — só a tabela está truncada."
-            : " Os totais abaixo consideram apenas os itens exibidos enquanto o sumário do período carrega."}
-        </div>
-      ) : null}
-
       <PagamentosSummaryCards
         totalRecebido={totalRecebido}
         totalPendente={totalPendente}
@@ -461,12 +456,48 @@ function PagamentosPageContent() {
       />
 
       <PagamentosTable
-        pagamentos={filtered}
+        pagamentos={pagamentos}
         nfseBloqueio={nfseBloqueio}
         onReceber={setRecebendo}
         onEmitirNfse={setEmitindo}
         onDetalhesNfse={handleAbrirDetalheNfse}
       />
+
+      {pagamentosTotal > PAGE_SIZE ? (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm">
+          <p className="text-xs text-muted-foreground">
+            Exibindo <span className="font-semibold text-foreground">
+              {pagamentos.length === 0 ? 0 : page * PAGE_SIZE + 1}-{page * PAGE_SIZE + pagamentos.length}
+            </span>{" "}
+            de <span className="font-semibold text-foreground">{pagamentosTotal.toLocaleString("pt-BR")}</span> pagamentos
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={page === 0 || isFetching}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <ChevronLeft size={16} className="mr-1" />
+              Anterior
+            </Button>
+            <span className="px-3 text-xs font-semibold">Página {page + 1}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={!hasNextPage || isFetching}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Próxima
+              <ChevronRight size={16} className="ml-1" />
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

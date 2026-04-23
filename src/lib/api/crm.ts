@@ -43,7 +43,7 @@ import type {
   StatusAgendamento,
   StatusProspect,
 } from "@/lib/types";
-import { ApiRequestError, apiRequest } from "./http";
+import { ApiRequestError, apiRequest, apiRequestWithMeta } from "./http";
 
 type ProspectApiResponse = Partial<
   Pick<
@@ -222,6 +222,9 @@ export async function listProspectsApi(input: {
   tenantId: string;
   status?: StatusProspect;
   origem?: OrigemProspect;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
 }): Promise<Prospect[]> {
   const response = await apiRequest<ProspectListApiResponse>({
     path: "/api/v1/academia/prospects",
@@ -229,10 +232,102 @@ export async function listProspectsApi(input: {
       tenantId: input.tenantId,
       status: input.status,
       origem: input.origem,
+      search: input.search,
+      startDate: input.startDate,
+      endDate: input.endDate,
     },
   });
 
   return normalizeProspectList(response, { tenantId: input.tenantId });
+}
+
+/**
+ * P1 (2026-04-23): variante paginada de `listProspectsApi`. Le os
+ * headers `X-Total-Count` / `X-Page` / `X-Total-Pages` emitidos pelo
+ * backend e retorna envelope com `items` + `total` + `hasNext`. Serve
+ * a tela `/prospects` pra substituir o load-all-then-filter local.
+ */
+export async function listProspectsPageApi(input: {
+  tenantId: string;
+  status?: StatusProspect;
+  origem?: OrigemProspect;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  size?: number;
+}): Promise<{
+  items: Prospect[];
+  total: number;
+  page: number;
+  size: number;
+  hasNext: boolean;
+}> {
+  const response = await apiRequestWithMeta<ProspectListApiResponse>({
+    path: "/api/v1/academia/prospects",
+    query: {
+      tenantId: input.tenantId,
+      status: input.status,
+      origem: input.origem,
+      search: input.search,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      page: input.page,
+      size: input.size,
+    },
+  });
+  const items = normalizeProspectList(response.data, { tenantId: input.tenantId });
+  const total = Number(response.headers["x-total-count"] ?? items.length);
+  const currentPage = Number(response.headers["x-page"] ?? input.page ?? 0);
+  const currentSize = Number(response.headers["x-size"] ?? input.size ?? items.length);
+  const totalPages = Number(response.headers["x-total-pages"] ?? 1);
+  const hasNext = Number.isFinite(totalPages) ? currentPage + 1 < totalPages : false;
+  return { items, total, page: currentPage, size: currentSize, hasNext };
+}
+
+export interface SumarioProspectsApiResponse {
+  novos: number;
+  emContato: number;
+  agendouVisita: number;
+  visitou: number;
+  convertidos: number;
+  perdidos: number;
+  ativos: number;
+  total: number;
+}
+
+/**
+ * P1 (2026-04-23): sumário por status de prospects no período.
+ * Usado pelos cards de totais na tela `/prospects` pra evitar
+ * recomputar em memoria após cada load.
+ */
+export async function getSumarioProspectsApi(input: {
+  tenantId: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<SumarioProspectsApiResponse> {
+  const response = await apiRequest<SumarioProspectsApiResponse>({
+    path: "/api/v1/academia/prospects/sumario",
+    query: {
+      tenantId: input.tenantId,
+      startDate: input.startDate,
+      endDate: input.endDate,
+    },
+  });
+  const toNum = (v: unknown): number => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return {
+    novos: toNum(response.novos),
+    emContato: toNum(response.emContato),
+    agendouVisita: toNum(response.agendouVisita),
+    visitou: toNum(response.visitou),
+    convertidos: toNum(response.convertidos),
+    perdidos: toNum(response.perdidos),
+    ativos: toNum(response.ativos),
+    total: toNum(response.total),
+  };
 }
 
 export async function getProspectApi(input: {

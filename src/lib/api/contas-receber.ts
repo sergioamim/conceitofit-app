@@ -125,6 +125,8 @@ export async function listContasReceberPageApi(input: {
   origem?: OrigemLancamentoContaReceberApi;
   startDate?: string;
   endDate?: string;
+  /** CPF (só dígitos) — filtra contas pelo cliente, match server-side. */
+  documentoCliente?: string;
   page?: number;
   size?: number;
 }): Promise<{
@@ -143,6 +145,7 @@ export async function listContasReceberPageApi(input: {
       origem: input.origem,
       startDate: input.startDate,
       endDate: input.endDate,
+      documentoCliente: input.documentoCliente,
       page: input.page,
       size: input.size,
     },
@@ -182,6 +185,8 @@ export async function getSumarioOperacionalContaReceberApi(input: {
   tenantId: string;
   startDate?: string;
   endDate?: string;
+  /** CPF (só dígitos) — restringe totais ao cliente quando informado. */
+  documentoCliente?: string;
 }): Promise<SumarioOperacionalContaReceberResponse> {
   const response = await apiRequest<SumarioOperacionalContaReceberResponse>({
     path: "/api/v1/gerencial/financeiro/contas-receber/sumario-operacional",
@@ -189,6 +194,7 @@ export async function getSumarioOperacionalContaReceberApi(input: {
       tenantId: input.tenantId,
       startDate: input.startDate,
       endDate: input.endDate,
+      documentoCliente: input.documentoCliente,
     },
   });
   return {

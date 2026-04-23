@@ -329,6 +329,8 @@ export async function listContasReceberOperacionaisPage(input: {
   status?: Pagamento["status"];
   startDate?: string;
   endDate?: string;
+  /** CPF digits-only — filtra contas pelo cliente no backend. */
+  documentoCliente?: string;
   page?: number;
   size?: number;
 }): Promise<{
@@ -353,6 +355,7 @@ export async function listContasReceberOperacionaisPage(input: {
                 : undefined,
       startDate: input.startDate,
       endDate: input.endDate,
+      documentoCliente: input.documentoCliente,
       page: input.page ?? 0,
       size: input.size ?? 200,
     }),
