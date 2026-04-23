@@ -77,6 +77,8 @@ export function usePagamentosPage(input: {
   status?: StatusPagamento;
   startDate?: string;
   endDate?: string;
+  /** CPF digits-only — filtra contas pelo cliente no backend. */
+  documentoCliente?: string;
   page?: number;
   size?: number;
 }) {
@@ -84,6 +86,7 @@ export function usePagamentosPage(input: {
     status: input.status,
     startDate: input.startDate,
     endDate: input.endDate,
+    documentoCliente: input.documentoCliente,
     page: input.page ?? 0,
     size: input.size ?? 200,
   };
@@ -96,6 +99,7 @@ export function usePagamentosPage(input: {
         status: input.status,
         startDate: input.startDate,
         endDate: input.endDate,
+        documentoCliente: input.documentoCliente,
         page: input.page ?? 0,
         size: input.size ?? 200,
       }),
@@ -116,6 +120,8 @@ export function useSumarioOperacionalPagamentos(input: {
   tenantResolved: boolean;
   startDate?: string;
   endDate?: string;
+  /** CPF digits-only — sumário restrito ao cliente quando informado. */
+  documentoCliente?: string;
 }) {
   return useQuery<SumarioOperacionalContaReceberResponse>({
     queryKey: [
@@ -124,12 +130,14 @@ export function useSumarioOperacionalPagamentos(input: {
       input.tenantId ?? "",
       input.startDate ?? null,
       input.endDate ?? null,
+      input.documentoCliente ?? null,
     ],
     queryFn: () =>
       getSumarioOperacionalContaReceberApi({
         tenantId: input.tenantId!,
         startDate: input.startDate,
         endDate: input.endDate,
+        documentoCliente: input.documentoCliente,
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved,
     staleTime: 30_000,
