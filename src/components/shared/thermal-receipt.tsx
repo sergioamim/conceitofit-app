@@ -158,16 +158,25 @@ export function ThermalReceipt({
           className="text-center"
           data-testid="thermal-receipt-header"
         >
-          <h3 className="font-mono text-base font-bold uppercase tracking-wider">
+          <h3
+            className="font-mono text-base font-bold uppercase tracking-wider"
+            suppressHydrationWarning
+          >
             {cabecalho.academiaNome}
           </h3>
           {cabecalho.cnpj ? (
-            <p className="mt-0.5 font-mono text-[11px] text-[color:#3a3e47]">
+            <p
+              className="mt-0.5 font-mono text-[11px] text-[color:#3a3e47]"
+              suppressHydrationWarning
+            >
               CNPJ {cabecalho.cnpj}
             </p>
           ) : null}
           {cabecalho.endereco ? (
-            <p className="mt-0.5 text-[11px] text-[color:#3a3e47]">
+            <p
+              className="mt-0.5 text-[11px] text-[color:#3a3e47]"
+              suppressHydrationWarning
+            >
               {cabecalho.endereco}
             </p>
           ) : null}

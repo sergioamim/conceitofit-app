@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -63,6 +63,13 @@ const METODO_LABEL: Record<PaymentPanelMetodo, string> = {
   CARTAO_DEBITO: "Débito",
   PIX: "PIX",
 };
+
+// useHasMounted inline — evita hydration mismatch no `cabecalho` do
+// ThermalReceipt (academiaNome/cnpj/endereço vêm do `tenant`, que só
+// resolve client-side via session). Mesmo padrão já usado em `page.tsx`.
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 interface PaymentPanelProps {
   workspace: VendaWorkspace;
@@ -226,17 +233,29 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
     [cart],
   );
 
+  // `hasMounted` é false no SSR e primeiro render client (suppressHydrationWarning
+  // garante que o mismatch não quebra). Só depois do mount usamos dados do
+  // `tenant` (resolvido via session client-side). Evita hydration error
+  // "Conceito Fit" (SSR) vs "Unidade Mananciais - S1" (client).
+  const hasMounted = useSyncExternalStore(
+    subscribeNoop,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+
   const cabecalho = useMemo(
     () => ({
-      academiaNome: tenant?.academiaNome || tenant?.nome || "Conceito Fit",
-      cnpj: tenant?.documento,
-      endereco: tenant?.endereco
+      academiaNome: hasMounted
+        ? tenant?.academiaNome || tenant?.nome || "Conceito Fit"
+        : "Conceito Fit",
+      cnpj: hasMounted ? tenant?.documento : undefined,
+      endereco: hasMounted && tenant?.endereco
         ? [tenant.endereco.logradouro, tenant.endereco.numero, tenant.endereco.cidade]
             .filter(Boolean)
             .join(", ")
         : undefined,
     }),
-    [tenant],
+    [hasMounted, tenant],
   );
 
   const parcelamentoReceipt = mostrarParcelas && watchedParcelas > 1

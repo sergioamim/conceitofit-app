@@ -168,6 +168,21 @@ export function useVendaWorkspace() {
   const [parcelas, setParcelasState] = useState<number>(1);
   const [autorizacao, setAutorizacaoState] = useState<string>("");
 
+  /**
+   * `saleCycleKey` — chave do ciclo de venda. Incrementada em
+   * {@link handleReceiptClose}. Consumida como `key` no `<PaymentPanel />`
+   * para forçar remount do formulário RHF a cada venda finalizada.
+   *
+   * Por quê: os 6 effects de sync form↔workspace do PaymentPanel fazem
+   * ping-pong quando o workspace é resetado externamente (pós-venda) e o
+   * form ainda está com o valor anterior — isso gerava "Maximum update
+   * depth exceeded" em `setFormaPagamento` quando o usuário fechava o
+   * recibo (inclusive via "Ver perfil do cliente", que também fecha).
+   * Remontar o form com defaults do workspace resetado elimina a corrida
+   * sem precisar reescrever os sync effects.
+   */
+  const [saleCycleKey, setSaleCycleKey] = useState(0);
+
   const setParcelas = useCallback((next: number) => {
     const clamped = Math.min(12, Math.max(1, Math.floor(Number.isFinite(next) ? next : 1)));
     setParcelasState(clamped);
@@ -251,41 +266,56 @@ export function useVendaWorkspace() {
         voucherCodigo: flow.cupomAppliedCode,
         voucherPercent: flow.cupomPercent,
       });
-      clearCart();
-      // Defer invalidações + resets pra DEPOIS do modal de recibo montar.
-      // Razão: fazer tudo no mesmo tick (abrir modal + 10+ setStates + cache
-      // invalidations) disputa com os 6 useEffects de sync form↔workspace do
-      // PaymentPanel e gera "Maximum update depth exceeded" no DialogOverlay.
-      // O setTimeout(0) isola o "fechar venda" do "limpar cockpit".
-      setTimeout(() => {
-        if (tenantId) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
-          const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
-          if (criouContrato) {
-            void queryClient.invalidateQueries({ queryKey: queryKeys.contratos.all(tenantId) });
-            if (venda.clienteId) {
-              void queryClient.invalidateQueries({
-                queryKey: queryKeys.contratos.byAluno(tenantId, venda.clienteId),
-              });
-            }
+      // Cache invalidations podem (e devem) rodar logo — o usuário pode
+      // abrir `/vendas` ou o perfil do cliente em outra aba enquanto o
+      // recibo está aberto e esperar dados frescos. Nada aqui mexe em
+      // state do PaymentPanel.
+      if (tenantId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
+        const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
+        if (criouContrato) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.contratos.all(tenantId) });
+          if (venda.clienteId) {
+            void queryClient.invalidateQueries({
+              queryKey: queryKeys.contratos.byAluno(tenantId, venda.clienteId),
+            });
           }
         }
-        items.setSelectedItemId("");
-        items.setItemQuery("");
-        items.setQtd("1");
-        // VUN-3.3: reset dos extras do PaymentPanel após confirmação.
-        setFormaPagamentoState("PIX");
-        setParcelasState(1);
-        setAutorizacaoState("");
-        // VUN-Onda3: limpa `dataInicioPlano` para o próximo cockpit
-        // voltar ao default (sugestão do hook). Usa setter do flow para
-        // o state compartilhado no `useCommercialFlow`.
-        setDataInicioPlano("");
-      }, 0);
+      }
+      // NOTA: resets de carrinho/forma-pagamento/parcelas/autorização/
+      // dataInício foram movidos pro `handleReceiptClose` (abaixo). Motivo:
+      // fazer esses resets aqui — no mesmo tick em que o modal abre —
+      // disparava cascata com os 6 useEffects de sync form↔workspace do
+      // PaymentPanel E ainda re-renderizava o modal recém-montado. Na 2ª
+      // venda consecutiva a cadeia batia "Maximum update depth exceeded"
+      // no DialogOverlay. Resetar só após o usuário fechar o recibo deixa
+      // o ciclo limpo: venda abre modal → modal fecha → cockpit reseta.
     } catch (err) {
       alert(err instanceof Error ? err.message : "Erro ao registrar venda");
     }
-  }, [alunos, clearCart, clienteId, flow.cupomAppliedCode, flow.cupomPercent, items, processSale, queryClient, receipt, requireCliente, selectedPlano, setDataInicioPlano, tenantId]);
+  }, [alunos, clienteId, flow.cupomAppliedCode, flow.cupomPercent, processSale, queryClient, receipt, requireCliente, selectedPlano, tenantId]);
+
+  /**
+   * Handler de fechamento do recibo (VUN-Onda-4 follow-up, 2026-04-22):
+   * limpa carrinho + extras do PaymentPanel. Rodar no close (em vez de
+   * no fim do confirm payment) elimina a corrida de re-renders que
+   * disparava loop no DialogOverlay na 2ª venda consecutiva.
+   */
+  const handleReceiptClose = useCallback(() => {
+    receipt.setReceiptOpen(false);
+    clearCart();
+    items.setSelectedItemId("");
+    items.setItemQuery("");
+    items.setQtd("1");
+    setFormaPagamentoState("PIX");
+    setParcelasState(1);
+    setAutorizacaoState("");
+    setDataInicioPlano("");
+    // Bump da key do PaymentPanel: remonta o form RHF limpo, sem disputar
+    // com os effects de sync form↔workspace. Ver comentário no
+    // `saleCycleKey` acima.
+    setSaleCycleKey((k) => k + 1);
+  }, [clearCart, items, receipt, setDataInicioPlano]);
 
   return {
     ...flow,
@@ -321,6 +351,7 @@ export function useVendaWorkspace() {
     // Actions
     handleAddPlano,
     handleConfirmPayment,
+    handleReceiptClose,
 
     // VUN-3.3 — Payment panel workspace extras
     formaPagamento,
@@ -331,5 +362,9 @@ export function useVendaWorkspace() {
     setAutorizacao,
     valorParcela,
     canFinalize,
+
+    // Ciclo de venda — usado como `key` no PaymentPanel para remontar
+    // o form a cada venda finalizada (evita loop de sync form↔workspace).
+    saleCycleKey,
   };
 }

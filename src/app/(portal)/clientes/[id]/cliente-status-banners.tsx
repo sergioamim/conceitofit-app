@@ -108,8 +108,9 @@ export function computeClienteBanners(
     }
   }
 
-  // Laranja — sem frequência (aparece tanto quando nunca houve presença
-  // quanto quando a última foi há mais de 14 dias).
+  // Laranja — "Sem frequência registrada" (só para alunos sem NENHUMA
+  // presença ainda). O banner "Sem frequência há X dias" foi removido
+  // em 2026-04-22 por gerar ruído em alunos com frequência esporádica.
   if (presencas.length === 0) {
     result.push({
       key: "sem-frequencia",
@@ -117,21 +118,6 @@ export function computeClienteBanners(
       text: "Sem frequência registrada",
       variant: "orange",
     });
-  } else {
-    const lastPresenca = presencas.reduce((latest, p) => {
-      const d = parseLocalDate(p.data);
-      const l = parseLocalDate(latest.data);
-      return d > l ? p : latest;
-    });
-    const daysSinceLast = daysBetween(parseLocalDate(lastPresenca.data), now);
-    if (daysSinceLast > 14) {
-      result.push({
-        key: "sem-frequencia",
-        icon: TrendingDown,
-        text: `Sem frequência há ${daysSinceLast} dias`,
-        variant: "orange",
-      });
-    }
   }
 
   // Azul — face não sincronizada.

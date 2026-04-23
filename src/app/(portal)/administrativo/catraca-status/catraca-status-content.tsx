@@ -24,6 +24,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   aplicarAdminCatracaConfiguracaoApi,
   gerarAdminCatracaCredencialApi,
   listarAdminCatracaCredenciaisApi,
@@ -959,10 +969,17 @@ function CredenciaisSection({ tenantId }: { tenantId: string }) {
     },
   });
 
+  // `credentialToRevoke` guarda a credencial selecionada pelo botão
+  // "Revogar" até o usuário confirmar no AlertDialog. Revogação é ação
+  // destrutiva e irreversível: qualquer agente usando a chave fica
+  // imediatamente sem acesso. Confirmação dupla evita clique acidental.
+  const [credentialToRevoke, setCredentialToRevoke] = useState<AdminCatracaCredentialResponse | null>(null);
+
   const revokeMutation = useMutation({
     mutationFn: (credentialId: string) => revogarAdminCatracaCredencialApi({ tenantId, credentialId }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["admin", "catraca-credenciais", tenantId] });
+      setCredentialToRevoke(null);
     },
   });
 
@@ -1059,7 +1076,7 @@ function CredenciaisSection({ tenantId }: { tenantId: string }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => revokeMutation.mutate(cred.id)}
+                  onClick={() => setCredentialToRevoke(cred)}
                   disabled={revokeMutation.isPending}
                   className="text-destructive hover:text-destructive"
                 >
@@ -1071,6 +1088,43 @@ function CredenciaisSection({ tenantId }: { tenantId: string }) {
           ))
         )}
       </div>
+
+      <AlertDialog
+        open={credentialToRevoke !== null}
+        onOpenChange={(open) => {
+          if (!open) setCredentialToRevoke(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revogar chave do System Tray?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {credentialToRevoke ? (
+                <>
+                  A chave <span className="font-mono text-foreground">{credentialToRevoke.keyId}</span>{" "}
+                  deixará de funcionar imediatamente. Qualquer agente (tray) usando essa chave
+                  perderá acesso até receber uma nova. Esta ação não pode ser desfeita.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revokeMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (credentialToRevoke) {
+                  revokeMutation.mutate(credentialToRevoke.id);
+                }
+              }}
+              disabled={revokeMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {revokeMutation.isPending ? "Revogando..." : "Revogar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

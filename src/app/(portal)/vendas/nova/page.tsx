@@ -36,7 +36,6 @@ function NovaVendaPageContent() {
   const workspace = useVendaWorkspace();
   const {
     receiptOpen,
-    setReceiptOpen,
     receiptVenda,
     receiptCliente,
     tenant,
@@ -45,6 +44,7 @@ function NovaVendaPageContent() {
     receiptVoucherCodigo,
     receiptVoucherPercent,
     handleConfirmPayment,
+    handleReceiptClose,
     setClienteId,
     clienteId,
     clienteQuery,
@@ -136,7 +136,7 @@ function NovaVendaPageContent() {
       {receiptOpen && (
         <SaleReceiptModal
           open
-          onClose={() => setReceiptOpen(false)}
+          onClose={handleReceiptClose}
           venda={receiptVenda}
           cliente={receiptCliente}
           tenant={tenant}
@@ -213,6 +213,7 @@ function NovaVendaPageContent() {
           <div className="flex flex-col gap-4 p-4">
             <CartItems workspace={workspace} />
             <PaymentPanel
+              key={workspace.saleCycleKey}
               workspace={workspace}
               handleConfirmPayment={handleConfirmPayment}
             />
