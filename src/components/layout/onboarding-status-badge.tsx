@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useEffect, useState, useSyncExternalStore } from "react";
-import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -125,10 +125,14 @@ function OnboardingFlowHelper({
   }
 
   return (
-    <div className="hidden w-[28rem] max-w-[28rem] items-center gap-4 rounded-lg border border-gym-accent/30 bg-gym-accent/10 px-4 py-3 text-left lg:flex xl:w-[34rem] xl:max-w-[34rem]">
-      <div className="min-w-0 flex-1">
+    // Flutuante: absoluto relativo ao container do badge (posicionado em
+    // relative no OnboardingStatusBadgeComponent). Abre abaixo do badge,
+    // ancorado à direita — sobrepõe conteúdo sem empurrar a topbar.
+    // Shadow + ring pro card destacar do conteúdo embaixo.
+    <div className="absolute right-0 top-full z-50 mt-2 hidden w-[22rem] max-w-[calc(100vw-2rem)] rounded-lg border border-gym-accent/40 bg-card/95 p-4 text-left shadow-xl shadow-black/30 backdrop-blur-sm lg:block xl:w-[26rem]">
+      <div className="min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gym-accent">
-          Helper de fluxo
+          Guia de configuração
         </p>
         <p className="mt-1 text-sm font-semibold text-foreground">
           {stepTitle}
@@ -137,18 +141,7 @@ function OnboardingFlowHelper({
           Clique no alerta ao lado para abrir o checklist.
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          className="h-8 rounded-md"
-          onClick={() => {
-            markOnboardingHelperUnderstood(stepId);
-            onAcknowledge();
-          }}
-        >
-          Entendi
-        </Button>
+      <div className="mt-3 flex items-center justify-end gap-2">
         <Button
           type="button"
           size="sm"
@@ -160,6 +153,17 @@ function OnboardingFlowHelper({
           }}
         >
           Lembrar depois
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          className="h-8 rounded-md"
+          onClick={() => {
+            markOnboardingHelperUnderstood(stepId);
+            onAcknowledge();
+          }}
+        >
+          Entendi
         </Button>
       </div>
     </div>
@@ -278,18 +282,8 @@ function OnboardingStatusBadgeComponent() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <div className="flex items-center gap-2">
-        {firstPendingStep ? (
-          <OnboardingFlowHelper
-            stepId={firstPendingStep.id}
-            stepTitle={firstPendingStep.titulo}
-            visible={helperVisible}
-            onAcknowledge={() => undefined}
-          />
-        ) : null}
-        {helperVisible ? (
-          <ArrowRight className="hidden size-4 shrink-0 text-gym-accent md:block" />
-        ) : null}
+      {/* relative: ancora o OnboardingFlowHelper flutuante logo abaixo do badge */}
+      <div className="relative flex items-center gap-2">
         <SheetTrigger asChild>
           <Button
             variant="ghost"
@@ -312,6 +306,14 @@ function OnboardingStatusBadgeComponent() {
             </Badge>
           </Button>
         </SheetTrigger>
+        {firstPendingStep ? (
+          <OnboardingFlowHelper
+            stepId={firstPendingStep.id}
+            stepTitle={firstPendingStep.titulo}
+            visible={helperVisible}
+            onAcknowledge={() => undefined}
+          />
+        ) : null}
       </div>
       <SheetContent side="right" className="w-full sm:max-w-md">
         <SheetHeader>
