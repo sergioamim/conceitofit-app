@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
 import { ClienteThumbnail } from "@/components/shared/cliente-thumbnail";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
@@ -88,6 +90,14 @@ export function ClienteResumoDialog({
               disabled={liberandoSuspensao}
             >
               {liberandoSuspensao ? "Liberando..." : "Liberar suspensão"}
+            </Button>
+          ) : null}
+          {clienteResumo ? (
+            <Button asChild type="button" variant="outline" className="border-border">
+              <Link href={`/vendas/nova?clienteId=${clienteResumo.id}`} onClick={onClose}>
+                <ShoppingCart className="mr-2 size-4" />
+                Venda
+              </Link>
             </Button>
           ) : null}
           <Button
