@@ -704,7 +704,6 @@ export default function CatracaAcessosPage() {
             getRowKey={(item) => `${item.id}-${item.occurredAt ?? item.createdAt ?? ""}-${item.memberId ?? ""}`}
             rowClassName={() => "hover:bg-secondary/30"}
             renderCells={(item) => {
-              const statusLabel = normalizeStatus(item.status);
               const tipoExibicao = resolveTipoExibicao(item);
               const tipoLiberacao = resolveTipoLiberacao(item.releaseType, item.issuedBy);
               const whoReleased = tipoLiberacao === "MANUAL" ? formatText(item.issuedBy ?? item.createdBy) : "—";
@@ -732,15 +731,16 @@ export default function CatracaAcessosPage() {
                     {formatTime(accessDateTime)}
                   </TableCell>
                   <TableCell className="px-4 py-3">
+                    {/* tipoExibicao ja comunica Liberado/Manual/Bloqueado — o badge
+                        de status (LIBERADO/BLOQUEADO) era redundante e duplicava
+                        a informação no mesmo card. Mantemos apenas o badge de
+                        origem (Wellhub/Operador/Visitante/etc) quando aplicável. */}
                     <div className="space-y-1">
                       <span
                         className={`inline-flex rounded-full border px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${tipoExibicao.className}`}
                       >
                         {tipoExibicao.label}
                       </span>
-                      <p className={`text-[11px] ${getStatusClass(item.status)} inline-flex rounded-full border px-2 py-0.5`}>
-                        {statusLabel}
-                      </p>
                       {(() => {
                         const origem = resolveOrigemDisplay(item.systemName);
                         if (!origem) return null;

@@ -56,7 +56,7 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
   }
 
   return (
-    <div className="border-b border-border/40 px-4 py-4 md:px-10">
+    <div className="border-b border-border/40 px-4 py-2 md:px-8">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button
