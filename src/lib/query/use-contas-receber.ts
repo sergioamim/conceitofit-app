@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import {
-  listContasReceberOperacionais,
   listContasReceberOperacionaisPage,
   type PagamentoComAluno,
 } from "@/lib/tenant/financeiro/recebimentos";
@@ -10,35 +9,6 @@ import {
   type StatusContaReceberApi,
 } from "@/lib/api/contas-receber";
 import type { StatusPagamento } from "@/lib/types";
-import { queryKeys } from "./keys";
-
-/**
- * Hook legado — lista completa (load-all). Preservado para
- * compatibilidade com a tela atual enquanto F3 migra pra versão
- * paginada. Novos consumidores devem usar `useContasReceberPage`.
- */
-export function useContasReceber(input: {
-  tenantId: string | undefined;
-  startDate: string;
-  endDate: string;
-}) {
-  const filters = {
-    startDate: input.startDate,
-    endDate: input.endDate,
-  };
-
-  return useQuery<PagamentoComAluno[]>({
-    queryKey: queryKeys.pagamentos.list(input.tenantId ?? "", filters),
-    queryFn: () =>
-      listContasReceberOperacionais({
-        tenantId: input.tenantId!,
-        startDate: input.startDate,
-        endDate: input.endDate,
-      }),
-    enabled: Boolean(input.tenantId) && input.startDate.length > 0 && input.endDate.length > 0,
-    staleTime: 30_000,
-  });
-}
 
 export interface UseContasReceberPageResult {
   items: PagamentoComAluno[];
