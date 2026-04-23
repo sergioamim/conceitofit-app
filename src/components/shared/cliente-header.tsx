@@ -18,6 +18,7 @@ import {
   ScanFace,
   Shield,
   ShieldOff,
+  ShoppingCart,
   Sparkles,
   Trash2,
   Unlock,
@@ -236,7 +237,8 @@ export function ClienteHeader({
         )}
         {!planoAtivo && (
           <Button onClick={onNovaVenda} className="h-9">
-            Nova contratacao
+            <ShoppingCart className="mr-2 size-4" />
+            Venda
           </Button>
         )}
         {showCartoesAction && (

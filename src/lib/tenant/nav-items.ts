@@ -71,7 +71,6 @@ export const growthGroup: NavGroup = {
     { href: "/crm/campanhas", label: "Campanhas", icon: Megaphone },
     { href: "/crm/retencao", label: "Retenção CRM", icon: ShieldAlert, description: "Dashboard de retenção" },
     { href: "/vendas", label: "Vendas", icon: ShoppingCart, description: "Listagem de vendas" },
-    { href: "/vendas/nova", label: "Nova Venda", icon: ShoppingCart },
     { href: "/retencao/nps", label: "NPS", icon: MessageSquareHeart, description: "Pesquisa relacional" },
     { href: "/administrativo/vouchers", label: "Vouchers", icon: CreditCard },
     { href: "/comercial/fidelizacao", label: "Fidelização", icon: Gift, description: "Indicações e recompensas" },
