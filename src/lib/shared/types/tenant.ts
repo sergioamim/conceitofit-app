@@ -154,7 +154,8 @@ export type TenantThemePreset =
   | "COBALTO_NOTURNO"
   | "AURORA_BOREAL"
   | "TERRACOTA_SUAVE"
-  | "MENTA_MODERNA";
+  | "MENTA_MODERNA"
+  | "LUMEN_FINANCE";
 
 export interface TenantThemeColors {
   accent: string;

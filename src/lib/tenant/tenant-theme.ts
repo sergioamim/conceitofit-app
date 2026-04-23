@@ -171,6 +171,23 @@ export const TENANT_THEME_PRESETS: Record<TenantThemePreset, TenantThemeColors> 
     warning: "#ca8a04",
     teal: "#0f766e",
   },
+  // Lumen Finance — claro, neutro-quente, oliva/lime como acento principal
+  // e teal discreto como contra-tom (receitas/confirmações). Estética de
+  // dashboard financeiro sério, com leve calor.
+  LUMEN_FINANCE: {
+    accent: "#6b8c1a",
+    primary: "#6b8c1a",
+    ring: "#6b8c1a",
+    secondary: "#f0f1f4",
+    background: "#f8f9fb",
+    surface: "#ffffff",
+    border: "#dfe1e6",
+    foreground: "#16181c",
+    mutedForeground: "#64697a",
+    danger: "#dc3545",
+    warning: "#e09020",
+    teal: "#1ea06a",
+  },
 };
 
 export const TENANT_THEME_OPTIONS: Array<{ id: TenantThemePreset; nome: string; descricao: string }> = [
@@ -186,6 +203,7 @@ export const TENANT_THEME_OPTIONS: Array<{ id: TenantThemePreset; nome: string; 
   { id: "AURORA_BOREAL", nome: "Aurora Boreal", descricao: "Escuro esverdeado com contraste vibrante e moderno" },
   { id: "TERRACOTA_SUAVE", nome: "Terracota Suave", descricao: "Tema claro terroso para marcas mais humanas" },
   { id: "MENTA_MODERNA", nome: "Menta Moderna", descricao: "Tema claro fresco com leitura leve e clean" },
+  { id: "LUMEN_FINANCE", nome: "Lumen Finance", descricao: "Claro neutro-quente com acento oliva/lime — visual de dashboard financeiro sério" },
 ];
 
 export const DEFAULT_THEME_PRESET: TenantThemePreset = "CONCEITO_DARK";

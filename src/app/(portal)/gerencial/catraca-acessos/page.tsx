@@ -355,15 +355,6 @@ export default function CatracaAcessosPage() {
     }
   }, [tenantId, loadingClienteOptions, clienteOptionsLoadedTenant, clienteOptions.length]);
 
-  // Carrega catálogo de clientes no mount (e ao trocar tenant) pra que a
-  // coluna "Cliente" da tabela resolva nome/email/cpf a partir do memberId —
-  // o endpoint de acessos devolve memberId mas não preenche memberNome.
-  // Sem isso, as linhas ficavam com foto mas nome em "—".
-  useEffect(() => {
-    if (!tenantId) return;
-    void loadClienteOptions();
-  }, [tenantId, loadClienteOptions]);
-
   const globallyFilteredItems = useMemo(() => {
     let scoped = items;
 
