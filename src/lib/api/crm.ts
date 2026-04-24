@@ -9,11 +9,12 @@
  * "Backend ainda não expõe ... neste ambiente". O FE não quebra — apenas
  * a feature fica em estado "indisponível":
  *
- *   - GET  /api/v1/crm/pipeline-stages    → listCrmPipelineStagesApi
- *   - GET  /api/v1/crm/cadencias          → listCrmCadenciasApi
- *   - POST /api/v1/crm/cadencias          → createCrmCadenciaApi
- *   - PUT  /api/v1/crm/cadencias/{id}     → updateCrmCadenciaApi
- *   - GET  /api/v1/crm/atividades         → listCrmActivitiesApi
+ *   - GET    /api/v1/crm/pipeline-stages    → listCrmPipelineStagesApi
+ *   - GET    /api/v1/crm/cadencias          → listCrmCadenciasApi
+ *   - POST   /api/v1/crm/cadencias          → createCrmCadenciaApi
+ *   - PUT    /api/v1/crm/cadencias/{id}     → updateCrmCadenciaApi
+ *   - DELETE /api/v1/crm/cadencias/{id}     → deleteCrmCadenciaApi
+ *   - GET    /api/v1/crm/atividades         → listCrmActivitiesApi
  *
  * Quando o BE implementar, basta nenhum trabalho FE — funções continuam
  * como estão e param de retornar erro amigável.
@@ -716,6 +717,21 @@ export async function updateCrmCadenciaApi(input: {
     });
   } catch (error) {
     mapUnavailableCapability(error, "Backend ainda não expõe atualização de cadências CRM neste ambiente.");
+  }
+}
+
+export async function deleteCrmCadenciaApi(input: {
+  tenantId: string;
+  id: string;
+}): Promise<void> {
+  try {
+    await apiRequest<void>({
+      path: `/api/v1/crm/cadencias/${input.id}`,
+      method: "DELETE",
+      query: { tenantId: input.tenantId },
+    });
+  } catch (error) {
+    mapUnavailableCapability(error, "Backend ainda não expõe remoção de cadências CRM neste ambiente.");
   }
 }
 
