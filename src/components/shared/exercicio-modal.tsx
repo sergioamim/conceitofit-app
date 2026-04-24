@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { Exercicio, GrupoMuscular } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export type ExercicioForm = Omit<Exercicio, "id" | "tenantId" | "criadoEm" | "atualizadoEm"> & {
   id?: Exercicio["id"];
@@ -52,8 +53,9 @@ export function ExercicioModal({
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isValid },
   } = useForm<ExercicioForm>({
+    mode: "onChange",
     defaultValues: toFormState(initial),
   });
 
@@ -100,10 +102,14 @@ export function ExercicioModal({
         <form onSubmit={handleSubmit(handleSave)}>
           <div className="grid gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="exercicio-nome">Nome *</Label>
+              <Label htmlFor="exercicio-nome">
+                Nome <span className="text-gym-danger">*</span>
+              </Label>
               <Input
                 id="exercicio-nome"
                 {...register("nome", { validate: (value) => value.trim().length > 0 || "Informe o nome do exercício." })}
+                aria-invalid={errors.nome ? "true" : "false"}
+                className={cn(errors.nome && "border-gym-danger")}
               />
               {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
@@ -164,7 +170,7 @@ export function ExercicioModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !isValid}>
               {initial?.id ? "Salvar exercício" : "Criar exercício"}
             </Button>
           </DialogFooter>

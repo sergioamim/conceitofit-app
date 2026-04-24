@@ -78,9 +78,10 @@ export function ClienteEditForm({
     reset,
     watch,
     setValue,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
+    mode: "onChange",
     defaultValues: buildForm(aluno),
   });
 
@@ -157,24 +158,47 @@ export function ClienteEditForm({
         <div className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label htmlFor="edit-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input id="edit-nome" {...register("nome")} className="bg-secondary border-border" />
+              <label htmlFor="edit-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Nome <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                id="edit-nome"
+                {...register("nome")}
+                aria-invalid={errors.nome ? "true" : "false"}
+                className="bg-secondary border-border"
+              />
               {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="edit-email" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-              <Input id="edit-email" type="email" {...register("email")} className="bg-secondary border-border" />
+              <label htmlFor="edit-email" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                E-mail <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                id="edit-email"
+                type="email"
+                {...register("email")}
+                aria-invalid={errors.email ? "true" : "false"}
+                className="bg-secondary border-border"
+              />
               {errors.email ? <p className="text-xs text-gym-danger">{errors.email.message}</p> : null}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label htmlFor="edit-telefone" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone *</label>
+              <label htmlFor="edit-telefone" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Telefone <span className="text-gym-danger">*</span>
+              </label>
               <Controller
                 control={control}
                 name="telefone"
                 render={({ field }) => (
-                  <PhoneInput id="edit-telefone" value={field.value} onChange={field.onChange} className="bg-secondary border-border" />
+                  <PhoneInput
+                    id="edit-telefone"
+                    value={field.value}
+                    onChange={field.onChange}
+                    aria-invalid={errors.telefone ? "true" : "false"}
+                    className="bg-secondary border-border"
+                  />
                 )}
               />
               {errors.telefone ? <p className="text-xs text-gym-danger">{errors.telefone.message}</p> : null}
@@ -192,12 +216,21 @@ export function ClienteEditForm({
           </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <label htmlFor="edit-cpf" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF *</label>
+              <label htmlFor="edit-cpf" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                CPF <span className="text-gym-danger">*</span>
+              </label>
               <Controller
                 control={control}
                 name="cpf"
                 render={({ field }) => (
-                  <MaskedInput id="edit-cpf" mask="cpf" value={field.value} onChange={field.onChange} className="bg-secondary border-border" />
+                  <MaskedInput
+                    id="edit-cpf"
+                    mask="cpf"
+                    value={field.value}
+                    onChange={field.onChange}
+                    aria-invalid={errors.cpf ? "true" : "false"}
+                    className="bg-secondary border-border"
+                  />
                 )}
               />
               {errors.cpf ? <p className="text-xs text-gym-danger">{errors.cpf.message}</p> : null}
@@ -207,15 +240,26 @@ export function ClienteEditForm({
               <Input id="edit-rg" {...register("rg")} className="bg-secondary border-border" />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="edit-dataNascimento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data de nascimento</label>
-              <Input id="edit-dataNascimento" type="date" {...register("dataNascimento")} className="bg-secondary border-border" />
+              <label htmlFor="edit-dataNascimento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Data de nascimento <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                id="edit-dataNascimento"
+                type="date"
+                {...register("dataNascimento")}
+                aria-invalid={errors.dataNascimento ? "true" : "false"}
+                className="bg-secondary border-border"
+              />
               {errors.dataNascimento ? <p className="text-xs text-gym-danger">{errors.dataNascimento.message}</p> : null}
             </div>
           </div>
           <div className="space-y-1.5">
-            <label htmlFor="edit-sexo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Sexo</label>
+            <label htmlFor="edit-sexo" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Sexo <span className="text-gym-danger">*</span>
+            </label>
             <select
               id="edit-sexo"
+              aria-invalid={errors.sexo ? "true" : "false"}
               className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
               {...register("sexo")}
             >
@@ -297,7 +341,7 @@ export function ClienteEditForm({
         <Button type="button" variant="outline" className="border-border" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={loading || !isValid}>
           {loading ? "Salvando..." : "Salvar alterações"}
         </Button>
       </div>

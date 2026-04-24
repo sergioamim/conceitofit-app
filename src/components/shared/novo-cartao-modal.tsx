@@ -97,8 +97,9 @@ export function NovoCartaoModal({
     setError,
     clearErrors,
     control,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<NovoCartaoFormValues>({
+    mode: "onChange",
     defaultValues: {
       titular: "",
       titularEhCliente: true,
@@ -191,8 +192,17 @@ export function NovoCartaoModal({
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Titular *</label>
-              <Input {...register("titular")} className="border-border bg-secondary" />
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Titular <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                {...register("titular", {
+                  validate: (value) => value.trim().length > 0 || "Informe o titular.",
+                })}
+                aria-invalid={errors.titular ? "true" : "false"}
+                className="border-border bg-secondary"
+              />
+              {errors.titular ? <p className="text-xs text-gym-danger">{errors.titular.message}</p> : null}
             </div>
             <div className="flex items-center gap-2 text-sm">
               <input type="checkbox" {...register("titularEhCliente")} />
@@ -200,30 +210,40 @@ export function NovoCartaoModal({
             </div>
             {!titularEhCliente ? (
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF do titular *</label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  CPF do titular <span className="text-gym-danger">*</span>
+                </label>
                 <Input
                   {...register("cpfTitular", {
+                    validate: (value) =>
+                      titularEhCliente || (value ?? "").length > 0 || "Informe o CPF do titular.",
                     onChange: (event) => {
                       event.target.value = event.target.value.replace(/\D/g, "").slice(0, 11);
                     },
                   })}
                   value={maskCPF(cpfTitular)}
                   placeholder="000.000.000-00"
+                  aria-invalid={errors.cpfTitular ? "true" : "false"}
                   className="border-border bg-secondary"
                 />
                 {errors.cpfTitular ? <p className="text-xs text-gym-danger">{errors.cpfTitular.message}</p> : null}
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Número *</label>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Número <span className="text-gym-danger">*</span>
+              </label>
               <Input
                 {...register("numero", {
+                  validate: (value) =>
+                    value.replace(/\D/g, "").length >= 12 || "Informe um número de cartão válido.",
                   onChange: (event) => {
                     event.target.value = event.target.value.replace(/\D/g, "").slice(0, 19);
                   },
                 })}
                 value={maskCardNumber(numero)}
                 placeholder="0000 0000 0000 0000"
+                aria-invalid={errors.numero ? "true" : "false"}
                 className="border-border bg-secondary"
               />
               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
@@ -240,30 +260,39 @@ export function NovoCartaoModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Validade *</label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Validade <span className="text-gym-danger">*</span>
+                </label>
                 <Input
                   {...register("validade", {
+                    validate: (value) => value.length >= 4 || "Informe a validade.",
                     onChange: (event) => {
                       event.target.value = event.target.value.replace(/\D/g, "").slice(0, 4);
                     },
                   })}
                   value={formatValidade(validade)}
                   placeholder="MM/AA"
+                  aria-invalid={errors.validade ? "true" : "false"}
                   className="border-border bg-secondary"
                 />
                 {errors.validade ? <p className="text-xs text-gym-danger">{errors.validade.message}</p> : null}
               </div>
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CVV *</label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  CVV <span className="text-gym-danger">*</span>
+                </label>
                 <Input
                   {...register("cvv", {
+                    validate: (value) => value.length >= 3 || "Informe o CVV.",
                     onChange: (event) => {
                       event.target.value = event.target.value.replace(/\D/g, "").slice(0, 4);
                     },
                   })}
                   placeholder="123"
+                  aria-invalid={errors.cvv ? "true" : "false"}
                   className="border-border bg-secondary"
                 />
+                {errors.cvv ? <p className="text-xs text-gym-danger">{errors.cvv.message}</p> : null}
               </div>
             </div>
           </div>
@@ -271,7 +300,7 @@ export function NovoCartaoModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" disabled={!isValid}>Salvar</Button>
           </DialogFooter>
         </form>
       </DialogContent>
