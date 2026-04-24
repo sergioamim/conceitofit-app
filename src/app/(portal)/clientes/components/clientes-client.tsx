@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Plus, Users, UserPlus, TrendingUp, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
@@ -26,6 +27,9 @@ const EXPORT_COLUMNS: ExportColumn<import("@/lib/types").Aluno>[] = [
 
 function ClientesPageContent() {
   const ws = useClientesWorkspace();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // VUN-5.1/5.2: state local para o CTA "Vincular agregador" do wizard.
   // Após criar o prospect, abrimos o modal passando o `alunoId` recém-criado.
@@ -46,6 +50,17 @@ function ClientesPageContent() {
       },
     ];
   }, [ws.tenantId, ws.filtro]);
+
+  useEffect(() => {
+    if (searchParams.get("action") !== "new" || ws.wizard.isOpen) return;
+
+    ws.wizard.open();
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("action");
+    const nextHref = nextParams.size > 0 ? `${pathname}?${nextParams.toString()}` : pathname;
+    router.replace(nextHref, { scroll: false });
+  }, [pathname, router, searchParams, ws.wizard]);
 
   return (
     <div className="space-y-8 pb-10">

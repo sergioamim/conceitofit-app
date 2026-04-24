@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, Search, ShoppingCart } from "lucide-react";
+import { Menu, Search, ShoppingCart, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveTenantSelector } from "@/components/layout/active-tenant-selector";
 import { OnboardingStatusBadge } from "@/components/layout/onboarding-status-badge";
@@ -106,6 +106,20 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
               </kbd>
             )}
           </button>
+
+          <Button
+            asChild
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-10 rounded-xl"
+            title="Cadastrar cliente ou prospect"
+            aria-label="Cadastrar cliente ou prospect"
+          >
+            <Link href="/clientes?action=new">
+              <UserPlus className="size-5" />
+            </Link>
+          </Button>
 
           <Button
             asChild
