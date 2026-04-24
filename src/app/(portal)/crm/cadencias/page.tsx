@@ -11,6 +11,7 @@ import {
   RefreshCcw,
   Send,
   Settings2,
+  Trash2,
   TrendingUp,
   XCircle,
   Zap,
@@ -45,10 +46,22 @@ import {
   listCrmCadenceExecutionsApi,
   listCrmEscalationRulesApi,
   cancelCrmCadenceExecutionApi,
+  deleteCrmEscalationRuleApi,
   processOverdueCadenceTasksApi,
 } from "@/lib/api/crm-cadencias";
 import { CadenciaEditorDrawer } from "./cadencia-editor-drawer";
+import { EscalationRuleEditorModal } from "./escalation-rule-editor-modal";
 import { TriggerCadenciaModal } from "./trigger-cadencia-modal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type {
   CrmCadencia,
@@ -142,6 +155,12 @@ function CrmCadenciasPageActive() {
   const [editingCadencia, setEditingCadencia] = useState<CrmCadencia | null>(null);
   const [triggerOpen, setTriggerOpen] = useState(false);
   const [triggerCadencia, setTriggerCadencia] = useState<CrmCadencia | null>(null);
+  const [escalationEditorOpen, setEscalationEditorOpen] = useState(false);
+  const [editingEscalation, setEditingEscalation] =
+    useState<CrmEscalationRule | null>(null);
+  const [deletingEscalation, setDeletingEscalation] =
+    useState<CrmEscalationRule | null>(null);
+  const [deletingEscalationLoading, setDeletingEscalationLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!tenantId) return;
@@ -201,6 +220,38 @@ function CrmCadenciasPageActive() {
   function handleOpenTrigger(cadencia: CrmCadencia) {
     setTriggerCadencia(cadencia);
     setTriggerOpen(true);
+  }
+
+  function handleOpenCreateEscalation() {
+    setEditingEscalation(null);
+    setEscalationEditorOpen(true);
+  }
+
+  function handleOpenEditEscalation(rule: CrmEscalationRule) {
+    setEditingEscalation(rule);
+    setEscalationEditorOpen(true);
+  }
+
+  async function handleConfirmDeleteEscalation() {
+    if (!deletingEscalation) return;
+    setDeletingEscalationLoading(true);
+    try {
+      await deleteCrmEscalationRuleApi({
+        tenantId,
+        id: deletingEscalation.id,
+      });
+      toast({ title: "Regra removida" });
+      setDeletingEscalation(null);
+      void loadData();
+    } catch (error) {
+      toast({
+        title: "Erro ao remover",
+        description: normalizeErrorMessage(error),
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingEscalationLoading(false);
+    }
   }
 
   async function handleProcessOverdue() {
@@ -551,12 +602,22 @@ function CrmCadenciasPageActive() {
 
             {/* --- Tab Escalação --- */}
             <TabsContent value="escalacao" className="space-y-4">
-              <div className="rounded-2xl border border-border bg-secondary/30 p-4">
-                <p className="text-sm font-medium text-foreground">Regras de escalação</p>
-                <p className="text-sm text-muted-foreground">
-                  Definem o que acontece quando uma tarefa de cadência vence sem ação ou
-                  o prospect fica sem resposta após o ciclo completo.
-                </p>
+              <div className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-secondary/30 p-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Regras de escalação</p>
+                  <p className="text-sm text-muted-foreground">
+                    Definem o que acontece quando uma tarefa de cadência vence sem ação ou
+                    o prospect fica sem resposta após o ciclo completo.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleOpenCreateEscalation}
+                  className="bg-gym-accent text-black hover:bg-gym-accent/90"
+                  disabled={cadencias.length === 0}
+                >
+                  <Plus className="mr-2 size-4" />
+                  Nova regra
+                </Button>
               </div>
 
               <div className="overflow-hidden rounded-2xl border border-border">
@@ -567,6 +628,7 @@ function CrmCadenciasPageActive() {
                       <TableHead>Condição</TableHead>
                       <TableHead>Ação</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="w-32 text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -594,11 +656,33 @@ function CrmCadenciasPageActive() {
                             {rule.ativo ? "Ativa" : "Inativa"}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8"
+                              onClick={() => handleOpenEditEscalation(rule)}
+                              aria-label={`Editar regra ${rule.nome}`}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-8 text-gym-danger hover:text-gym-danger"
+                              onClick={() => setDeletingEscalation(rule)}
+                              aria-label={`Remover regra ${rule.nome}`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))}
                     {!loading && escalationRules.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
+                        <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
                           Nenhuma regra de escalação configurada.
                         </TableCell>
                       </TableRow>
@@ -629,6 +713,50 @@ function CrmCadenciasPageActive() {
           void loadData();
         }}
       />
+
+      <EscalationRuleEditorModal
+        open={escalationEditorOpen}
+        tenantId={tenantId}
+        cadencias={cadencias}
+        rule={editingEscalation}
+        onOpenChange={setEscalationEditorOpen}
+        onSaved={() => void loadData()}
+      />
+
+      <AlertDialog
+        open={Boolean(deletingEscalation)}
+        onOpenChange={(next) => {
+          if (deletingEscalationLoading) return;
+          if (!next) setDeletingEscalation(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover regra de escalação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A regra <span className="font-semibold">{deletingEscalation?.nome}</span>{" "}
+              será removida permanentemente. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingEscalationLoading}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void handleConfirmDeleteEscalation();
+              }}
+              disabled={deletingEscalationLoading}
+            >
+              {deletingEscalationLoading ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : null}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
