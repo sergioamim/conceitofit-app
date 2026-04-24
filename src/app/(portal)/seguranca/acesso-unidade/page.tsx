@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +72,7 @@ export default function AcessoUnidadePage() {
         initialPerfilIds: true,
       })
     ),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: {
       name: "",
       email: "",
@@ -82,19 +82,14 @@ export default function AcessoUnidadePage() {
   });
   const grantAccessForm = useForm<GrantAccessFormValues>({
     resolver: zodResolver(grantAccessFormSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: {
       tenantId: tenantContext.tenantId || "",
       userId: "",
       userQuery: "",
     },
   });
-  // Manual watch dos required fields do createUserForm (name + email) para
-  // evitar rodar o zodResolver no mount (dev overlay exibiria ZodError).
-  const watchedCreateName = useWatch({ control: createUserForm.control, name: "name" }) ?? "";
-  const watchedCreateEmail = useWatch({ control: createUserForm.control, name: "email" }) ?? "";
-  const canSaveCreateUser =
-    Boolean(watchedCreateName?.trim()) && Boolean(watchedCreateEmail?.trim());
+  const canSaveCreateUser = createUserForm.formState.isValid;
   const createProfileIds = useWatch({ control: createUserForm.control, name: "initialPerfilIds" }) ?? [];
   const tenantId = useWatch({ control: grantAccessForm.control, name: "tenantId" }) ?? "";
   const selectedUserId = useWatch({ control: grantAccessForm.control, name: "userId" }) ?? "";

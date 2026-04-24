@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Eye, Pencil } from "lucide-react";
 import { Controller, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { z } from "zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

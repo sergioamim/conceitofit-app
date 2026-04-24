@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { z } from "zod";
 import { validateAcademiaUserCreateDraft } from "@/lib/tenant/security-user-create";
 import { academiaUserCreateBaseFormSchema } from "@/lib/tenant/forms/security-user-create-schemas";

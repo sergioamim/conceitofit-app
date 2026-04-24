@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { getBusinessTodayIso } from "@/lib/business-date";

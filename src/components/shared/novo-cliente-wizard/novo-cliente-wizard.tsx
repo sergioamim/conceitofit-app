@@ -95,7 +95,7 @@ export function NovoClienteWizard({
                   type="button"
                   variant="secondary"
                   onClick={() => void w.handleCreateOnly()}
-                  disabled={w.loading || !w.canSave}
+                  disabled={w.loading || !w.isValid}
                   data-testid="wizard-cta-salvar"
                 >
                   <Save className="size-3.5" />
@@ -106,7 +106,7 @@ export function NovoClienteWizard({
                   variant="outline"
                   className="border-border"
                   onClick={() => void w.handleCreateOnly({ openSale: true })}
-                  disabled={w.loading || !w.canSave}
+                  disabled={w.loading || !w.isValid}
                   data-testid="wizard-cta-vender"
                 >
                   <ShoppingCart className="size-3.5" />
@@ -115,7 +115,7 @@ export function NovoClienteWizard({
                 <Button
                   type="button"
                   onClick={() => void w.handleCreateOnly({ linkAggregator: true })}
-                  disabled={w.loading || !w.canSave}
+                  disabled={w.loading || !w.isValid}
                   data-testid="wizard-cta-vincular-agregador"
                 >
                   <Link2 className="size-3.5" />

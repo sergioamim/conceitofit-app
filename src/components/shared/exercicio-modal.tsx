@@ -59,8 +59,6 @@ export function ExercicioModal({
     defaultValues: toFormState(initial),
   });
 
-  // Manual watch dos required fields para evitar rodar o resolver no mount
-  // (onChange dispararia ZodError no dev overlay antes do modal abrir).
   const watchedNome = useWatch({ control, name: "nome" });
   const canSave = Boolean(watchedNome?.trim());
 

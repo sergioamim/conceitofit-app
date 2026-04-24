@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useId, useMemo, type ChangeEvent, type ReactNode } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import type { CreateProspectInput, Funcionario, Prospect, OrigemProspect } from "@/lib/types";
