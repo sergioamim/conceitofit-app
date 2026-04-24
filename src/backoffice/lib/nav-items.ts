@@ -2,15 +2,18 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  BellRing,
   Building2,
   Coins,
   CreditCard,
   Eye,
   FileText,
   Globe,
+  History,
   KeyRound,
   LayoutDashboard,
   LineChart,
+  Megaphone,
   MessageSquare,
   Package,
   PlugZap,
@@ -129,7 +132,27 @@ export const governanceGroup: NavGroup = {
   ],
 };
 
-/** 7. Configurações & Ferramentas */
+/** 7. Notificações — emissão manual e auditoria (Epic 4 Wave 5) */
+export const notificacoesGroup: NavGroup = {
+  label: "Notificações",
+  icon: BellRing,
+  items: [
+    {
+      href: "/admin/notificacoes/emitir",
+      label: "Emitir",
+      icon: Megaphone,
+      description: "Publicar notificação global no inbox",
+    },
+    {
+      href: "/admin/notificacoes/historico",
+      label: "Histórico",
+      icon: History,
+      description: "Auditoria de emissões manuais",
+    },
+  ],
+};
+
+/** 8. Configurações & Ferramentas */
 export const configGroup: NavGroup = {
   label: "Configurações",
   icon: Settings,
@@ -165,6 +188,7 @@ export const adminGroups: NavGroup[] = [
   gestaoAcessosGroup,
   plataformaGroup,
   governanceGroup,
+  notificacoesGroup,
   configGroup,
 ];
 
