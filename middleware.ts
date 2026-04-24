@@ -174,8 +174,8 @@ function isSandboxActive(request: NextRequest): boolean {
   const raw = request.cookies.get(SESSION_CLAIMS_COOKIE)?.value;
   if (!raw) return false;
   try {
-    const parsed = JSON.parse(raw) as { sandbox_mode?: unknown };
-    return parsed.sandbox_mode === true;
+    const parsed = JSON.parse(raw) as { sandboxMode?: unknown };
+    return parsed.sandboxMode === true;
   } catch {
     return false;
   }
