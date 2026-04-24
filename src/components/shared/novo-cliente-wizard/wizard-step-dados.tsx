@@ -32,7 +32,10 @@ export function Step1Dados({
 
   const watchedCpf = useWatch({ control, name: "cpf" });
   const watchedEmail = useWatch({ control, name: "email" });
-  const canCheckCpf = Boolean(tenantId && watchedCpf && !watchedCpf.includes("_"));
+  const watchedEstrangeiro = useWatch({ control, name: "estrangeiro" });
+  const watchedTemResponsavel = useWatch({ control, name: "temResponsavel" });
+  const cpfObrigatorio = !watchedEstrangeiro && !watchedTemResponsavel;
+  const canCheckCpf = Boolean(cpfObrigatorio && tenantId && watchedCpf && !watchedCpf.includes("_"));
   const canCheckEmail = Boolean(tenantId && watchedEmail && watchedEmail.includes("@"));
 
   useEffect(() => {
@@ -159,7 +162,7 @@ export function Step1Dados({
             htmlFor="novo-cliente-cpf"
             className={cn("text-xs font-semibold uppercase tracking-wide", errors.cpf ? "text-destructive" : "text-muted-foreground")}
           >
-            CPF *
+            CPF {cpfObrigatorio ? "*" : "(opcional)"}
           </label>
           <Controller name="cpf" control={control} render={({ field }) => (
             <MaskedInput

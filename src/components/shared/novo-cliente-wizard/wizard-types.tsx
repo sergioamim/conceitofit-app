@@ -25,10 +25,10 @@ export async function checkUniqueness(tenantId: string, search: string) {
   }
 }
 
-export function normalizeDraftEmail(nome: string, cpf: string, email?: string) {
+export function normalizeDraftEmail(nome: string, identitySeed: string, email?: string) {
   const trimmed = email?.trim();
   if (trimmed) return trimmed;
-  const cpfDigits = (cpf || "").replace(/\D/g, "");
+  const identityDigits = (identitySeed || "").replace(/\D/g, "");
   const slug = (nome || "")
     .trim()
     .toLowerCase()
@@ -37,18 +37,22 @@ export function normalizeDraftEmail(nome: string, cpf: string, email?: string) {
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-  const base = slug || cpfDigits || "cliente";
+  const base = slug || identityDigits || "cliente";
   return `${base}.${Date.now()}@temporario.local`;
 }
 
 // ─── ZOD SCHEMA PARA O WIZARD ──────────────────────────────────────────────
+
+const cpfMaskSchema = z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato CPF inválido").or(z.literal(""));
 
 export const clienteWizardSchema = z.object({
   nome: z.string().min(3, "Nome muito curto"),
   email: z.string().email("E-mail inválido").or(z.literal("")),
   telefone: z.string().min(10, "Informe um telefone válido com DDD"),
   telefoneSec: z.string().optional(),
-  cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato CPF inválido").or(z.literal("")),
+  cpf: cpfMaskSchema,
+  estrangeiro: z.boolean().default(false),
+  passaporte: z.string().optional(),
   rg: z.string().optional(),
   dataNascimento: z.string().optional(),
   sexo: z.string().optional(),
@@ -62,6 +66,13 @@ export const clienteWizardSchema = z.object({
   emergenciaNome: z.string().optional(),
   emergenciaTelefone: z.string().optional(),
   emergenciaParentesco: z.string().optional(),
+  temResponsavel: z.boolean().default(false),
+  responsavelClienteId: z.string().optional(),
+  responsavelNome: z.string().optional(),
+  responsavelCpf: cpfMaskSchema.optional(),
+  responsavelEmail: z.string().email("E-mail inválido").or(z.literal("")).optional(),
+  responsavelTelefone: z.string().optional(),
+  responsavelParentesco: z.string().optional(),
   observacoesMedicas: z.string().optional(),
   foto: z.string().optional(),
 
@@ -79,6 +90,39 @@ export const clienteWizardSchema = z.object({
     cartaoCvv: z.string().optional(),
     cartaoCpfTitular: z.string().optional(),
   }),
+}).superRefine((values, ctx) => {
+  if (!values.estrangeiro && !values.temResponsavel && !values.cpf) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cpf"],
+      message: "CPF é obrigatório quando não houver passaporte ou responsável.",
+    });
+  }
+
+  if (values.estrangeiro && !values.passaporte?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["passaporte"],
+      message: "Passaporte é obrigatório para estrangeiro.",
+    });
+  }
+
+  if (values.temResponsavel) {
+    if (!values.responsavelNome?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["responsavelNome"],
+        message: "Nome do responsável é obrigatório.",
+      });
+    }
+    if (!values.responsavelCpf?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["responsavelCpf"],
+        message: "CPF do responsável é obrigatório.",
+      });
+    }
+  }
 });
 
 export type ClienteWizardForm = z.infer<typeof clienteWizardSchema>;

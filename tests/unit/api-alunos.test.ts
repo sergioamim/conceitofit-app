@@ -248,8 +248,60 @@ describe("api/alunos", () => {
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
       expect(spy.mock.calls[0][0].body).toMatchObject({
-        tenantId: "t1",
         nome: "Novo",
+      });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
+    });
+
+    it("permite criar aluno sem cpf quando houver passaporte", async () => {
+      const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({
+        id: "a1",
+        status: "ATIVO",
+      } as never);
+      await createAlunoApi({
+        tenantId: "t1",
+        data: {
+          nome: "Estrangeiro",
+          email: "x@y.com",
+          telefone: "11",
+          passaporte: "XP-991",
+          dataNascimento: "2000-01-01",
+          sexo: "F",
+        },
+      });
+      expect(spy.mock.calls[0][0].body).toMatchObject({
+        passaporte: "XP-991",
+      });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("cpf");
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
+    });
+
+    it("envia responsável quando informado", async () => {
+      const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({
+        id: "a1",
+        status: "ATIVO",
+      } as never);
+      await createAlunoApi({
+        tenantId: "t1",
+        data: {
+          nome: "Dependente",
+          email: "dep@y.com",
+          telefone: "11",
+          dataNascimento: "2014-01-01",
+          sexo: "M",
+          responsavel: {
+            clienteId: "c1",
+            nome: "Maria Responsavel",
+            cpf: "98765432100",
+          },
+        },
+      });
+      expect(spy.mock.calls[0][0].body).toMatchObject({
+        responsavel: {
+          clienteId: "c1",
+          nome: "Maria Responsavel",
+          cpf: "98765432100",
+        },
       });
     });
   });

@@ -1,4 +1,4 @@
-import { UUID, LocalDate, LocalDateTime, Sexo, Endereco, ContatoEmergencia, PaginatedResult } from './comum';
+import { UUID, LocalDate, LocalDateTime, Sexo, Endereco, ContatoEmergencia } from './comum';
 
 /**
  * Status operacional do aluno.
@@ -40,11 +40,21 @@ export interface Aluno {
   telefone: string;
   telefoneSec?: string;
   cpf: string;
+  passaporte?: string;
   rg?: string;
   dataNascimento: LocalDate;
   sexo: Sexo;
   endereco?: Endereco;
   contatoEmergencia?: ContatoEmergencia;
+  responsavel?: {
+    id?: UUID;
+    clienteId?: UUID;
+    nome: string;
+    cpf?: string;
+    email?: string;
+    telefone?: string;
+    parentesco?: string;
+  };
   observacoesMedicas?: string;
   foto?: string;
   estadoAtual?: {
@@ -72,10 +82,6 @@ export interface Aluno {
   }[];
   dataCadastro: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
-}
-
-interface PaginatedAlunosResult extends PaginatedResult<Aluno> {
-  totaisStatus?: AlunoTotaisStatus;
 }
 
 export interface Presenca {

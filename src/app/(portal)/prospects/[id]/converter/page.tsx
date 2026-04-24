@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { useForm } from "react-hook-form";
+import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 import { getProspectApi, updateProspectStatusApi } from "@/lib/api/crm";
-import { createAlunoApi } from "@/lib/api/alunos";
+import { createAlunoApi, searchAlunosApi } from "@/lib/api/alunos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,12 @@ import { ListErrorState } from "@/components/shared/list-states";
  * conversão cross-entity. Hoje só marcamos o Prospect como CONVERTIDO.
  */
 
+const cpfMaskSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido")
+  .or(z.literal(""));
+
 const converterSchema = z.object({
   nome: z.string().trim().min(2, "Nome obrigatório"),
   email: z
@@ -49,15 +56,52 @@ const converterSchema = z.object({
     .or(z.literal(""))
     .transform((v) => v || ""),
   telefone: z.string().trim().min(8, "Telefone obrigatório"),
-  cpf: z
-    .string()
-    .trim()
-    .regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido"),
+  cpf: cpfMaskSchema,
+  estrangeiro: z.boolean().default(false),
+  passaporte: z.string().optional(),
+  temResponsavel: z.boolean().default(false),
+  responsavelClienteId: z.string().optional(),
+  responsavelNome: z.string().optional(),
+  responsavelCpf: cpfMaskSchema.optional(),
+  responsavelEmail: z.string().email("E-mail inválido").or(z.literal("")).optional(),
+  responsavelTelefone: z.string().optional(),
+  responsavelParentesco: z.string().optional(),
   dataNascimento: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de nascimento obrigatória (AAAA-MM-DD)"),
   sexo: z.enum(["M", "F", "OUTRO", "NAO_INFORMADO"] as const),
   observacoesMedicas: z.string().optional().default(""),
+}).superRefine((values, ctx) => {
+  if (!values.estrangeiro && !values.temResponsavel && !values.cpf) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cpf"],
+      message: "CPF é obrigatório quando não houver passaporte ou responsável.",
+    });
+  }
+  if (values.estrangeiro && !values.passaporte?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["passaporte"],
+      message: "Passaporte é obrigatório para estrangeiro.",
+    });
+  }
+  if (values.temResponsavel) {
+    if (!values.responsavelNome?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["responsavelNome"],
+        message: "Nome do responsável é obrigatório.",
+      });
+    }
+    if (!values.responsavelCpf?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["responsavelCpf"],
+        message: "CPF do responsável é obrigatório.",
+      });
+    }
+  }
 });
 
 type ConverterFormValues = z.infer<typeof converterSchema>;
@@ -75,6 +119,7 @@ export default function ConverterProspectPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [responsavelHint, setResponsavelHint] = useState("");
 
   const {
     register,
@@ -83,13 +128,22 @@ export default function ConverterProspectPage() {
     watch,
     formState: { errors },
   } = useForm<ConverterFormValues>({
-    resolver: zodResolver(converterSchema),
+    resolver: zodResolver(converterSchema) as Resolver<ConverterFormValues>,
     mode: "onChange",
     defaultValues: {
       nome: "",
       email: "",
       telefone: "",
       cpf: "",
+      estrangeiro: false,
+      passaporte: "",
+      temResponsavel: false,
+      responsavelClienteId: "",
+      responsavelNome: "",
+      responsavelCpf: "",
+      responsavelEmail: "",
+      responsavelTelefone: "",
+      responsavelParentesco: "",
       dataNascimento: "",
       sexo: "NAO_INFORMADO",
       observacoesMedicas: "",
@@ -124,6 +178,10 @@ export default function ConverterProspectPage() {
     };
   }, [id, activeTenantId, setValue]);
 
+  const estrangeiroValue = watch("estrangeiro");
+  const temResponsavelValue = watch("temResponsavel");
+  const responsavelCpfValue = watch("responsavelCpf");
+
   const onSubmit = async (values: ConverterFormValues) => {
     if (!activeTenantId || !prospect) return;
     setSubmitting(true);
@@ -135,9 +193,18 @@ export default function ConverterProspectPage() {
           nome: values.nome.trim(),
           email: values.email.trim(),
           telefone: values.telefone.trim(),
-          cpf: cpfDigits,
+          cpf: cpfDigits || undefined,
+          passaporte: values.passaporte?.trim() || undefined,
           dataNascimento: values.dataNascimento,
           sexo: values.sexo as Sexo,
+          responsavel: values.temResponsavel ? {
+            clienteId: values.responsavelClienteId || undefined,
+            nome: values.responsavelNome?.trim() || undefined,
+            cpf: values.responsavelCpf ? onlyDigits(values.responsavelCpf) : undefined,
+            email: values.responsavelEmail?.trim() || undefined,
+            telefone: values.responsavelTelefone?.trim() || undefined,
+            parentesco: values.responsavelParentesco?.trim() || undefined,
+          } : undefined,
           observacoesMedicas: values.observacoesMedicas?.trim() || undefined,
         },
       });
@@ -160,6 +227,38 @@ export default function ConverterProspectPage() {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!temResponsavelValue || !activeTenantId || !responsavelCpfValue || responsavelCpfValue.includes("_")) {
+      setValue("responsavelClienteId", "");
+      setResponsavelHint("");
+      return;
+    }
+
+    const cpfDigits = onlyDigits(responsavelCpfValue);
+    const handler = setTimeout(async () => {
+      try {
+        const results = await searchAlunosApi({
+          tenantId: activeTenantId,
+          search: cpfDigits,
+          page: 0,
+          size: 5,
+        });
+        const linked = results.find((aluno) => onlyDigits(aluno.cpf || "") === cpfDigits);
+        if (linked) {
+          setValue("responsavelClienteId", linked.id, { shouldValidate: true });
+          setResponsavelHint(`Responsável já cadastrado: ${linked.nome}. O vínculo será feito entre clientes.`);
+          return;
+        }
+        setValue("responsavelClienteId", "", { shouldValidate: true });
+        setResponsavelHint("Responsável externo. O vínculo será criado com os dados informados.");
+      } catch {
+        setResponsavelHint("");
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [temResponsavelValue, responsavelCpfValue, activeTenantId, setValue]);
 
   if (!activeTenantId) {
     return (
@@ -292,6 +391,29 @@ export default function ConverterProspectPage() {
             ) : null}
           </div>
 
+          <div className="flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm">
+            <input
+              type="checkbox"
+              checked={estrangeiroValue}
+              onChange={(event) => setValue("estrangeiro", event.target.checked, { shouldValidate: true })}
+            />
+            Cliente estrangeiro
+          </div>
+
+          {estrangeiroValue ? (
+            <div>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Passaporte
+              </label>
+              <Input {...register("passaporte")} className="mt-1 bg-secondary" />
+              {errors.passaporte ? (
+                <p className="text-xs text-gym-danger" role="alert">
+                  {errors.passaporte.message}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div>
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Data de nascimento
@@ -327,6 +449,81 @@ export default function ConverterProspectPage() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-secondary/40 p-4">
+          <label className="flex items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={temResponsavelValue}
+              onChange={(event) => setValue("temResponsavel", event.target.checked, { shouldValidate: true })}
+            />
+            Possui responsável
+          </label>
+
+          {temResponsavelValue ? (
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <input type="hidden" {...register("responsavelClienteId")} />
+
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Nome do responsável
+                </label>
+                <Input {...register("responsavelNome")} className="mt-1 bg-secondary" />
+                {errors.responsavelNome ? (
+                  <p className="text-xs text-gym-danger" role="alert">
+                    {errors.responsavelNome.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  CPF do responsável
+                </label>
+                <MaskedInput
+                  mask="cpf"
+                  value={watch("responsavelCpf") || ""}
+                  onChange={(v) => setValue("responsavelCpf", v, { shouldValidate: true })}
+                  className="mt-1 bg-secondary"
+                />
+                {errors.responsavelCpf ? (
+                  <p className="text-xs text-gym-danger" role="alert">
+                    {errors.responsavelCpf.message}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Telefone do responsável
+                </label>
+                <PhoneInput
+                  value={watch("responsavelTelefone") || ""}
+                  onChange={(v) => setValue("responsavelTelefone", v, { shouldValidate: true })}
+                  className="mt-1 bg-secondary"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  E-mail do responsável
+                </label>
+                <Input type="email" {...register("responsavelEmail")} className="mt-1 bg-secondary" />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Parentesco
+                </label>
+                <Input {...register("responsavelParentesco")} className="mt-1 bg-secondary" />
+              </div>
+
+              {responsavelHint ? (
+                <div className="md:col-span-2 text-xs text-muted-foreground">{responsavelHint}</div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div>
