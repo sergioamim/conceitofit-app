@@ -336,15 +336,20 @@ Migração `V202604241907__notificacao_inbox_e_idempotency.sql` criada. Branch `
 | **4.7** | `NotificacaoCanal.IN_APP` + enum `NotificacaoSeveridade` + `AudienceTipo` | ✅ | `faafad45` |
 | — | Testes Wave 1 | ✅ | `5f868c1c` |
 
-### Wave 2 — Endpoints REST para portal inbox
+### Wave 2 — Endpoints REST para portal inbox ✅ CONCLUÍDA (2026-04-24)
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.8** | `GET /api/v1/notificacoes/inbox?tenantId={activeId}&limit=50&cursor=&apenasNaoLidas=false` — paginado com filtro D6 | M | 4.2 |
-| **4.9** | `POST /api/v1/notificacoes/inbox/{id}/marcar-lida` + `POST /inbox/{id}/acao` — idempotentes | S | 4.2 |
-| **4.10** | `POST /api/v1/notificacoes/inbox/marcar-todas-lidas?tenantId=` — atomiza várias | S | 4.2 |
-| **4.11** | `GET /api/v1/notificacoes/inbox/contadores?tenantId=` — retorna `{naoLidas, urgentesNaoLidas}` para badge | S | 4.2 |
-| **4.12** | `POST /api/v1/notificacoes/admin/emitir` — endpoint manual (valida `UserKind=PLATAFORMA` para GLOBAL) + audit log | M | 4.5 |
+Branch `feat/notificacoes-epic4-wave2` mergeada via fast-forward em main. 5483 tests no monolito (0 falhas), `modulo-notificacoes` foi de 124 → 141 (+17). Worktree e branch removidos.
+
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.8** | `GET /inbox` paginado com cursor base64 + filtro D6 | ✅ | `2094cf86` + `85635b27` |
+| **4.9** | `POST /inbox/{id}/marcar-lida` + `POST /inbox/{id}/acao` (idempotentes) | ✅ | `85635b27` |
+| **4.10** | `POST /inbox/marcar-todas-lidas?tenantId=` (UPDATE atômico no repo) | ✅ | `85635b27` |
+| **4.11** | `GET /inbox/contadores?tenantId=` retornando `{naoLidas, urgentesNaoLidas}` | ✅ | `85635b27` |
+| **4.12** | `POST /admin/emitir` com `@PreAuthorize("hasRole('PLATAFORMA')")` + double-check userKind para GLOBAL + audit log | ✅ | `d9e6f545` |
+| — | Testes Wave 2 (37 novos) | ✅ | `cdd0b480` |
+
+**Implementação criou:** `NotificacaoInboxService` (modulo-notificacoes), `NotificacaoInboxController` + `NotificacaoAdminController` + `OperadorAuthContextService` (modulo-app), `NotificacaoNaoEncontradaException`. Auth segue padrão de `AppClienteIdentidadeService` (parse JWT via `JwtTokenProvider.getUserId(token)`). Audit best-effort via `AuditService` (modulo-core) + SLF4J Marker `AUDIT`.
 
 ### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27)
 
