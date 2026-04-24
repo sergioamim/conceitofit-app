@@ -6,6 +6,7 @@ import { Menu, Search, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ActiveTenantSelector } from "@/components/layout/active-tenant-selector";
 import { OnboardingStatusBadge } from "@/components/layout/onboarding-status-badge";
+import { NotificationBellPortal } from "@/components/portal/notifications/notification-bell-portal";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { cn } from "@/lib/utils";
 
@@ -119,6 +120,8 @@ function AppTopbarComponent({ onOpenMenu, shellReady = false }: AppTopbarProps) 
               <ShoppingCart className="size-5" />
             </Link>
           </Button>
+
+          <NotificationBellPortal />
 
           <OnboardingStatusBadge />
         </div>
