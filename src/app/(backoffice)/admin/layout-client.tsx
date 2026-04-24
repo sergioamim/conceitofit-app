@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/tooltip";
 import { SidebarBackoffice } from "@/backoffice/components/sidebar-backoffice";
 import { SandboxBanner } from "@/components/layout/sandbox-banner";
+import { NotificationBellPortal } from "@/components/portal/notifications/notification-bell-portal";
 
 function isBackofficeNavItemActive(pathname: string, item: BackofficeNavItem) {
   return pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + "/"));
@@ -178,7 +179,10 @@ function AdminShellFrame({ children, pathname }: { children: ReactNode; pathname
                 </button>
                 <Breadcrumbs pathname={pathname ?? null} />
               </div>
-              <ModeBadge />
+              <div className="flex items-center gap-3">
+                <NotificationBellPortal />
+                <ModeBadge />
+              </div>
             </header>
 
             <main className="flex-1">{children}</main>
