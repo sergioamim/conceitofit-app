@@ -19,7 +19,8 @@ type CreateAlunoInput = {
   email: string;
   telefone: string;
   telefoneSec?: string;
-  cpf: string;
+  cpf?: string;
+  passaporte?: string;
   dataNascimento: string;
   sexo: Sexo;
   rg?: string;
@@ -35,6 +36,14 @@ type CreateAlunoInput = {
   contatoEmergencia?: {
     nome: string;
     telefone: string;
+    parentesco?: string;
+  };
+  responsavel?: {
+    clienteId?: string;
+    nome?: string;
+    cpf?: string;
+    email?: string;
+    telefone?: string;
     parentesco?: string;
   };
   observacoesMedicas?: string;
@@ -68,8 +77,6 @@ export type ClienteListEnvelopeResponse = {
   hasNext: boolean;
   totaisStatus?: ClienteTotaisStatusResponse;
 };
-
-type ListAlunosApiResponse = ClienteListEnvelopeResponse;
 
 type AlunoListPayload = Aluno[] | ClienteListEnvelopeResponse;
 
@@ -142,6 +149,8 @@ export function alunoFacialUrl(aluno: Pick<Aluno, "id" | "tenantId" | "foto" | "
 function normalizeAluno(input: Aluno): Aluno & { fotoThumbnail?: string } {
   return {
     ...input,
+    cpf: typeof input.cpf === "string" ? input.cpf : "",
+    passaporte: typeof input.passaporte === "string" && input.passaporte.trim() ? input.passaporte : undefined,
     foto: normalizeAlunoFotoUrl(input),
     fotoThumbnail: buildAlunoFotoUrl(input, "thumbnail"),
     status: normalizeAlunoStatus((input as Aluno & { status?: unknown }).status),
@@ -283,6 +292,19 @@ type CreateAlunoComMatriculaResponse = {
   pagamento: Pagamento;
 };
 
+type UpdateAlunoInput = Omit<Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>, "responsavel"> & {
+  estrangeiro?: boolean;
+  possuiResponsavel?: boolean;
+  responsavel?: {
+    clienteId?: string;
+    nome?: string;
+    cpf?: string;
+    email?: string;
+    telefone?: string;
+    parentesco?: string;
+  };
+};
+
 type ExcluirAlunoApiRequest = {
   tenantId: string;
   justificativa: string;
@@ -390,11 +412,16 @@ export async function createAlunoApi(input: {
   tenantId: string;
   data: CreateAlunoInput;
 }): Promise<Aluno> {
+  const { cpf, ...rest } = input.data;
+  const body = {
+    ...rest,
+    ...(cpf?.trim() ? { cpf } : {}),
+  };
   const response = await apiRequest<Aluno>({
     path: "/api/v1/comercial/alunos",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: input.data,
+    body,
   });
   return normalizeAluno(response);
 }
@@ -402,7 +429,7 @@ export async function createAlunoApi(input: {
 export async function updateAlunoApi(input: {
   tenantId: string;
   id: string;
-  data: Partial<Omit<Aluno, "id" | "tenantId" | "dataCadastro">>;
+  data: UpdateAlunoInput;
 }): Promise<Aluno> {
   const response = await apiRequest<Aluno>({
     path: `/api/v1/comercial/alunos/${input.id}`,
@@ -413,7 +440,7 @@ export async function updateAlunoApi(input: {
   return normalizeAluno(response);
 }
 
-async function updateAlunoStatusApi(input: {
+export async function updateAlunoStatusApi(input: {
   tenantId: string;
   id: string;
   status: StatusAluno;
@@ -433,11 +460,16 @@ export async function createAlunoComMatriculaApi(input: {
   tenantId: string;
   data: CreateAlunoComMatriculaInput;
 }): Promise<CreateAlunoComMatriculaResponse> {
+  const { cpf, ...rest } = input.data;
+  const body = {
+    ...rest,
+    ...(cpf?.trim() ? { cpf } : {}),
+  };
   return apiRequest<CreateAlunoComMatriculaResponse>({
     path: "/api/v1/comercial/alunos-com-matricula",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: input.data,
+    body,
   });
 }
 

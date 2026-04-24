@@ -37,6 +37,17 @@ export function MeuPerfilContent() {
   });
 
   const aluno = context?.aluno;
+  const documentoPrincipal = aluno?.cpf
+    ? { label: "CPF", value: aluno.cpf }
+    : aluno?.passaporte
+      ? { label: "Passaporte", value: aluno.passaporte }
+      : { label: "CPF / Passaporte", value: "---" };
+  const responsavelResumo = aluno?.responsavel
+    ? [aluno.responsavel.nome, aluno.responsavel.parentesco].filter(Boolean).join(" • ")
+    : null;
+  const responsavelContato = aluno?.responsavel
+    ? aluno.responsavel.cpf || aluno.responsavel.telefone || aluno.responsavel.email || null
+    : null;
 
   const handleAvatarSuccess = useCallback(() => {
     queryClient.invalidateQueries();
@@ -107,7 +118,9 @@ export function MeuPerfilContent() {
               <ProfileItem icon={Mail} label="E-mail" value={aluno?.email || "---"} />
               <ProfileItem icon={Phone} label="Telefone" value={aluno?.telefone || "---"} />
               <ProfileItem icon={Calendar} label="Nascimento" value={aluno?.dataNascimento ? formatDate(aluno.dataNascimento) : "---"} />
-              <ProfileItem icon={ShieldCheck} label="CPF" value={aluno?.cpf || "---"} />
+              <ProfileItem icon={ShieldCheck} label={documentoPrincipal.label} value={documentoPrincipal.value} />
+              {responsavelResumo ? <ProfileItem icon={UserCog} label="Responsável" value={responsavelResumo} /> : null}
+              {responsavelContato ? <ProfileItem icon={Phone} label="Contato do Responsável" value={responsavelContato} /> : null}
               <ProfileItem icon={MapPin} label="Endere&ccedil;o" value={aluno?.endereco?.cidade ? `${aluno.endereco.cidade} / ${aluno.endereco.estado}` : "N&atilde;o informado"} />
             </div>
           </CardContent>

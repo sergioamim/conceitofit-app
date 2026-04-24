@@ -30,10 +30,13 @@ export interface CreateOnlyOptions {
 
 const DEFAULT_VALUES: ClienteWizardForm = {
   nome: "", email: "", telefone: "", telefoneSec: "", cpf: "", rg: "",
+  estrangeiro: false, passaporte: "",
   dataNascimento: "", sexo: "",
   enderecoCep: "", enderecoLogradouro: "", enderecoNumero: "", enderecoComplemento: "",
   enderecoBairro: "", enderecoCidade: "", enderecoEstado: "",
   emergenciaNome: "", emergenciaTelefone: "", emergenciaParentesco: "",
+  temResponsavel: false, responsavelClienteId: "", responsavelNome: "", responsavelCpf: "",
+  responsavelEmail: "", responsavelTelefone: "", responsavelParentesco: "",
   observacoesMedicas: "", foto: "",
   selectedPlano: "",
   pagamento: {
@@ -51,12 +54,14 @@ const DEFAULT_VALUES: ClienteWizardForm = {
 };
 
 function buildAlunoPayload(vals: ClienteWizardForm) {
+  const identitySeed = vals.cpf || vals.passaporte || vals.telefone;
   return {
     nome: vals.nome,
-    email: normalizeDraftEmail(vals.nome, vals.cpf, vals.email),
+    email: normalizeDraftEmail(vals.nome, identitySeed, vals.email),
     telefone: vals.telefone,
     telefoneSec: vals.telefoneSec,
-    cpf: vals.cpf,
+    cpf: vals.cpf || undefined,
+    passaporte: vals.passaporte || undefined,
     rg: vals.rg,
     dataNascimento: vals.dataNascimento || "2000-01-01",
     sexo: (vals.sexo || "OUTRO") as Sexo,
@@ -73,6 +78,14 @@ function buildAlunoPayload(vals: ClienteWizardForm) {
       nome: vals.emergenciaNome,
       telefone: vals.emergenciaTelefone || "",
       parentesco: vals.emergenciaParentesco,
+    } : undefined,
+    responsavel: vals.temResponsavel ? {
+      clienteId: vals.responsavelClienteId || undefined,
+      nome: vals.responsavelNome || undefined,
+      cpf: vals.responsavelCpf || undefined,
+      email: vals.responsavelEmail || undefined,
+      telefone: vals.responsavelTelefone || undefined,
+      parentesco: vals.responsavelParentesco || undefined,
     } : undefined,
     observacoesMedicas: vals.observacoesMedicas,
     foto: vals.foto,
@@ -116,7 +129,7 @@ export function useClienteWizardState(callbacks: {
 
   async function handleCreateOnly(options?: CreateOnlyOptions) {
     if (!tenantId) return;
-    const ok = await trigger(["nome", "telefone", "cpf", "email"]);
+    const ok = await trigger();
     if (!ok) return;
 
     setLoading(true);

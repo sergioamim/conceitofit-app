@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
+import { searchAlunosApi } from "@/lib/api/alunos";
 import { updateAlunoService } from "@/lib/tenant/comercial/runtime";
 import { fetchCep } from "@/lib/shared/cep-lookup";
 import type { Aluno } from "@/lib/types";
@@ -14,12 +15,16 @@ import { PhoneInput } from "@/components/shared/phone-input";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
 
+const cpfMaskSchema = z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido").or(z.literal(""));
+
 const clienteFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome."),
   email: requiredTrimmedString("Informe o e-mail.").email("E-mail inválido."),
   telefone: requiredTrimmedString("Informe o telefone."),
   telefoneSec: optionalTrimmedString(),
-  cpf: requiredTrimmedString("Informe o CPF."),
+  cpf: cpfMaskSchema,
+  estrangeiro: z.boolean().default(false),
+  passaporte: optionalTrimmedString(),
   rg: optionalTrimmedString(),
   dataNascimento: requiredTrimmedString("Informe a data de nascimento."),
   sexo: requiredTrimmedString("Selecione o sexo."),
@@ -33,7 +38,45 @@ const clienteFormSchema = z.object({
   emergenciaNome: optionalTrimmedString(),
   emergenciaTelefone: optionalTrimmedString(),
   emergenciaParentesco: optionalTrimmedString(),
+  temResponsavel: z.boolean().default(false),
+  responsavelClienteId: optionalTrimmedString(),
+  responsavelNome: optionalTrimmedString(),
+  responsavelCpf: cpfMaskSchema.optional(),
+  responsavelEmail: z.string().email("E-mail inválido").or(z.literal("")).optional(),
+  responsavelTelefone: optionalTrimmedString(),
+  responsavelParentesco: optionalTrimmedString(),
   observacoesMedicas: optionalTrimmedString(),
+}).superRefine((values, ctx) => {
+  if (!values.estrangeiro && !values.temResponsavel && !values.cpf) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cpf"],
+      message: "CPF é obrigatório quando não houver passaporte ou responsável.",
+    });
+  }
+  if (values.estrangeiro && !values.passaporte?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["passaporte"],
+      message: "Passaporte é obrigatório para estrangeiro.",
+    });
+  }
+  if (values.temResponsavel) {
+    if (!values.responsavelNome?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["responsavelNome"],
+        message: "Nome do responsável é obrigatório.",
+      });
+    }
+    if (!values.responsavelCpf?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["responsavelCpf"],
+        message: "CPF do responsável é obrigatório.",
+      });
+    }
+  }
 });
 
 type ClienteFormValues = z.infer<typeof clienteFormSchema>;
@@ -44,7 +87,9 @@ function buildForm(aluno: Aluno): ClienteFormValues {
     email: aluno.email,
     telefone: aluno.telefone,
     telefoneSec: aluno.telefoneSec ?? "",
-    cpf: aluno.cpf,
+    cpf: aluno.cpf ?? "",
+    estrangeiro: Boolean(aluno.passaporte),
+    passaporte: aluno.passaporte ?? "",
     rg: aluno.rg ?? "",
     dataNascimento: aluno.dataNascimento,
     sexo: aluno.sexo || "",
@@ -58,6 +103,13 @@ function buildForm(aluno: Aluno): ClienteFormValues {
     emergenciaNome: aluno.contatoEmergencia?.nome ?? "",
     emergenciaTelefone: aluno.contatoEmergencia?.telefone ?? "",
     emergenciaParentesco: aluno.contatoEmergencia?.parentesco ?? "",
+    temResponsavel: Boolean(aluno.responsavel),
+    responsavelClienteId: aluno.responsavel?.clienteId ?? "",
+    responsavelNome: aluno.responsavel?.nome ?? "",
+    responsavelCpf: aluno.responsavel?.cpf ?? "",
+    responsavelEmail: aluno.responsavel?.email ?? "",
+    responsavelTelefone: aluno.responsavel?.telefone ?? "",
+    responsavelParentesco: aluno.responsavel?.parentesco ?? "",
     observacoesMedicas: aluno.observacoesMedicas ?? "",
   };
 }
@@ -84,16 +136,19 @@ export function ClienteEditForm({
     mode: "onChange",
     defaultValues: buildForm(aluno),
   });
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [responsavelHint, setResponsavelHint] = useState("");
 
   useEffect(() => {
     reset(buildForm(aluno));
     setError("");
   }, [aluno, reset]);
 
+  const watchedEstrangeiro = watch("estrangeiro");
+  const watchedTemResponsavel = watch("temResponsavel");
   const enderecoCep = watch("enderecoCep");
+  const responsavelCpf = watch("responsavelCpf");
 
   useEffect(() => {
     fetchCep(enderecoCep ?? "").then((data) => {
@@ -104,6 +159,36 @@ export function ClienteEditForm({
       if (data.uf) setValue("enderecoEstado", data.uf);
     });
   }, [enderecoCep, setValue]);
+
+  useEffect(() => {
+    if (!watchedTemResponsavel || !responsavelCpf || responsavelCpf.includes("_")) {
+      setValue("responsavelClienteId", "");
+      setResponsavelHint("");
+      return;
+    }
+    const cpfDigits = responsavelCpf.replace(/\D/g, "");
+    const handler = setTimeout(async () => {
+      try {
+        const results = await searchAlunosApi({
+          tenantId: aluno.tenantId,
+          search: cpfDigits,
+          page: 0,
+          size: 5,
+        });
+        const linked = results.find((item) => item.id !== aluno.id && (item.cpf || "").replace(/\D/g, "") === cpfDigits);
+        if (linked) {
+          setValue("responsavelClienteId", linked.id);
+          setResponsavelHint(`Responsável já cadastrado: ${linked.nome}. O vínculo será feito entre clientes.`);
+          return;
+        }
+        setValue("responsavelClienteId", "");
+        setResponsavelHint("Responsável externo. O vínculo será criado com os dados informados.");
+      } catch {
+        setResponsavelHint("");
+      }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [watchedTemResponsavel, responsavelCpf, aluno.tenantId, setValue]);
 
   const onFormSubmit = async (form: ClienteFormValues) => {
     setLoading(true);
@@ -117,7 +202,10 @@ export function ClienteEditForm({
           email: form.email,
           telefone: form.telefone,
           telefoneSec: form.telefoneSec || undefined,
-          cpf: form.cpf,
+          cpf: form.cpf || undefined,
+          estrangeiro: form.estrangeiro,
+          possuiResponsavel: form.temResponsavel,
+          passaporte: form.passaporte || undefined,
           rg: form.rg || undefined,
           dataNascimento: form.dataNascimento,
           sexo: (form.sexo as Aluno["sexo"]) || undefined,
@@ -135,6 +223,16 @@ export function ClienteEditForm({
                 nome: form.emergenciaNome,
                 telefone: form.emergenciaTelefone ?? "",
                 parentesco: form.emergenciaParentesco || undefined,
+              }
+            : undefined,
+          responsavel: form.temResponsavel
+            ? {
+                clienteId: form.responsavelClienteId || undefined,
+                nome: form.responsavelNome || "",
+                cpf: form.responsavelCpf || undefined,
+                email: form.responsavelEmail || undefined,
+                telefone: form.responsavelTelefone || undefined,
+                parentesco: form.responsavelParentesco || undefined,
               }
             : undefined,
           observacoesMedicas: form.observacoesMedicas || undefined,
@@ -217,7 +315,7 @@ export function ClienteEditForm({
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <label htmlFor="edit-cpf" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                CPF <span className="text-gym-danger">*</span>
+                CPF {watchedEstrangeiro || watchedTemResponsavel ? "" : <span className="text-gym-danger">*</span>}
               </label>
               <Controller
                 control={control}
@@ -234,6 +332,18 @@ export function ClienteEditForm({
                 )}
               />
               {errors.cpf ? <p className="text-xs text-gym-danger">{errors.cpf.message}</p> : null}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cliente estrangeiro</label>
+              <label className="flex h-10 items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm">
+                <input type="checkbox" {...register("estrangeiro")} />
+                Marcar como estrangeiro
+              </label>
+            </div>
+            <div className="space-y-1.5">
+              <label htmlFor="edit-passaporte" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Passaporte</label>
+              <Input id="edit-passaporte" {...register("passaporte")} className="bg-secondary border-border" />
+              {errors.passaporte ? <p className="text-xs text-gym-danger">{errors.passaporte.message}</p> : null}
             </div>
             <div className="space-y-1.5">
               <label htmlFor="edit-rg" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">RG</label>
@@ -269,6 +379,58 @@ export function ClienteEditForm({
               <option value="OUTRO">Outro</option>
             </select>
             {errors.sexo ? <p className="text-xs text-gym-danger">{errors.sexo.message}</p> : null}
+          </div>
+          <div className="mt-4 rounded-lg border border-border bg-secondary/40 p-4">
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input type="checkbox" {...register("temResponsavel")} />
+              Possui responsável
+            </label>
+            {watchedTemResponsavel ? (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <input type="hidden" {...register("responsavelClienteId")} />
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-responsavel-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome do responsável</label>
+                  <Input id="edit-responsavel-nome" {...register("responsavelNome")} className="bg-secondary border-border" />
+                  {errors.responsavelNome ? <p className="text-xs text-gym-danger">{errors.responsavelNome.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-responsavel-cpf" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">CPF do responsável</label>
+                  <Controller
+                    control={control}
+                    name="responsavelCpf"
+                    render={({ field }) => (
+                      <MaskedInput
+                        id="edit-responsavel-cpf"
+                        mask="cpf"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        className="bg-secondary border-border"
+                      />
+                    )}
+                  />
+                  {errors.responsavelCpf ? <p className="text-xs text-gym-danger">{errors.responsavelCpf.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-responsavel-telefone" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone do responsável</label>
+                  <Controller
+                    control={control}
+                    name="responsavelTelefone"
+                    render={({ field }) => (
+                      <PhoneInput id="edit-responsavel-telefone" value={field.value ?? ""} onChange={field.onChange} className="bg-secondary border-border" />
+                    )}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-responsavel-email" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail do responsável</label>
+                  <Input id="edit-responsavel-email" type="email" {...register("responsavelEmail")} className="bg-secondary border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-responsavel-parentesco" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Parentesco</label>
+                  <Input id="edit-responsavel-parentesco" {...register("responsavelParentesco")} className="bg-secondary border-border" />
+                </div>
+                {responsavelHint ? <p className="col-span-2 text-xs text-muted-foreground">{responsavelHint}</p> : null}
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
