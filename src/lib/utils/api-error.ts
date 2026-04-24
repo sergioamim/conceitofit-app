@@ -58,6 +58,21 @@ export function normalizeErrorMessage(error: unknown): string {
     return details;
   }
 
+  // Zod v4 error: array of ZodIssue. Quando vem direto (ex.: erro não tratado
+  // do resolver), mostramos cada mensagem amigável "campo: mensagem".
+  if (Array.isArray(error) && error.length > 0) {
+    const issues = error.filter((item): item is Record<string, unknown> => isRecord(item));
+    if (issues.length > 0 && issues.every((item) => typeof item.message === "string")) {
+      return issues
+        .map((item) => {
+          const path = Array.isArray(item.path) ? item.path.filter((p) => typeof p === "string" || typeof p === "number").join(".") : "";
+          const message = String(item.message);
+          return path ? `${path}: ${message}` : message;
+        })
+        .join(" ");
+    }
+  }
+
   if (error instanceof Error) {
     return error.message;
   }
