@@ -50,13 +50,13 @@ export function AbrirCaixaForm({
       valorAbertura: 0,
       observacoes: "",
     },
-    mode: "onBlur",
+    mode: "onChange",
   });
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = form;
 
   async function onSubmit(data: AbrirCaixaFormData): Promise<void> {
@@ -136,7 +136,9 @@ export function AbrirCaixaForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="caixaCatalogoId">Caixa do catálogo (UUID)</Label>
+          <Label htmlFor="caixaCatalogoId">
+            Caixa do catálogo (UUID) <span className="text-gym-danger">*</span>
+          </Label>
           <Input
             id="caixaCatalogoId"
             placeholder="ex.: 123e4567-e89b-12d3-a456-426614174000"
@@ -161,7 +163,9 @@ export function AbrirCaixaForm({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="valorAbertura">Valor de abertura (R$)</Label>
+          <Label htmlFor="valorAbertura">
+            Valor de abertura (R$) <span className="text-gym-danger">*</span>
+          </Label>
           <Input
             id="valorAbertura"
             type="number"
@@ -194,7 +198,7 @@ export function AbrirCaixaForm({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={submitting}>
+        <Button type="submit" disabled={submitting || !isValid}>
           {submitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />

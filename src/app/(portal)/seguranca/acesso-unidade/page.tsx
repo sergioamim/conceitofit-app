@@ -72,6 +72,7 @@ export default function AcessoUnidadePage() {
         initialPerfilIds: true,
       })
     ),
+    mode: "onChange",
     defaultValues: {
       name: "",
       email: "",
@@ -81,6 +82,7 @@ export default function AcessoUnidadePage() {
   });
   const grantAccessForm = useForm<GrantAccessFormValues>({
     resolver: zodResolver(grantAccessFormSchema),
+    mode: "onChange",
     defaultValues: {
       tenantId: tenantContext.tenantId || "",
       userId: "",
@@ -370,10 +372,13 @@ export default function AcessoUnidadePage() {
 
           <form className="grid gap-4 md:grid-cols-2" onSubmit={createUserForm.handleSubmit(handleCreateUser)}>
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-                <Input
-                  aria-label="Nome do usuário da unidade"
-                  {...createUserForm.register("name")}
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Nome <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                aria-label="Nome do usuário da unidade"
+                {...createUserForm.register("name")}
+                aria-invalid={createUserForm.formState.errors.name ? "true" : "false"}
                 className="border-border bg-secondary"
                 placeholder="Carla Operações"
               />
@@ -383,11 +388,14 @@ export default function AcessoUnidadePage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail *</label>
-                <Input
-                  aria-label="E-mail do usuário da unidade"
-                  type="email"
-                  {...createUserForm.register("email")}
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                E-mail <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                aria-label="E-mail do usuário da unidade"
+                type="email"
+                {...createUserForm.register("email")}
+                aria-invalid={createUserForm.formState.errors.email ? "true" : "false"}
                 className="border-border bg-secondary"
                 placeholder="carla@academia.local"
               />
@@ -442,7 +450,10 @@ export default function AcessoUnidadePage() {
             </div>
 
             <div className="md:col-span-2 flex justify-end">
-              <Button type="submit" disabled={saving || loading || !effectiveTenantId}>
+              <Button
+                type="submit"
+                disabled={saving || loading || !effectiveTenantId || !createUserForm.formState.isValid}
+              >
                 {saving ? "Criando..." : "Criar usuário"}
               </Button>
             </div>
