@@ -5,8 +5,11 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Pencil,
   Play,
+  Plus,
   RefreshCcw,
+  Send,
   Settings2,
   TrendingUp,
   XCircle,
@@ -41,10 +44,11 @@ import {
 import {
   listCrmCadenceExecutionsApi,
   listCrmEscalationRulesApi,
-  triggerCrmCadenceApi,
   cancelCrmCadenceExecutionApi,
   processOverdueCadenceTasksApi,
 } from "@/lib/api/crm-cadencias";
+import { CadenciaEditorDrawer } from "./cadencia-editor-drawer";
+import { TriggerCadenciaModal } from "./trigger-cadencia-modal";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import type {
   CrmCadencia,
@@ -131,6 +135,13 @@ function CrmCadenciasPageActive() {
   const [escalationRules, setEscalationRules] = useState<CrmEscalationRule[]>([]);
   const [statusFilter, setStatusFilter] = useState<"TODAS" | CrmCadenceExecutionStatus>("TODAS");
   const [processing, setProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"cadencias" | "execucoes" | "escalacao">(
+    "cadencias",
+  );
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingCadencia, setEditingCadencia] = useState<CrmCadencia | null>(null);
+  const [triggerOpen, setTriggerOpen] = useState(false);
+  const [triggerCadencia, setTriggerCadencia] = useState<CrmCadencia | null>(null);
 
   const loadData = useCallback(async () => {
     if (!tenantId) return;
@@ -175,6 +186,21 @@ function CrmCadenciasPageActive() {
     } catch (error) {
       toast({ title: "Erro", description: normalizeErrorMessage(error), variant: "destructive" });
     }
+  }
+
+  function handleOpenCreate() {
+    setEditingCadencia(null);
+    setEditorOpen(true);
+  }
+
+  function handleOpenEdit(cadencia: CrmCadencia) {
+    setEditingCadencia(cadencia);
+    setEditorOpen(true);
+  }
+
+  function handleOpenTrigger(cadencia: CrmCadencia) {
+    setTriggerCadencia(cadencia);
+    setTriggerOpen(true);
   }
 
   async function handleProcessOverdue() {
@@ -236,6 +262,13 @@ function CrmCadenciasPageActive() {
                 )}
                 Processar vencidas
               </Button>
+              <Button
+                onClick={handleOpenCreate}
+                className="bg-gym-accent text-black hover:bg-gym-accent/90"
+              >
+                <Plus className="mr-2 size-4" />
+                Nova cadência
+              </Button>
             </div>
           </div>
         </div>
@@ -272,7 +305,11 @@ function CrmCadenciasPageActive() {
         </div>
 
         <div className="px-6 py-6">
-          <Tabs defaultValue="cadencias" className="space-y-6">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+            className="space-y-6"
+          >
             <TabsList className="grid h-auto grid-cols-3 gap-1 rounded-2xl bg-secondary/50 p-1">
               <TabsTrigger value="cadencias" className="rounded-xl">
                 <Settings2 className="mr-2 size-4" />
@@ -343,17 +380,38 @@ function CrmCadenciasPageActive() {
                           </div>
                         ))}
                       </div>
-                      <div className="flex items-center justify-between pt-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                         <p className="text-xs text-muted-foreground">
                           Última execução: {formatDateTime(cadencia.ultimaExecucao ?? "")}
                         </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void handleToggleCadencia(cadencia)}
-                        >
-                          {cadencia.ativo ? "Desativar" : "Ativar"}
-                        </Button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-border"
+                            onClick={() => handleOpenTrigger(cadencia)}
+                            disabled={!cadencia.ativo}
+                          >
+                            <Send className="mr-1.5 size-3.5" />
+                            Disparar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-border"
+                            onClick={() => handleOpenEdit(cadencia)}
+                          >
+                            <Pencil className="mr-1.5 size-3.5" />
+                            Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void handleToggleCadencia(cadencia)}
+                          >
+                            {cadencia.ativo ? "Desativar" : "Ativar"}
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -552,6 +610,25 @@ function CrmCadenciasPageActive() {
           </Tabs>
         </div>
       </section>
+
+      <CadenciaEditorDrawer
+        open={editorOpen}
+        tenantId={tenantId}
+        cadencia={editingCadencia}
+        onOpenChange={setEditorOpen}
+        onSaved={() => void loadData()}
+      />
+
+      <TriggerCadenciaModal
+        open={triggerOpen}
+        tenantId={tenantId}
+        cadencia={triggerCadencia}
+        onOpenChange={setTriggerOpen}
+        onTriggered={() => {
+          setActiveTab("execucoes");
+          void loadData();
+        }}
+      />
     </div>
   );
 }
