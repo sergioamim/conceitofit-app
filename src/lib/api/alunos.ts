@@ -394,10 +394,7 @@ export async function createAlunoApi(input: {
     path: "/api/v1/comercial/alunos",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: {
-      tenantId: input.tenantId,
-      ...input.data,
-    },
+    body: input.data,
   });
   return normalizeAluno(response);
 }

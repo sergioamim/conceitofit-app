@@ -230,7 +230,7 @@ describe("api/alunos", () => {
   });
 
   describe("createAlunoApi", () => {
-    it("POST com body completo", async () => {
+    it("POST envia tenantId na query e nao no body", async () => {
       const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({
         id: "a1",
         status: "ATIVO",
@@ -247,10 +247,9 @@ describe("api/alunos", () => {
         },
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
-      expect(spy.mock.calls[0][0].body).toMatchObject({
-        tenantId: "t1",
-        nome: "Novo",
-      });
+      expect(spy.mock.calls[0][0].query).toMatchObject({ tenantId: "t1" });
+      expect(spy.mock.calls[0][0].body).toMatchObject({ nome: "Novo" });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
   });
 
