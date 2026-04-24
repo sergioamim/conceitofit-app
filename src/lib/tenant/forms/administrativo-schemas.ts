@@ -19,8 +19,11 @@ export const convenioFormSchema = z.object({
   descontoPercentual: z.string(),
   descontoValor: z.string(),
   ativo: z.boolean(),
+  permiteVoucherAcumulado: z.boolean().default(true),
   planoIds: z.array(z.string()).default([]),
   formasPagamentoPermitidas: z.array(z.string()).default([]),
+  validoDe: z.string(),
+  validoAte: z.string(),
   observacoes: z.string(),
 });
 

@@ -9,7 +9,7 @@ import {
   validarVoucherCodigoService,
 } from "@/lib/tenant/comercial/runtime";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { planoDryRun } from "@/lib/tenant/comercial/plano-flow";
+import { isConvenioVigente, planoDryRun } from "@/lib/tenant/comercial/plano-flow";
 import type {
   Aluno,
   Convenio,
@@ -124,6 +124,14 @@ export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }
     [planos, selectedPlanoId]
   );
 
+  // Data de referência pra vigência: a data de início da venda quando
+  // informada pelo user, senão "hoje". Mantém o filtro coerente com o
+  // cálculo do `planoDryRun` (que usa a mesma lógica de fallback).
+  const dataRefVigencia = useMemo(
+    () => dataInicioPlano || getBusinessTodayIso(),
+    [dataInicioPlano]
+  );
+
   const conveniosPlano = useMemo(
     () => {
       if (!selectedPlano) return [];
@@ -142,10 +150,15 @@ export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }
         ) {
           return false;
         }
+
+        // Phase 3: filtro de vigência. Oculta convênios fora do intervalo
+        // validoDe..validoAte na data de referência da venda.
+        if (!isConvenioVigente(convenio, dataRefVigencia)) return false;
+
         return true;
       });
     },
-    [convenios, selectedPlano, formaPagamento]
+    [convenios, selectedPlano, formaPagamento, dataRefVigencia]
   );
 
   const selectedConvenio = useMemo(
@@ -182,10 +195,13 @@ export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }
       couponPercent: cupomPercent,
       convenio: selectedConvenio ?? undefined,
       formaPagamento,
+      // Phase 3: vigência + regra de acumulação com voucher.
+      dataReferencia: dataRefVigencia,
+      voucherAplicado: cupomPercent > 0,
       renovacaoAutomatica: renovacaoAutomaticaPlano,
       isentarMatricula,
     });
-  }, [selectedPlano, dataInicioPlano, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, formaPagamento, renovacaoAutomaticaPlano, isentarMatricula]);
+  }, [selectedPlano, dataInicioPlano, dataRefVigencia, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, formaPagamento, renovacaoAutomaticaPlano, isentarMatricula]);
 
   // Sync cart items with dry-run when it's a plan sale
   useEffect(() => {

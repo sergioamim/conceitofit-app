@@ -164,6 +164,12 @@ export interface Convenio {
   id: UUID;
   nome: string;
   ativo: boolean;
+  /**
+   * Quando `false`, o convênio não se acumula com voucher/cupom aplicado
+   * na mesma venda. Regra de precedência: voucher vence (ação explícita
+   * do cliente); desconto do convênio é zerado. Default no backend: `true`.
+   */
+  permiteVoucherAcumulado: boolean;
   tipoDesconto: TipoDescontoConvenio;
   /** Preenchido quando tipoDesconto === "PERCENTUAL" (0..100). */
   descontoPercentual: number;
@@ -172,6 +178,10 @@ export interface Convenio {
   planoIds?: UUID[];
   /** Vazio/undefined = todas as formas aceitam o convênio. */
   formasPagamentoPermitidas?: import("./pagamento").TipoFormaPagamento[];
+  /** ISO date (YYYY-MM-DD). undefined = vale desde sempre. */
+  validoDe?: string;
+  /** ISO date (YYYY-MM-DD). undefined = vale indefinidamente. */
+  validoAte?: string;
   observacoes?: string;
 }
 

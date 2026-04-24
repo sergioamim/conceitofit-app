@@ -55,22 +55,52 @@ export interface PlanoDryRunParams {
    * — mantém retrocompat com callers antigos.
    */
   formaPagamento?: TipoFormaPagamento;
+  /**
+   * Data de referência (ISO YYYY-MM-DD) para avaliar a vigência do convênio.
+   * Default quando omitido = data do negócio de hoje. Exposto separadamente
+   * do `dataInicio` do plano porque a vigência do convênio é checada no
+   * momento da venda, não no start do contrato.
+   */
+  dataReferencia?: string;
+  /**
+   * Código de voucher/cupom aplicado na venda. Quando presente E o convênio
+   * tem `permiteVoucherAcumulado=false`, o desconto do convênio é zerado
+   * (voucher vence a precedência por ser ação explícita do cliente).
+   */
+  voucherAplicado?: boolean;
   renovacaoAutomatica: boolean;
   isentarMatricula?: boolean;
 }
 
 /**
- * Cálculo do desconto de convênio respeitando `tipoDesconto` e o filtro
- * opcional por forma de pagamento. Exportado para consumo direto no
- * checkout quando a forma ainda não está resolvida mas a eligibilidade
- * precisa ser avaliada (ex.: destacar/ocultar convênio na dropdown).
+ * Compara uma data ISO (YYYY-MM-DD) contra um intervalo opcional. Feita
+ * como comparação lexicográfica para evitar issues de timezone — ISO
+ * YYYY-MM-DD é naturalmente ordenável como string.
+ */
+export function isConvenioVigente(convenio: Convenio, dataReferencia: string): boolean {
+  if (convenio.validoDe && dataReferencia < convenio.validoDe) return false;
+  if (convenio.validoAte && dataReferencia > convenio.validoAte) return false;
+  return true;
+}
+
+/**
+ * Cálculo do desconto de convênio respeitando `tipoDesconto`, vigência,
+ * filtro por forma de pagamento e regra de acumulação com voucher.
+ * Exportado para consumo direto no checkout quando a eligibilidade
+ * precisa ser avaliada fora do `planoDryRun` (ex.: filtrar dropdown).
  */
 export function calcularDescontoConvenio(
   plano: Plano,
   convenio: Convenio | undefined,
   formaPagamento?: TipoFormaPagamento,
+  options?: { dataReferencia?: string; voucherAplicado?: boolean },
 ): number {
   if (!convenio || !convenio.ativo) return 0;
+
+  // Vigência temporal
+  if (options?.dataReferencia !== undefined && !isConvenioVigente(convenio, options.dataReferencia)) {
+    return 0;
+  }
 
   // Filtro de forma de pagamento quando aplicável
   if (
@@ -79,6 +109,11 @@ export function calcularDescontoConvenio(
     convenio.formasPagamentoPermitidas.length > 0 &&
     !convenio.formasPagamentoPermitidas.includes(formaPagamento)
   ) {
+    return 0;
+  }
+
+  // Regra de acumulação com voucher: voucher vence
+  if (options?.voucherAplicado && !convenio.permiteVoucherAcumulado) {
     return 0;
   }
 
@@ -164,6 +199,8 @@ export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
     couponPercent = 0,
     convenio,
     formaPagamento,
+    dataReferencia,
+    voucherAplicado,
     renovacaoAutomatica,
     isentarMatricula = false,
   } = params;
@@ -173,9 +210,15 @@ export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
   const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
 
   // 2. Calcular descontos
-  // Desconto de convênio: respeita tipoDesconto (PERCENTUAL/VALOR_FIXO) e
-  // filtro por forma de pagamento quando informada.
-  const descontoConvenio = calcularDescontoConvenio(plano, convenio, formaPagamento);
+  // Desconto de convênio: respeita tipoDesconto, filtro por forma, vigência
+  // (dataReferencia) e acumulação com voucher (voucherAplicado).
+  // Se voucherAplicado não for explicitamente passado, infere: couponPercent>0
+  // conta como voucher aplicado (cupom = voucher no código legado).
+  const voucherEmUso = voucherAplicado ?? couponPercent > 0;
+  const descontoConvenio = calcularDescontoConvenio(plano, convenio, formaPagamento, {
+    dataReferencia,
+    voucherAplicado: voucherEmUso,
+  });
 
   // Desconto de cupom aplica sobre o valor do plano
   const descontoCupom = (Number(plano.valor ?? 0) * couponPercent) / 100;
