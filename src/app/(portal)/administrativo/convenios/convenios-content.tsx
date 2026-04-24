@@ -13,6 +13,7 @@ import type { Convenio, Plano } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { ConvenioModal } from "@/components/shared/convenio-modal";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
+import { formatBRL } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useCrudOperations } from "@/hooks/use-crud-operations";
@@ -101,6 +102,7 @@ export function ConveniosContent({ initialData, initialPlanos, tenantId }: Conve
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Convênio</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Desconto</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Planos</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pagamento</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
             </tr>
@@ -109,9 +111,18 @@ export function ConveniosContent({ initialData, initialPlanos, tenantId }: Conve
             {convenios.map((c) => (
               <tr key={c.id} className="transition-colors hover:bg-secondary/40">
                 <td className="px-4 py-3 text-sm font-medium">{c.nome}</td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{c.descontoPercentual}%</td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {c.tipoDesconto === "VALOR_FIXO"
+                    ? formatBRL(c.descontoValor ?? 0)
+                    : `${c.descontoPercentual}%`}
+                </td>
                 <td className="px-4 py-3 text-sm text-muted-foreground">
                   {c.planoIds && c.planoIds.length > 0 ? `${c.planoIds.length} planos` : "Todos"}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {c.formasPagamentoPermitidas && c.formasPagamentoPermitidas.length > 0
+                    ? `${c.formasPagamentoPermitidas.length} forma${c.formasPagamentoPermitidas.length === 1 ? "" : "s"}`
+                    : "Todas"}
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <span className={cn(
@@ -149,7 +160,7 @@ export function ConveniosContent({ initialData, initialPlanos, tenantId }: Conve
             ))}
             {convenios.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhum convênio cadastrado
                 </td>
               </tr>

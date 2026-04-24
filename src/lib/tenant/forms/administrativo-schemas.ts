@@ -15,9 +15,12 @@ const funcionarioFormSchema = z.object({
 
 export const convenioFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome do convênio."),
+  tipoDesconto: z.enum(["PERCENTUAL", "VALOR_FIXO"]).default("PERCENTUAL"),
   descontoPercentual: z.string(),
+  descontoValor: z.string(),
   ativo: z.boolean(),
   planoIds: z.array(z.string()).default([]),
+  formasPagamentoPermitidas: z.array(z.string()).default([]),
   observacoes: z.string(),
 });
 

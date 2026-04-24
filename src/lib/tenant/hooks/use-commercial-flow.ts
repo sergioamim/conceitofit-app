@@ -16,6 +16,7 @@ import type {
   FormaPagamento,
   PagamentoVenda,
   Plano,
+  TipoFormaPagamento,
   TipoVenda,
   Venda,
 } from "@/lib/types";
@@ -33,9 +34,20 @@ export interface CartItem {
 export interface UseCommercialFlowProps {
   tenantId: string | null;
   initialClienteId?: string;
+  /**
+   * Forma de pagamento atual do checkout. Quando informada, o hook:
+   *  - filtra `conveniosPlano` ocultando convênios com
+   *    `formasPagamentoPermitidas` incompatíveis;
+   *  - propaga ao `planoDryRun`, que zera o desconto do convênio se a
+   *    forma atual não estiver permitida (caso algum filtro falhe ou o
+   *    convênio selecionado vire inelegível durante a edição).
+   *
+   * Quando ausente, mantém retrocompat: nenhum filtro por forma.
+   */
+  formaPagamento?: TipoFormaPagamento;
 }
 
-export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialFlowProps) {
+export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }: UseCommercialFlowProps) {
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
@@ -113,11 +125,27 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
   );
 
   const conveniosPlano = useMemo(
-    () =>
-      selectedPlano
-        ? convenios.filter((convenio) => (convenio.planoIds ?? []).includes(selectedPlano.id))
-        : [],
-    [convenios, selectedPlano]
+    () => {
+      if (!selectedPlano) return [];
+      return convenios.filter((convenio) => {
+        // Filtro por plano (lógica preservada — o filter usa inclusão estrita
+        // em planoIds; convênio sem planoIds permanece oculto, como antes).
+        if (!(convenio.planoIds ?? []).includes(selectedPlano.id)) return false;
+
+        // Phase 2: filtro por forma de pagamento. Se o convênio restringe
+        // formas e a forma atual do checkout não está permitida, oculta.
+        const formasPermitidas = convenio.formasPagamentoPermitidas ?? [];
+        if (
+          formaPagamento !== undefined &&
+          formasPermitidas.length > 0 &&
+          !formasPermitidas.includes(formaPagamento)
+        ) {
+          return false;
+        }
+        return true;
+      });
+    },
+    [convenios, selectedPlano, formaPagamento]
   );
 
   const selectedConvenio = useMemo(
@@ -127,6 +155,17 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
         : null,
     [convenioPlanoId, conveniosPlano]
   );
+
+  // Phase 2: auto-deseleciona o convênio quando ele sai da lista de
+  // elegíveis (p.ex. trocar forma de pagamento para uma incompatível).
+  // Evita total "congelado" com desconto inválido no carrinho.
+  useEffect(() => {
+    if (convenioPlanoId === "__SEM_CONVENIO__") return;
+    const aindaElegivel = conveniosPlano.some((c) => c.id === convenioPlanoId);
+    if (!aindaElegivel) {
+      setConvenioPlanoId("__SEM_CONVENIO__");
+    }
+  }, [conveniosPlano, convenioPlanoId]);
 
   // Totals calculations via Dry-Run
   const dryRun = useMemo(() => {
@@ -142,10 +181,11 @@ export function useCommercialFlow({ tenantId, initialClienteId }: UseCommercialF
       motivoDesconto,
       couponPercent: cupomPercent,
       convenio: selectedConvenio ?? undefined,
+      formaPagamento,
       renovacaoAutomatica: renovacaoAutomaticaPlano,
       isentarMatricula,
     });
-  }, [selectedPlano, dataInicioPlano, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, renovacaoAutomaticaPlano, isentarMatricula]);
+  }, [selectedPlano, dataInicioPlano, parcelasAnuidade, manualDiscount, motivoDesconto, cupomPercent, selectedConvenio, formaPagamento, renovacaoAutomaticaPlano, isentarMatricula]);
 
   // Sync cart items with dry-run when it's a plan sale
   useEffect(() => {

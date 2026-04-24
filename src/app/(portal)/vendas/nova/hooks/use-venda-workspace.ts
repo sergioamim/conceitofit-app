@@ -24,7 +24,12 @@ export function useVendaWorkspace() {
   const [tenant, setTenant] = useState<Tenant | null>(tenantContext.tenant ?? null);
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
 
-  const flow = useCommercialFlow({ tenantId });
+  // Declarado antes de `useCommercialFlow` porque o hook agora aceita a
+  // forma atual como input para filtrar convênios elegíveis (Phase 2).
+  // Setter abaixo mantém nome legado `setFormaPagamentoState`.
+  const [formaPagamento, setFormaPagamentoState] = useState<TipoFormaPagamento>("PIX");
+
+  const flow = useCommercialFlow({ tenantId, formaPagamento });
   const {
     alunos, planos, formasPagamento,
     loadAlunos, alunosLoaded,
@@ -163,8 +168,9 @@ export function useVendaWorkspace() {
   // ---------------------------------------------------------------------
   // VUN-3.3 — Expansão do workspace: forma de pagamento, parcelas,
   // autorização (NSU) e flag canFinalize consumidos pelo PaymentPanel.
+  // `formaPagamento` vive mais acima — é input do `useCommercialFlow`
+  // desde a Phase 2 do convênio (filtro por forma).
   // ---------------------------------------------------------------------
-  const [formaPagamento, setFormaPagamentoState] = useState<TipoFormaPagamento>("PIX");
   const [parcelas, setParcelasState] = useState<number>(1);
   const [autorizacao, setAutorizacaoState] = useState<string>("");
 

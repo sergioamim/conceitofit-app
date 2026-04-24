@@ -3,7 +3,12 @@
 import { useEffect, useMemo } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { Convenio, Plano } from "@/lib/types";
+import type {
+  Convenio,
+  Plano,
+  TipoDescontoConvenio,
+  TipoFormaPagamento,
+} from "@/lib/types";
 import { convenioFormSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,34 +27,59 @@ import { formatBRL } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
 type EscopoPlanos = "TODOS" | "ESPECIFICOS";
+type EscopoPagamento = "TODAS" | "ESPECIFICAS";
 
 type ConvenioFormValues = {
   nome: string;
+  tipoDesconto: TipoDescontoConvenio;
   descontoPercentual: string;
+  descontoValor: string;
   ativo: boolean;
   escopoPlanos: EscopoPlanos;
   planoIds: string[];
+  escopoPagamento: EscopoPagamento;
+  formasPagamentoPermitidas: string[];
   observacoes: string;
 };
+
+const FORMAS_PAGAMENTO: Array<{ value: TipoFormaPagamento; label: string }> = [
+  { value: "DINHEIRO", label: "Dinheiro" },
+  { value: "PIX", label: "PIX" },
+  { value: "CARTAO_CREDITO", label: "Cartão de crédito" },
+  { value: "CARTAO_DEBITO", label: "Cartão de débito" },
+  { value: "BOLETO", label: "Boleto" },
+  { value: "RECORRENTE", label: "Recorrente" },
+];
 
 function toFormValues(initial?: Convenio | null): ConvenioFormValues {
   if (!initial) {
     return {
       nome: "",
+      tipoDesconto: "PERCENTUAL",
       descontoPercentual: "0",
+      descontoValor: "",
       ativo: true,
       escopoPlanos: "TODOS",
       planoIds: [],
+      escopoPagamento: "TODAS",
+      formasPagamentoPermitidas: [],
       observacoes: "",
     };
   }
   const temPlanos = Boolean(initial.planoIds && initial.planoIds.length > 0);
+  const temFormas = Boolean(
+    initial.formasPagamentoPermitidas && initial.formasPagamentoPermitidas.length > 0,
+  );
   return {
     nome: initial.nome,
+    tipoDesconto: initial.tipoDesconto ?? "PERCENTUAL",
     descontoPercentual: String(initial.descontoPercentual ?? 0),
+    descontoValor: initial.descontoValor != null ? String(initial.descontoValor) : "",
     ativo: initial.ativo,
     escopoPlanos: temPlanos ? "ESPECIFICOS" : "TODOS",
     planoIds: initial.planoIds ?? [],
+    escopoPagamento: temFormas ? "ESPECIFICAS" : "TODAS",
+    formasPagamentoPermitidas: (initial.formasPagamentoPermitidas ?? []) as string[],
     observacoes: initial.observacoes ?? "",
   };
 }
@@ -88,22 +118,42 @@ export function ConvenioModal({
   const planosAtivos = useMemo(() => planos.filter((p) => p.ativo), [planos]);
 
   const nomeWatch = watch("nome");
-  const descontoWatch = watch("descontoPercentual");
-  const escopoWatch = watch("escopoPlanos");
+  const tipoDescontoWatch = watch("tipoDesconto");
+  const descontoPercentualWatch = watch("descontoPercentual");
+  const descontoValorWatch = watch("descontoValor");
+  const escopoPlanosWatch = watch("escopoPlanos");
+  const escopoPagamentoWatch = watch("escopoPagamento");
   const ativoWatch = watch("ativo");
   const planoIdsWatch = watch("planoIds") ?? [];
+  const formasPermitidasWatch = watch("formasPagamentoPermitidas") ?? [];
 
-  const descontoNumero = Number.parseFloat(descontoWatch ?? "0");
+  const descontoPercentualNum = Number.parseFloat(descontoPercentualWatch ?? "0");
+  const descontoValorNum = Number.parseFloat(descontoValorWatch ?? "0");
+
+  const descontoPercentualValido =
+    Number.isFinite(descontoPercentualNum) &&
+    descontoPercentualNum >= 0 &&
+    descontoPercentualNum <= 100;
+
+  const descontoValorValido = Number.isFinite(descontoValorNum) && descontoValorNum > 0;
+
   const descontoValido =
-    Number.isFinite(descontoNumero) && descontoNumero >= 0 && descontoNumero <= 100;
+    tipoDescontoWatch === "PERCENTUAL" ? descontoPercentualValido : descontoValorValido;
 
   const canSave =
     Boolean(nomeWatch?.trim()) &&
     descontoValido &&
-    (escopoWatch === "TODOS" || planoIdsWatch.length > 0);
+    (escopoPlanosWatch === "TODOS" || planoIdsWatch.length > 0) &&
+    (escopoPagamentoWatch === "TODAS" || formasPermitidasWatch.length > 0);
 
+  // Preview
   const precoExemplo = 150;
-  const descontoExemplo = (precoExemplo * (Number.isFinite(descontoNumero) ? descontoNumero : 0)) / 100;
+  const descontoExemploPercent = (precoExemplo * (Number.isFinite(descontoPercentualNum) ? descontoPercentualNum : 0)) / 100;
+  const descontoExemploFixo = Math.min(
+    Number.isFinite(descontoValorNum) && descontoValorNum > 0 ? descontoValorNum : 0,
+    precoExemplo,
+  );
+  const descontoExemplo = tipoDescontoWatch === "PERCENTUAL" ? descontoExemploPercent : descontoExemploFixo;
   const precoFinal = Math.max(0, precoExemplo - descontoExemplo);
 
   function togglePlano(id: string) {
@@ -118,22 +168,38 @@ export function ConvenioModal({
     setValue("planoIds", todosSelecionados ? [] : todosIds, { shouldDirty: true, shouldValidate: true });
   }
 
+  function toggleFormaPagamento(forma: TipoFormaPagamento) {
+    const atual = formasPermitidasWatch;
+    const proximo = atual.includes(forma) ? atual.filter((x) => x !== forma) : [...atual, forma];
+    setValue("formasPagamentoPermitidas", proximo, { shouldDirty: true, shouldValidate: true });
+  }
+
   function handleSave(values: ConvenioFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
+
+    const isPercentual = values.tipoDesconto === "PERCENTUAL";
     const desconto = Number.parseFloat(values.descontoPercentual) || 0;
+    const valorFixo = Number.parseFloat(values.descontoValor) || 0;
+
     onSave(
       {
         nome,
         ativo: values.ativo,
-        descontoPercentual: desconto,
+        tipoDesconto: values.tipoDesconto,
+        descontoPercentual: isPercentual ? desconto : 0,
+        descontoValor: isPercentual ? undefined : valorFixo,
         planoIds:
           values.escopoPlanos === "ESPECIFICOS" && values.planoIds.length > 0
             ? values.planoIds
             : undefined,
+        formasPagamentoPermitidas:
+          values.escopoPagamento === "ESPECIFICAS" && values.formasPagamentoPermitidas.length > 0
+            ? (values.formasPagamentoPermitidas as TipoFormaPagamento[])
+            : undefined,
         observacoes: values.observacoes.trim() || undefined,
       },
-      initial?.id
+      initial?.id,
     );
   }
 
@@ -153,7 +219,7 @@ export function ConvenioModal({
             {initial ? "Editar convênio" : "Novo convênio"}
           </DialogTitle>
           <DialogDescription>
-            Defina nome, desconto aplicado e quais planos participam.
+            Defina nome, desconto aplicado e restrições de plano e forma de pagamento.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,39 +263,110 @@ export function ConvenioModal({
               Regra de desconto
             </h3>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="convenio-desconto">
-                Desconto <span className="text-gym-danger">*</span>
-              </Label>
-              <div className="relative">
-                <Input
-                  id="convenio-desconto"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.01"
-                  aria-invalid={!descontoValido ? "true" : "false"}
-                  {...register("descontoPercentual")}
-                  className="border-border bg-secondary pr-8"
-                />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                  %
-                </span>
-              </div>
-              {!descontoValido ? (
-                <p className="text-xs text-gym-danger">
-                  O desconto deve estar entre 0 e 100%.
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  Exemplo: plano de {formatBRL(precoExemplo)} →{" "}
-                  <span className="font-semibold text-foreground">
-                    {formatBRL(precoFinal)}
-                  </span>{" "}
-                  ({formatBRL(descontoExemplo)} de desconto)
-                </p>
+            {/* Tipo de desconto */}
+            <Controller
+              control={control}
+              name="tipoDesconto"
+              render={({ field }) => (
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tipo de desconto">
+                  {([
+                    { value: "PERCENTUAL" as const, label: "Percentual", hint: "% sobre o valor do plano" },
+                    { value: "VALOR_FIXO" as const, label: "Valor fixo", hint: "R$ abatido por venda" },
+                  ]).map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={cn(
+                        "flex cursor-pointer items-start gap-2 rounded-lg border px-3 py-2.5 transition-colors",
+                        field.value === opt.value
+                          ? "border-gym-accent bg-gym-accent/10"
+                          : "border-border hover:bg-secondary/60",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="tipoDesconto"
+                        value={opt.value}
+                        checked={field.value === opt.value}
+                        onChange={() => field.onChange(opt.value)}
+                        className="mt-0.5 accent-gym-accent"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{opt.label}</p>
+                        <p className="text-xs text-muted-foreground">{opt.hint}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
               )}
-            </div>
+            />
+
+            {/* Campo de valor — muda conforme tipo */}
+            {tipoDescontoWatch === "PERCENTUAL" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="convenio-desconto-percent">
+                  Desconto <span className="text-gym-danger">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="convenio-desconto-percent"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    aria-invalid={!descontoPercentualValido ? "true" : "false"}
+                    {...register("descontoPercentual")}
+                    className="border-border bg-secondary pr-8"
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    %
+                  </span>
+                </div>
+                {!descontoPercentualValido ? (
+                  <p className="text-xs text-gym-danger">
+                    O desconto deve estar entre 0 e 100%.
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="convenio-desconto-valor">
+                  Valor do desconto <span className="text-gym-danger">*</span>
+                </Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    id="convenio-desconto-valor"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="30,00"
+                    aria-invalid={!descontoValorValido ? "true" : "false"}
+                    {...register("descontoValor")}
+                    className="border-border bg-secondary pl-9"
+                  />
+                </div>
+                {!descontoValorValido ? (
+                  <p className="text-xs text-gym-danger">
+                    Informe um valor maior que zero.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Em planos com valor menor que {formatBRL(descontoValorNum)}, o desconto é limitado ao valor do plano.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Preview */}
+            {descontoValido ? (
+              <p className="text-xs text-muted-foreground">
+                Exemplo: plano de {formatBRL(precoExemplo)} →{" "}
+                <span className="font-semibold text-foreground">{formatBRL(precoFinal)}</span>{" "}
+                ({formatBRL(descontoExemplo)} de desconto)
+              </p>
+            ) : null}
 
             <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
               <div>
@@ -276,7 +413,7 @@ export function ConvenioModal({
                       "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
                       field.value === "TODOS"
                         ? "border-gym-accent bg-gym-accent/10"
-                        : "border-border hover:bg-secondary/60"
+                        : "border-border hover:bg-secondary/60",
                     )}
                   >
                     <input
@@ -299,7 +436,7 @@ export function ConvenioModal({
                       "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
                       field.value === "ESPECIFICOS"
                         ? "border-gym-accent bg-gym-accent/10"
-                        : "border-border hover:bg-secondary/60"
+                        : "border-border hover:bg-secondary/60",
                     )}
                   >
                     <input
@@ -321,7 +458,7 @@ export function ConvenioModal({
               )}
             />
 
-            {escopoWatch === "ESPECIFICOS" ? (
+            {escopoPlanosWatch === "ESPECIFICOS" ? (
               <div className="space-y-2">
                 {planosAtivos.length === 0 ? (
                   <p className="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
@@ -354,7 +491,7 @@ export function ConvenioModal({
                               "flex items-center justify-between rounded-md border px-2.5 py-2 text-left text-xs transition-colors",
                               selecionado
                                 ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
                             )}
                           >
                             <span className="truncate font-medium">{plano.nome}</span>
@@ -372,6 +509,102 @@ export function ConvenioModal({
                     ) : null}
                   </>
                 )}
+              </div>
+            ) : null}
+          </section>
+
+          {/* --------------- Formas de pagamento permitidas --------------- */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Formas de pagamento permitidas
+            </h3>
+
+            <Controller
+              control={control}
+              name="escopoPagamento"
+              render={({ field }) => (
+                <div className="grid gap-2" role="radiogroup" aria-label="Escopo de formas de pagamento">
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+                      field.value === "TODAS"
+                        ? "border-gym-accent bg-gym-accent/10"
+                        : "border-border hover:bg-secondary/60",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="escopoPagamento"
+                      value="TODAS"
+                      checked={field.value === "TODAS"}
+                      onChange={() => field.onChange("TODAS")}
+                      className="mt-0.5 accent-gym-accent"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Todas as formas</p>
+                      <p className="text-xs text-muted-foreground">
+                        O desconto vale independentemente da forma escolhida no checkout.
+                      </p>
+                    </div>
+                  </label>
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+                      field.value === "ESPECIFICAS"
+                        ? "border-gym-accent bg-gym-accent/10"
+                        : "border-border hover:bg-secondary/60",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="escopoPagamento"
+                      value="ESPECIFICAS"
+                      checked={field.value === "ESPECIFICAS"}
+                      onChange={() => field.onChange("ESPECIFICAS")}
+                      className="mt-0.5 accent-gym-accent"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Restringir a formas específicas</p>
+                      <p className="text-xs text-muted-foreground">
+                        O desconto só é aplicado se a venda usar uma das formas marcadas.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+            />
+
+            {escopoPagamentoWatch === "ESPECIFICAS" ? (
+              <div className="space-y-2">
+                <div className="text-xs text-muted-foreground">
+                  {formasPermitidasWatch.length} de {FORMAS_PAGAMENTO.length} selecionadas
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {FORMAS_PAGAMENTO.map((forma) => {
+                    const selecionada = formasPermitidasWatch.includes(forma.value);
+                    return (
+                      <button
+                        key={forma.value}
+                        type="button"
+                        onClick={() => toggleFormaPagamento(forma.value)}
+                        aria-pressed={selecionada}
+                        className={cn(
+                          "rounded-md border px-2.5 py-2 text-left text-xs transition-colors",
+                          selecionada
+                            ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                            : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                        )}
+                      >
+                        <span className="font-medium">{forma.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {formasPermitidasWatch.length === 0 ? (
+                  <p className="text-xs text-gym-danger">
+                    Selecione ao menos uma forma ou troque para &quot;Todas as formas&quot;.
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </section>

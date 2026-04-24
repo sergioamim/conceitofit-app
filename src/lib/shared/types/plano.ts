@@ -158,12 +158,20 @@ export interface Produto {
   ativo: boolean;
 }
 
+export type TipoDescontoConvenio = "PERCENTUAL" | "VALOR_FIXO";
+
 export interface Convenio {
   id: UUID;
   nome: string;
   ativo: boolean;
+  tipoDesconto: TipoDescontoConvenio;
+  /** Preenchido quando tipoDesconto === "PERCENTUAL" (0..100). */
   descontoPercentual: number;
+  /** Preenchido quando tipoDesconto === "VALOR_FIXO" (R$). */
+  descontoValor?: number;
   planoIds?: UUID[];
+  /** Vazio/undefined = todas as formas aceitam o convênio. */
+  formasPagamentoPermitidas?: import("./pagamento").TipoFormaPagamento[];
   observacoes?: string;
 }
 

@@ -8,6 +8,7 @@ import type {
   Plano,
   StatusContratoPlano,
   StatusFluxoComercial,
+  TipoFormaPagamento,
 } from "@/lib/types";
 
 export type PlanoVendaItemDraft = {
@@ -46,8 +47,51 @@ export interface PlanoDryRunParams {
   motivoDesconto?: string;
   couponPercent?: number;
   convenio?: Convenio;
+  /**
+   * Forma de pagamento escolhida no checkout. Quando presente, habilita a
+   * filtragem por `convenio.formasPagamentoPermitidas`: se o convênio está
+   * restrito a formas específicas e a forma atual não está na lista, o
+   * desconto é zerado. Quando ausente (undefined), nenhum filtro é aplicado
+   * — mantém retrocompat com callers antigos.
+   */
+  formaPagamento?: TipoFormaPagamento;
   renovacaoAutomatica: boolean;
   isentarMatricula?: boolean;
+}
+
+/**
+ * Cálculo do desconto de convênio respeitando `tipoDesconto` e o filtro
+ * opcional por forma de pagamento. Exportado para consumo direto no
+ * checkout quando a forma ainda não está resolvida mas a eligibilidade
+ * precisa ser avaliada (ex.: destacar/ocultar convênio na dropdown).
+ */
+export function calcularDescontoConvenio(
+  plano: Plano,
+  convenio: Convenio | undefined,
+  formaPagamento?: TipoFormaPagamento,
+): number {
+  if (!convenio || !convenio.ativo) return 0;
+
+  // Filtro de forma de pagamento quando aplicável
+  if (
+    formaPagamento !== undefined &&
+    convenio.formasPagamentoPermitidas &&
+    convenio.formasPagamentoPermitidas.length > 0 &&
+    !convenio.formasPagamentoPermitidas.includes(formaPagamento)
+  ) {
+    return 0;
+  }
+
+  const valorPlano = Number(plano.valor ?? 0);
+
+  if (convenio.tipoDesconto === "VALOR_FIXO") {
+    const descontoFixo = Number(convenio.descontoValor ?? 0);
+    return Math.min(Math.max(0, descontoFixo), valorPlano);
+  }
+
+  // PERCENTUAL (default retrocompat)
+  const pct = Number(convenio.descontoPercentual ?? 0);
+  return (valorPlano * pct) / 100;
 }
 
 export const STATUS_CONTRATO_LABEL: Record<StatusContratoPlano, string> = {
@@ -119,6 +163,7 @@ export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
     motivoDesconto,
     couponPercent = 0,
     convenio,
+    formaPagamento,
     renovacaoAutomatica,
     isentarMatricula = false,
   } = params;
@@ -128,10 +173,9 @@ export function planoDryRun(params: PlanoDryRunParams): PlanoDryRunResult {
   const subtotal = items.reduce((sum, item) => sum + item.valorUnitario * item.quantidade, 0);
 
   // 2. Calcular descontos
-  // Desconto de convênio aplica sobre o valor do plano (item base)
-  const descontoConvenio = convenio
-    ? (Number(plano.valor ?? 0) * (convenio.descontoPercentual ?? 0)) / 100
-    : 0;
+  // Desconto de convênio: respeita tipoDesconto (PERCENTUAL/VALOR_FIXO) e
+  // filtro por forma de pagamento quando informada.
+  const descontoConvenio = calcularDescontoConvenio(plano, convenio, formaPagamento);
 
   // Desconto de cupom aplica sobre o valor do plano
   const descontoCupom = (Number(plano.valor ?? 0) * couponPercent) / 100;
