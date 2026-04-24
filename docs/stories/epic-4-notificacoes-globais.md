@@ -1,336 +1,456 @@
-# Epic 4 — Notificações Globais (Cross-Domain)
+# Epic 4 — Notificações Globais (extensão do hub existente)
 
 **Criado por:** @po (Pax) + @architect (Aria) — sessão de debate com user
 **Data:** 2026-04-24
+**Revisado:** 2026-04-24 após spikes SP-1 a SP-5 descobrirem sistema pré-existente
 **Status:** Ready for `@sm *draft`
 **Escopo:**
-- BE: novo `modulo-notificacoes` em `academia-java/`
-- FE: novo pacote `src/lib/notifications/` + componentes em `src/components/notifications/` em `academia-app/`
-**Predecessor:** Epic 3 (Cadências CRM) — `NOTIFICAR_GESTOR` está stub, será substituído por este epic
-**Substitui:** Story 3.27 (`notificar-gestor-integration`) — fechada como "substituída pelo Epic 4 Wave 3"
+- BE: **ESTENDE** `modulo-notificacoes` existente (não cria módulo novo)
+- FE: novo pacote `src/components/portal/notifications/` — `NotificationBell` do portal operador (paralelo ao `src/components/cliente/notification-bell.tsx` já existente para aluno)
+**Predecessor:** Epic 3 (Cadências CRM) — `NOTIFICAR_GESTOR` stub
+**Substitui:** Story 3.27 — absorvida pela Wave 3
 
 ---
 
-## Glossário (domínio ConceitoFit)
+## Glossário
 
-| Termo de código | Termo de negócio | Significado |
+| Termo técnico | Termo de negócio | Significado |
 |---|---|---|
-| `tenant_id` / `TENANT` | **Unidade** / Filial | Unidade operacional isolada (cada filial da academia é um tenant) |
-| `rede_id` / `REDE` | **Academia** / Rede | Organização-mãe que agrupa 1+ unidades (uma Academia tem N Unidades) |
-| `PLATAFORMA` | SaaS admin | Operadores do ConceitoFit que gerenciam o produto |
+| `tenant_id` / `TENANT` | **Unidade** / Filial | Cada filial da academia é um tenant isolado |
+| `rede_id` / `REDE` / `networkId` | **Academia** / Rede | Organização-mãe que agrupa 1+ unidades |
+| `PLATAFORMA` | SaaS admin | Operadores do ConceitoFit (envelope `UserKind`) |
 
-**Convenção deste doc:** mantemos `tenant`/`rede` nos nomes técnicos (padrão multi-tenant do código existente), e usamos Unidade/Academia na prosa. Nomes de enum preservam `TENANT`/`REDE` para consistência com o resto do stack.
+---
+
+## Descobertas dos spikes (crítico — lê antes de continuar)
+
+Após SP-1 a SP-5, descobrimos que **grande parte da infraestrutura de notificação JÁ EXISTE**:
+
+### SP-1 — Roles granulares ✅ existem
+
+Tabela `auth.user_roles` com 8 roles scoped por tenant: `ADMIN`, `SUPER_ADMIN`, `GERENTE`, `FINANCEIRO`, `INSTRUTOR`, `RECEPCAO`, `CUSTOMER`, `VIEWER`. Localização: `modulo-auth/domain/Role.java`. FE consome via `src/lib/access-control.ts`.
+
+**Consequência no epic:** Wave 3 usa `AudienceTipo=ROLE` apontando para **`GERENTE`** (nome real) em vez do fictício `GERENTE_COMERCIAL`.
+
+### SP-2 — Modelo Academia/Unidade ✅ claro
+
+- `modulo-academia/domain/Academia.java` → tabela `academias` (Rede, organização-mãe)
+- Tabela `tenants` com FK `academia_id` → Unidade pertence a uma Academia
+- `auth.user_tenant_membership` → user ↔ Unidade (N:N)
+- `User.redeId` direto na tabela `auth.users` → user pertence a **UMA** Academia (singular)
+- JWT já expõe: `networkId` (Academia), `activeTenantId` (Unidade ativa), `availableScopes: ["UNIDADE"|"REDE"|"GLOBAL"]`
+- FE: `getNetworkIdFromSession()` + `getActiveTenantIdFromSession()` + `useTenantContext()` + `switchActiveTenant()`
+
+**Consequência no epic:** user tem UM `networkId` (não array). Query do sino fica `WHERE rede_id = :userNetworkId` — direto, sem `ANY()`.
+
+### SP-3 — SSE já é padrão no backend ✅
+
+2 controllers funcionais produzindo eventos em tempo real:
+- `ConversasSseController` (mensagens WhatsApp) → `/api/v1/conversas/stream`
+- `CockpitSseController` (check-ins pendentes) → `/api/v1/cockpit/stream`
+
+Padrão: `Map<UUID, List<SseEmitter>>` por tenant, heartbeat 30s, escuta `ApplicationEvent`. Deploy blue/green single-pod via Caddy (sticky implícita). **Sem Redis/broker.**
+
+**Consequência no epic:** Wave para real-time pode copiar padrão direto. Não precisa criar novo design. **Se o deploy evoluir pra multi-pod, precisa Redis pub/sub** — decisão futura.
+
+### SP-4 — UI existente do aluno ✅
+
+`src/components/cliente/notification-bell.tsx` + `src/lib/query/use-notificacoes-aluno.ts` já funcional para alunos. Padrão: `Sheet` lateral (não `Popover`) + React Query polling 60s + Sonner para toast. Mutations `marcarLida`/`marcarTodasLidas` prontas.
+
+**Consequência no epic:** portal segue mesmo padrão. Reusa hooks/mutations generalizando, não reinventa.
+
+### SP-5 — `modulo-notificacoes` JÁ EXISTE no BE 🎁
+
+Localização: `academia-java/modulo-notificacoes/`. Componentes descobertos:
+
+**Entidades:**
+- `NotificacaoEventoEntity` (tabela `notificacao_evento`) — evento emitido, com `payloadJson`, `status`, `correlationId`, `schemaVersion`
+- `NotificacaoOutboxEntity` (tabela `notificacao_outbox`) — fila de envios por canal (email/whatsapp/push) com retry e tentativas
+- `NotificacaoPreferenciaEntity` (tabela `notificacao_preferencia`) — preferências por aluno×evento×canal
+- `PushDeviceTokenEntity` — tokens de push mobile
+- `OutboxMessageEntity` — outbox genérico cross-domain
+
+**Serviço:**
+- `NotificacaoHubService.publicar(PublicarEventoCommand)` — entrypoint único, resolve destinatário/canais/preferências/templates
+- `NotificacaoPublisher` (interface)
+- Métodos auxiliares: `listarPreferencias`, `atualizarPreferencia`, `listarEventos`, `reenviar`
+
+**Controller** (`modulo-app/.../NotificacaoController.java`):
+- `GET /api/v1/notificacoes/preferencias?tenantId&alunoId`
+- `PUT /api/v1/notificacoes/preferencias`
+- `GET /api/v1/notificacoes/eventos?tenantId&alunoId?`
+- `POST /api/v1/notificacoes/outbox/{id}/reenviar`
+
+**Emitters já integrados:**
+- `AulasNotificacaoService` (2 eventos)
+- `ReservaAulaService` (2 eventos)
+- `DunningService` (pagamentos — cobrança)
+
+**Tipos no FE (aluno):** `PAGAMENTO_VENCENDO`, `AULA_CONFIRMADA`, `TREINO_NOVO`, `MATRICULA_VENCENDO`, `GERAL`.
+
+**Consequência no epic (CRÍTICA):** **Opção B — estender o hub existente**, NÃO criar módulo novo. Economia de ~50% de stories.
+
+---
+
+## Gap analysis — o que falta pra Epic 4
+
+| Feature necessária | Existe? | Gap |
+|---|---|---|
+| Per-user (alunoId) | ✅ | — |
+| Per-audience (GLOBAL/REDE/TENANT/ROLE) | ❌ | Adicionar campo `audience` no `notificacao_evento` + lógica de resolve no hub |
+| Canal IN_APP (sino) distinto de email/push | ❌ | Nova tabela `notificacao_inbox` (lazy-eager fan-out, paralela ao outbox) |
+| Idempotência via `idempotency_key` | ❌ | Adicionar coluna UNIQUE em `notificacao_evento` |
+| TTL + purga | ❌ | Coluna `expires_at` + job `@Scheduled` + ShedLock |
+| Severidade (INFO/AVISO/URGENTE) | ❌ | Coluna `severidade` em `notificacao_inbox` |
+| CTA (`acao_url`, `acao_label`, `requer_acao`) | ❌ | Colunas em `notificacao_inbox` |
+| Metadata JSONB | ~✅ | `payloadJson` existe em `notificacao_evento` — reusa |
+| Filtro por Unidade ativa no FE | ❌ | Lógica de query no endpoint de listagem |
+| Cross-domain listeners | ✅ | Padrão já em uso — só precisa adicionar listener da `CadenciaEscaladaEvent` |
+| Emissor GLOBAL com autorização | ❌ | Endpoint admin + validação `UserKind=PLATAFORMA` |
+| FE portal `NotificationBell` | ❌ | Novo componente (aluno tem referência) |
+| UI admin de emissão manual | ❌ | Wave 5 |
 
 ---
 
 ## Objetivo do épico
 
-Construir um sistema **global e event-driven** de notificações in-app para o ConceitoFit. Qualquer domínio (CRM, Financeiro, Operacional, Comercial) emite eventos → `NotificacaoService` resolve audience (GLOBAL / REDE / TENANT / ROLE / USUARIO) → usuário vê no sino do header.
+**Estender `modulo-notificacoes`** adicionando:
+1. Canal `IN_APP` (sino no portal operador) paralelo aos canais existentes (email/whatsapp/push).
+2. Audience multi-tipo (GLOBAL/REDE/TENANT/ROLE/USUARIO) para além do atual direcionamento exclusivo por aluno.
+3. Idempotência + TTL + purga no evento.
+4. UI do portal operador (bell + dropdown + página `/notificacoes`).
+5. Substituir `NOTIFICAR_GESTOR` stub (Story 3.27) com listener real que emite notificação IN_APP por role.
 
-**Valor de negócio:**
-- Operadores descobrem proativamente o que precisa de atenção (hoje dependem de relatórios / WhatsApp pessoal).
-- Reduzir "blindspots" (contas vencendo, cadências escalando, prospects sem resposta — tudo centralizado).
-- Fundação reutilizável: destrava `NOTIFICAR_GESTOR` (Story 3.27), futuros avisos de compliance, comunicados do SaaS, etc.
+Valor: reduzir blindspots operacionais, dar fundação cross-domain (destrava futuros avisos de compliance, comunicados do SaaS, etc.), aproveitar infraestrutura madura que já existe.
 
-## Premissas e restrições
+## Decisões arquiteturais finais
 
-- **Fire-and-forget:** emissor só sabe `notificacao_id`. Delivery é resolvido em query time (lazy fan-out).
-- **Idempotência obrigatória:** toda criação carrega `idempotency_key` único. Tentativa duplicada retorna existente.
-- **Purga agressiva:** TTL obrigatório (`expira_em NOT NULL`), job diário deleta expiradas (hard delete, sem soft).
-- **Tenant-awareness no FE:** query respeita `activeTenantId` da sessão — notificações TENANT/ROLE só aparecem quando a unidade correspondente está ativa; GLOBAL/REDE/USUARIO sempre visíveis a quem tem acesso.
-- **Autorização GLOBAL:** só usuários `UserKind=PLATAFORMA` podem emitir notificação `AudienceTipo=GLOBAL`. Validado no service.
-- **Real-time evolução:** polling 60s no MVP; SSE/WebSocket como Wave 7 quando volume justificar.
-- **Sem snooze, sem ação inline:** usuário fecha (marca lida) ou expira; CTA sempre é URL de navegação.
+### D1 — Nova tabela `notificacao_inbox` paralela ao outbox
 
-## Decisões arquiteturais
-
-### D1 — Audience multi-tipo
-
-```java
-public enum AudienceTipo {
-  GLOBAL,    // todos usuários do SaaS (emissor restrito a PLATAFORMA)
-  REDE,      // todos de uma Academia/Rede (cobre N Unidades) — sempre visível independente da unidade ativa
-  TENANT,    // todos de uma Unidade específica — só visível quando unidade ativa == esse tenant
-  ROLE,      // usuários com role X em uma Unidade — só visível quando unidade ativa == tenant + user tem a role
-  USUARIO    // 1 usuário específico — sempre visível independente da unidade ativa
-}
-```
-
-**Nota sobre REDE:** se um usuário tem acesso à Academia (ex: diretor geral), a notificação `AudienceTipo=REDE` aparece pra ele **em qualquer Unidade ativa** (inclusive se ele acabou de trocar de filial no switcher). Notificação `AudienceTipo=TENANT` é o oposto — só aparece quando aquela unidade específica está ativa na sessão.
-
-### D2 — Lazy fan-out (não eager)
-
-1 linha em `notificacao` + 1 linha por regra em `notificacao_audience`. Não pré-explode linha por usuário ao criar. Linha de `notificacao_leitura` só nasce quando usuário marca como lida.
-
-**Economia:** em academia com 50 funcionários + 10 notificações/dia × 365 dias = 182.500 linhas/ano no modelo eager vs ~3.650 no lazy.
-
-### D3 — Idempotência via `idempotency_key`
-
-Convenção de chave por emissor (exemplos):
-- `cadencia-escalada-{execucaoId}-{regraId}`
-- `conta-vencida-{contaId}-{diasBucket}` (bucket 1/7/15/30 evita spam diário)
-- `global-admin-{uuid-manual}`
-
-`UNIQUE` constraint no DB — `INSERT ... ON CONFLICT DO NOTHING RETURNING id`. Se conflito, service faz `SELECT` e retorna existente.
-
-### D4 — Metadata JSONB livre
-
-Coluna `metadata_json JSONB NULL` permite emissor serializar payload arbitrário por tipo. FE renderiza template específico por `notificacao.tipo`.
-
-Exemplos:
-- `CADENCIA_ESCALADA`: `{cadenciaId, execucaoId, prospectNome, regraId, motivo}`
-- `CONTA_VENCIDA`: `{contaId, valor, diasVencida, fornecedorNome}`
-- `PAGAMENTO_RECEBIDO`: `{pagamentoId, valor, clienteNome, contratoId}`
-
-### D5 — Filtro por Unidade ativa no FE
-
-Query do sino passa `activeTenantId` (Unidade ativa da sessão). BE filtra:
+Canal IN_APP não cabe em `notificacao_outbox` (esse é voltado a envio assíncrono com retry). Criar tabela própria:
 
 ```sql
-WHERE EXISTS (
-  SELECT 1 FROM notificacao_audience a WHERE a.notificacao_id = n.id AND (
-    (a.tipo = 'GLOBAL')                                                       -- sempre
-    OR (a.tipo = 'USUARIO' AND a.user_id = :userId)                           -- sempre
-    OR (a.tipo = 'REDE'    AND a.rede_id = ANY(:userRedeIds))                 -- sempre (user tem acesso à Academia)
-    OR (a.tipo = 'TENANT'  AND a.tenant_id = :activeTenantId)                 -- só quando Unidade ativa == tenant
-    OR (a.tipo = 'ROLE'    AND a.tenant_id = :activeTenantId
-                          AND a.role = ANY(:userRolesNoTenant))               -- só quando Unidade ativa E com role
-  )
-)
-```
-
-**Intuição:** usuário com acesso à Academia inteira (diretor, gerente regional) mantém notificações da Academia visíveis mesmo trocando de Unidade. Já notificações específicas de uma Unidade só aparecem quando ele está "dentro" dela.
-
-### D6 — TTL obrigatório + purga hard
-
-| Tipo | TTL default | Racional |
-|------|-------------|----------|
-| `CADENCIA_ESCALADA` | 14 dias | Ação operacional, curta vida útil |
-| `CONTA_VENCIDA` | 60 dias | Ciclo financeiro mensal + margem |
-| `PAGAMENTO_RECEBIDO` | 7 dias | Informativa |
-| `ANIVERSARIANTE_CLIENTE` | 1 dia | Só relevante no dia |
-| `PROSPECT_NOVO` | 30 dias | Follow-up window |
-| `GLOBAL_AVISO_SISTEMA` | 30 dias | Comunicado do SaaS |
-| `ADMIN_CUSTOM` | configurável | Admin define |
-
-`NotificacaoPurgeJob` roda `@Scheduled(cron = "0 0 3 * * *")` com ShedLock. Hard delete, CASCADE apaga audience + leitura.
-
-### D7 — Re-emissão de `requer_acao` não resolvido
-
-Emissor decide. Ex: `CONTA_VENCIDA` emite em buckets 1/7/15/30 dias — bucket vira parte da `idempotency_key`. Usuário recebe re-aviso sem duplicação no mesmo bucket.
-
-### D8 — Severidade visual
-
-Sino no header tem:
-- **Badge numérico** com count de não-lidas (igual padrão web comum)
-- **Ícone `!` de alerta** adicional/destacado quando há pelo menos uma URGENTE não-lida
-- **Sem pulsar/piscar** (descartado — agressivo demais para sistema B2B)
-
-## Fora de escopo (futuros epics)
-
-- **Multicanal:** email, push mobile, SMS, WhatsApp como canais de entrega. Fica em `epic-notificacoes-multicanal` quando mobile/SMTP estiverem maduros.
-- **Snooze** (adiar notificação pra reaparecer depois).
-- **Ação inline no dropdown** (botão "Aprovar" direto, sem navegar).
-- **Digest diário por email** ("resumo do dia das suas notificações").
-- **Canal dedicado por tipo:** ex: notificações financeiras irem pra UI financeira específica além do sino.
-- **Analytics:** dashboard de "quais tipos mais gerados / menos lidos / ação não executada".
-
----
-
-## Stories
-
-Cada story pronta para `@sm *draft`. `@sm` expande título, descrição, tasks técnicas e File List.
-
-### Wave 1 — Core BE (modulo-notificacoes)
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.1** | Migration Flyway `V{ts}__notificacoes_schema.sql` (3 tabelas + índices + constraint de shape na audience) | M | — |
-| **4.2** | Entidades JPA: `NotificacaoEntity` + `NotificacaoAudienceEntity` + `NotificacaoLeituraEntity` + enums (`AudienceTipo`, `NotificacaoSeveridade`) | M | 4.1 |
-| **4.3** | Repositories: `NotificacaoRepository` + `NotificacaoAudienceRepository` + `NotificacaoLeituraRepository` com queries customizadas (listar por usuário com filtro de unidade ativa, ver D5) | M | 4.2 |
-| **4.4** | `NotificacaoService.criar(request)` com idempotência via `ON CONFLICT DO NOTHING` + validação de autorização GLOBAL (só `UserKind=PLATAFORMA`) + testes | L | 4.3 |
-| **4.5** | `NotificacaoService.listarParaUsuario(userId, activeTenantId)` resolvendo audience via query D5 + paginação (cursor-based por `criada_em DESC`) + testes | L | 4.3 |
-| **4.6** | `NotificacaoService.marcarLida(notificacaoId, userId)` + `executarAcao(notificacaoId, userId)` (upsert em leitura) + testes | S | 4.3 |
-| **4.7** | `NotificacaoPurgeJob` com `@Scheduled(cron)` + ShedLock + config opt-in via property | S | 4.2 |
-| **4.8** | Evento `NotificacaoCriadaEvent` publicado via `ApplicationEventPublisher` após persist — permite futuros listeners (email/push) | XS | 4.4 |
-
-### Wave 2 — Endpoints REST BE
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.9** | `GET /api/v1/notificacoes/minhas?tenantId={activeId}&apenasNaoLidas=false&limit=50&cursor=` — retorna lista paginada filtrada por D5 | M | 4.5 |
-| **4.10** | `POST /api/v1/notificacoes/{id}/marcar-lida?tenantId=` + `POST /api/v1/notificacoes/{id}/acao?tenantId=` (idempotentes) | S | 4.6 |
-| **4.11** | `POST /api/v1/notificacoes` — endpoint admin para criar manual (audit log + autorização PLATAFORMA se GLOBAL) | S | 4.4 |
-| **4.12** | `GET /api/v1/notificacoes/contadores?tenantId=` — retorna `{naoLidas, urgentesNaoLidas}` para o badge do sino (endpoint leve, cacheável) | S | 4.5 |
-
-### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27)
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.13** | `CadenciaEscaladaListener` (modulo-crm) consumindo `CadenciaEscaladaEvent` → chama `NotificacaoService.criar(tipo=CADENCIA_ESCALADA, audiencia=ROLE(tenantId, GERENTE_COMERCIAL), severidade=URGENTE, metadata={...})` | M | 4.4 |
-| **4.14** | Remover `log.warn` stub do `CrmProcessOverdueService.executarAcaoEscalacao()` para `NOTIFICAR_GESTOR` — agora chama evento que o listener converte em notificação | XS | 4.13 |
-| **4.15** | Testes integração BE: escalação NOTIFICAR_GESTOR → assert notificação criada com audience ROLE correta | M | 4.13 |
-| **4.16** | Atualizar `CADENCIAS_CRM.md` §6.4 (remover "[stub — ver débito 3.27]") + §14.3 marca 3.27 como ✅ RESOLVIDO via Epic 4 | XS | 4.13 |
-
-### Wave 4 — Core FE (sino + dropdown + página)
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.17** | Tipos TS em `src/lib/shared/types/notificacao.ts` espelhando entities + enums + adapter `src/lib/api/notificacoes.ts` | M | 4.9 |
-| **4.18** | Hook `useNotifications(activeTenantId)` com react-query + polling 60s + cache | M | 4.17 |
-| **4.19** | `<NotificationBell />` no header — badge numérico de não-lidas + ícone `!` adicional quando há URGENTE não-lida (condicional) + click abre dropdown | M | 4.18 |
-| **4.20** | `<NotificationDropdown />` popover shadcn com até 10 últimas + ícone por tipo + "há X tempo" + CTA opcional + "Ver todas" link | L | 4.18 |
-| **4.21** | Página `/notificacoes` com lista completa + filtros (tipo, severidade, lida/não-lida) + paginação cursor | M | 4.18 |
-| **4.22** | Mutation `marcarLida` com optimistic update + mutation `executarAcao` (click em CTA marca lida + navega) | S | 4.18 |
-
-### Wave 5 — Admin SaaS (emissão GLOBAL)
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.23** | Página `/admin/notificacoes/emitir` no backoffice (só PLATAFORMA) — form react-hook-form + zod com padrão `onTouched + canSave` | M | 4.11 |
-| **4.24** | Audience picker: Select de escopo (GLOBAL/REDE/TENANT/ROLE/USUARIO) + campos condicionais (select de rede, tenant, role, user) | L | 4.23 |
-| **4.25** | Audit log visualizável em `/admin/notificacoes/historico` — lista emissões manuais com quem+quando+escopo | M | 4.23 |
-
-### Wave 6 — Preferências por usuário
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.26** | Tabela `user_notification_preference(user_id, tipo, ativo)` + migration + entity | S | 4.1 |
-| **4.27** | Filtro em `listarParaUsuario` respeita preferências (default: todos tipos ativos) | S | 4.5, 4.26 |
-| **4.28** | Página `/meu-perfil/notificacoes` (usuário) — toggle por tipo + salvar | M | 4.26 |
-
-### Wave 7 — Integrações de exemplo (dogfooding)
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.29** | Listener `ContaVencidaEvent` (modulo-financeiro) com dedupe por bucket (1/7/15/30 dias) | M | 4.4 |
-| **4.30** | Listener `PagamentoRecebidoEvent` (modulo-financeiro) com severidade INFO e TTL curto | S | 4.4 |
-| **4.31** | Listener `ProspectNovoEvent` (modulo-crm) notificando role `VENDEDOR` do tenant | S | 4.4 |
-
-### Wave 8 — Real-time (SSE)
-
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.32** | Endpoint SSE `GET /api/v1/notificacoes/stream?tenantId=` emitindo `NotificacaoCriadaEvent` filtrado por audience do user | L | 4.8 |
-| **4.33** | FE: substituir polling do `useNotifications` por EventSource com reconexão automática (fallback polling se SSE indisponível) | L | 4.32 |
-
----
-
-## Spikes técnicos pré-épico
-
-| Spike | Pergunta | Bloqueia |
-|-------|----------|----------|
-| **SP-1** | Quais roles existem no sistema? `userKind-taxonomy` da memória menciona PLATAFORMA/OPERADOR/CLIENTE — mas role granular (GERENTE_COMERCIAL, RECEPCIONISTA, etc.) vive onde? | 4.4 validação + 4.13 audience |
-| **SP-2** | Como descobrir `userRedeIds` (ids das Academias que o user tem acesso)? No domínio ConceitoFit: Academia/Rede agrupa N Unidades/Tenants. Entidade `Academia` existe em qual módulo? Tabela de associação user↔academia vs user↔tenant? | 4.5 query D5 |
-| **SP-3** | SSE no stack atual — `spring-web` SseEmitter funciona bem com múltiplos pods atrás de LB? Precisa sticky session? | 4.32 |
-| **SP-4** | UI padrão de `popover` no projeto — shadcn Popover ou DropdownMenu? Conferir componentes existentes no header | 4.20 |
-
----
-
-## Dependências externas
-
-- **Módulo Auth / User** (existe) — leitura de `userId`, `userRoles`, `userRedeIds` (Academias acessíveis), `activeTenantId` (Unidade ativa), `userKind` via sessão
-- **Módulo de Academias/Redes** (existe? spike SP-2) — entidade Academia agrupando Unidades
-- **Módulo CRM** (existe) — emite `CadenciaEscaladaEvent` já (Wave 3 do Epic 3)
-- **Módulo Financeiro** — precisa emitir `ContaVencidaEvent` / `PagamentoRecebidoEvent` (Wave 7 pode incluir adição desses eventos se ainda não existirem)
-
-## Métricas de sucesso
-
-1. **Adoção:** % de usuários que abriram o sino pelo menos 1x por semana (alvo: >70% após 30 dias de rollout)
-2. **Engagement:** taxa de click em CTA (alvo: >25% pra URGENTE, >5% pra INFO)
-3. **Dedupe:** contagem de `INSERT ON CONFLICT` evitados (monitorar — se >50%, revisar `idempotency_key` do emissor)
-4. **Storage:** tamanho da tabela `notificacao` após 90 dias (alvo: <1GB com purga funcionando)
-5. **Zero regressão** em fluxos existentes (CRM cadências, financeiro) durante integração
-
-## Riscos do epic
-
-| Risco | Probabilidade | Impacto | Mitigação |
-|-------|--------------|---------|-----------|
-| Query do sino ficar lenta em academia grande | Média | Alto | Índices bem dimensionados (§SCHEMA abaixo) + cache via endpoint `/contadores` separado + paginação cursor |
-| Emissor mal-comportado spammar notificações | Média | Médio | Idempotency key por convenção + monitoramento de emissões duplicadas no job de purga |
-| SSE falhar em produção multi-pod | Baixa | Baixo | Wave 8 só depois das outras maduras; polling continua como fallback |
-| Role granular não existir ainda | Alta | Alto | SP-1 primeiro; se não existir, audience ROLE vira fase 2 e 4.13 usa TENANT por enquanto |
-
----
-
-## Schema DB (resumo — Wave 1)
-
-```sql
-CREATE TABLE notificacao (
+CREATE TABLE notificacao_inbox (
   id UUID PRIMARY KEY,
-  idempotency_key VARCHAR(200) NOT NULL UNIQUE,
-  tipo VARCHAR(50) NOT NULL,
-  severidade VARCHAR(20) NOT NULL,
+  evento_id UUID NOT NULL REFERENCES notificacao_evento(id) ON DELETE CASCADE,
+  tenant_id UUID NULL,            -- nullable em GLOBAL/REDE
+  rede_id UUID NULL,              -- populado quando audience=REDE/TENANT/ROLE
+  user_id UUID NOT NULL,          -- destinatário (eager fan-out)
   titulo VARCHAR(200) NOT NULL,
   mensagem VARCHAR(1000) NOT NULL,
+  severidade VARCHAR(20) NOT NULL,
   acao_url VARCHAR(500) NULL,
   acao_label VARCHAR(100) NULL,
   requer_acao BOOLEAN NOT NULL DEFAULT false,
   criada_em TIMESTAMP NOT NULL DEFAULT now(),
   expira_em TIMESTAMP NOT NULL,
-  metadata_json JSONB NULL,
-  CONSTRAINT notificacao_severidade_chk CHECK (severidade IN ('INFO','AVISO','URGENTE'))
-);
-CREATE INDEX notificacao_expira_idx ON notificacao(expira_em);
-CREATE INDEX notificacao_criada_idx ON notificacao(criada_em DESC);
-
-CREATE TABLE notificacao_audience (
-  id UUID PRIMARY KEY,
-  notificacao_id UUID NOT NULL REFERENCES notificacao(id) ON DELETE CASCADE,
-  tipo VARCHAR(20) NOT NULL,
-  rede_id UUID NULL,
-  tenant_id UUID NULL,
-  role VARCHAR(50) NULL,
-  user_id UUID NULL,
-  CONSTRAINT notificacao_audience_tipo_chk CHECK (tipo IN ('GLOBAL','REDE','TENANT','ROLE','USUARIO')),
-  CONSTRAINT notificacao_audience_shape_chk CHECK (
-    (tipo = 'GLOBAL'  AND rede_id IS NULL AND tenant_id IS NULL AND role IS NULL AND user_id IS NULL)
-    OR (tipo = 'REDE'    AND rede_id IS NOT NULL AND tenant_id IS NULL AND role IS NULL AND user_id IS NULL)
-    OR (tipo = 'TENANT'  AND tenant_id IS NOT NULL AND rede_id IS NULL AND role IS NULL AND user_id IS NULL)
-    OR (tipo = 'ROLE'    AND tenant_id IS NOT NULL AND role IS NOT NULL AND rede_id IS NULL AND user_id IS NULL)
-    OR (tipo = 'USUARIO' AND user_id IS NOT NULL AND rede_id IS NULL AND tenant_id IS NULL AND role IS NULL)
-  )
-);
-CREATE INDEX notificacao_audience_notif_idx ON notificacao_audience(notificacao_id);
-CREATE INDEX notificacao_audience_tenant_role_idx ON notificacao_audience(tenant_id, role) WHERE tenant_id IS NOT NULL;
-CREATE INDEX notificacao_audience_rede_idx ON notificacao_audience(rede_id) WHERE rede_id IS NOT NULL;
-CREATE INDEX notificacao_audience_user_idx ON notificacao_audience(user_id) WHERE user_id IS NOT NULL;
-
-CREATE TABLE notificacao_leitura (
-  notificacao_id UUID NOT NULL REFERENCES notificacao(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL,
-  lida_em TIMESTAMP NOT NULL DEFAULT now(),
+  lida_em TIMESTAMP NULL,
   acao_executada_em TIMESTAMP NULL,
-  PRIMARY KEY (notificacao_id, user_id)
+  CONSTRAINT notificacao_inbox_severidade_chk CHECK (severidade IN ('INFO','AVISO','URGENTE'))
 );
+
+CREATE INDEX notificacao_inbox_user_criada_idx
+  ON notificacao_inbox(user_id, criada_em DESC);
+CREATE INDEX notificacao_inbox_user_naolida_idx
+  ON notificacao_inbox(user_id, lida_em)
+  WHERE lida_em IS NULL;
+CREATE INDEX notificacao_inbox_tenant_idx
+  ON notificacao_inbox(tenant_id) WHERE tenant_id IS NOT NULL;
+CREATE INDEX notificacao_inbox_expira_idx ON notificacao_inbox(expira_em);
 ```
 
-(Wave 6 adiciona `user_notification_preference`.)
+**Eager fan-out:** 1 linha por destinatário. Aceitável em academia B2B (100 funcionários × 50 notificações/dia × 30d TTL = 150k linhas — controlado por TTL + índices eficientes). Simplifica "marcar lida" (1 row = 1 user).
+
+### D2 — Audience resolver no `NotificacaoHubService`
+
+Novo método privado `List<UUID> resolverDestinatariosInApp(audience)`:
+
+```java
+record AudienceInApp(
+  AudienceTipo tipo,
+  UUID redeId,      // REDE/TENANT/ROLE
+  UUID tenantId,    // TENANT/ROLE
+  String role,      // ROLE
+  UUID userId       // USUARIO
+) {}
+
+enum AudienceTipo { GLOBAL, REDE, TENANT, ROLE, USUARIO }
+
+// resolve retorna lista de user_id:
+// GLOBAL  → todos usuários do SaaS (query completa em auth.users — cuidado)
+// REDE    → users com User.redeId = redeId
+// TENANT  → users com membership em tenantId ativo (user_tenant_membership.tenant_id = tenantId AND active=true)
+// ROLE    → users com membership em tenantId + user_roles com role.nome = role (scoped)
+// USUARIO → 1 user direto
+```
+
+Após resolve, hub faz batch insert em `notificacao_inbox` (1 SQL com `INSERT ... SELECT`).
+
+### D3 — Extensão de `PublicarEventoCommand`
+
+Record atual:
+```java
+record PublicarEventoCommand(
+  UUID tenantId, UUID pessoaId, String evento, String origem,
+  UUID referenciaId, String destinatarioEmail, String destinatarioTelefone,
+  Set<CanalNotificacao> canais, Map<String,Object> payload, String correlationId
+)
+```
+
+Adicionar:
+```java
+record PublicarEventoCommand(
+  ...campos existentes...,
+  // NOVOS:
+  String idempotencyKey,           // opcional; hub calcula se null
+  AudienceInApp audienceInApp,     // opcional; só se CanalNotificacao.IN_APP ∈ canais
+  NotificacaoSeveridade severidade, // opcional; default INFO
+  String tituloInApp,               // template-able
+  String mensagemInApp,             // template-able
+  String acaoUrl,
+  String acaoLabel,
+  Boolean requerAcao,
+  Duration ttl                      // opcional; default por tipo de evento
+)
+```
+
+### D4 — Idempotência em `notificacao_evento`
+
+Adicionar coluna:
+```sql
+ALTER TABLE notificacao_evento
+  ADD COLUMN idempotency_key VARCHAR(200) NULL;
+
+CREATE UNIQUE INDEX notificacao_evento_idempotency_uq
+  ON notificacao_evento(idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+```
+
+Na publicação: `INSERT ... ON CONFLICT (idempotency_key) DO NOTHING RETURNING id` — se nada retorna, busca existente.
+
+Convenção de chaves por emissor:
+- `cadencia-escalada-{execucaoId}-{regraId}`
+- `conta-vencida-{contaId}-{diasBucket}`
+- `global-admin-{uuid-manual}`
+
+### D5 — TTL + purga via job
+
+Colunas em `notificacao_evento` e `notificacao_inbox`:
+- `expires_at TIMESTAMP NOT NULL`
+
+Job `NotificacaoMaintenanceJob` com `@Scheduled(cron = "0 0 3 * * *")` + `@SchedulerLock(name="notificacao_purge")`:
+```sql
+DELETE FROM notificacao_inbox WHERE expires_at < now();
+DELETE FROM notificacao_evento WHERE expires_at < now() AND NOT EXISTS (SELECT 1 FROM notificacao_inbox WHERE evento_id = id);
+-- outbox fica com política própria já existente
+```
+
+TTL default por tipo (config em `notificacao_tipo_config`):
+
+| Tipo | TTL |
+|---|---|
+| `CADENCIA_ESCALADA` | 14 dias |
+| `CONTA_VENCIDA` | 60 dias |
+| `PAGAMENTO_RECEBIDO` | 7 dias |
+| `ANIVERSARIANTE_CLIENTE` | 1 dia |
+| `PROSPECT_NOVO` | 30 dias |
+| `GLOBAL_AVISO_SISTEMA` | 30 dias |
+| Default se não configurado | 14 dias |
+
+### D6 — Query do sino (endpoint GET /notificacoes/inbox)
+
+```sql
+SELECT *
+FROM notificacao_inbox
+WHERE user_id = :userId
+  AND (tenant_id IS NULL OR tenant_id = :activeTenantId)  -- filtro por Unidade ativa
+  AND expires_at > now()
+ORDER BY criada_em DESC
+LIMIT :limit;
+```
+
+**Por que funciona:** eager fan-out persiste tenant_id no momento da criação. Usuário só vê row se (a) não é específica de unidade OU (b) é da unidade ativa dele. GLOBAL/REDE ficam com `tenant_id = NULL`. TENANT/ROLE ficam com `tenant_id` preenchido.
+
+Ao trocar de unidade no `TenantSwitcher`, o sino automaticamente filtra.
+
+### D7 — Severidade visual
+
+Sino do header no portal:
+- **Badge numérico** = count não-lidas do `activeTenantId` + GLOBAL/REDE
+- **Ícone `!` alerta destacado** quando há ao menos uma URGENTE não-lida
+- Sem pulsar/piscar
+
+### D8 — Re-emissão com bucket na idempotency_key
+
+Emissor decide se re-emite. Ex: `conta-vencida-{contaId}-{1|7|15|30}` — a cada bucket, key diferente, notificação nova sem conflito.
+
+### D9 — Sem snooze, sem ação inline
+
+Descartadas (complexidade). Usuário fecha (marca lida) ou expira. CTA sempre é URL.
+
+### D10 — Emissão GLOBAL restrita
+
+Endpoint admin valida `UserKind=PLATAFORMA` antes de aceitar `AudienceTipo=GLOBAL`. Todas emissões GLOBAL são logadas em `audit_log`.
+
+## Fora de escopo
+
+- **Lazy fan-out** (query-time audience resolution): considerada e rejeitada. Eager é consistente com outbox pattern já em uso.
+- **Multi-canal via outbox + in-app simultâneo:** já funciona via `canais: Set<IN_APP, EMAIL>` no command. Hub roda ambos independentes.
+- **Redis para SSE multi-pod:** deploy atual é single-pod. Decisão adiada.
+- **Digest por email** ("resumo do dia"): epic futuro.
+- **Ação inline** no dropdown: epic futuro.
+- **Snooze:** epic futuro.
+- **Analytics:** dashboard de tipos mais gerados/menos lidos — epic futuro.
+
+---
+
+## Stories (revisadas para ~15 vs. 33 originais)
+
+Cada story pronta para `@sm *draft`.
+
+### Wave 1 — Extensão do `modulo-notificacoes` BE
+
+| ID | Título curto | Tamanho | Dependências |
+|----|--------------|---------|--------------|
+| **4.1** | Migration `V{ts}__notificacao_inbox.sql` + adicionar `idempotency_key` e `expires_at` em `notificacao_evento` | M | — |
+| **4.2** | `NotificacaoInboxEntity` + `NotificacaoInboxRepository` + query paginada por user+unidade | M | 4.1 |
+| **4.3** | Estender `PublicarEventoCommand` com campos IN_APP + audience + severidade + idempotency + TTL | S | 4.1 |
+| **4.4** | `AudienceResolver` — service que resolve GLOBAL/REDE/TENANT/ROLE/USUARIO → `List<UUID>` de user_ids via queries em `auth.users`, `user_tenant_membership`, `user_roles` | L | — |
+| **4.5** | Estender `NotificacaoHubService.publicar()` com idempotência (ON CONFLICT) + fan-out inbox + fallback TTL por tipo | L | 4.2, 4.3, 4.4 |
+| **4.6** | `NotificacaoMaintenanceJob` (@Scheduled + ShedLock) — purga inbox + eventos órfãos | S | 4.1 |
+| **4.7** | Enum `CanalNotificacao.IN_APP` adicionado + `NotificacaoSeveridade` enum + `AudienceTipo` enum | XS | — |
+
+### Wave 2 — Endpoints REST para portal inbox
+
+| ID | Título curto | Tamanho | Dependências |
+|----|--------------|---------|--------------|
+| **4.8** | `GET /api/v1/notificacoes/inbox?tenantId={activeId}&limit=50&cursor=&apenasNaoLidas=false` — paginado com filtro D6 | M | 4.2 |
+| **4.9** | `POST /api/v1/notificacoes/inbox/{id}/marcar-lida` + `POST /inbox/{id}/acao` — idempotentes | S | 4.2 |
+| **4.10** | `POST /api/v1/notificacoes/inbox/marcar-todas-lidas?tenantId=` — atomiza várias | S | 4.2 |
+| **4.11** | `GET /api/v1/notificacoes/inbox/contadores?tenantId=` — retorna `{naoLidas, urgentesNaoLidas}` para badge | S | 4.2 |
+| **4.12** | `POST /api/v1/notificacoes/admin/emitir` — endpoint manual (valida `UserKind=PLATAFORMA` para GLOBAL) + audit log | M | 4.5 |
+
+### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27)
+
+| ID | Título curto | Tamanho | Dependências |
+|----|--------------|---------|--------------|
+| **4.13** | `CadenciaEscaladaListener` em `modulo-crm` — consume `CadenciaEscaladaEvent` → chama `notificacaoHubService.publicar()` com `AudienceTipo=ROLE(tenantId, "GERENTE")`, `CanalNotificacao.IN_APP`, severidade URGENTE, metadata completo | M | 4.5 |
+| **4.14** | Remover `log.warn` de `CrmProcessOverdueService.executarAcaoEscalacao()` — agora depende só do evento publicado | XS | 4.13 |
+| **4.15** | Testes integração: escalação → assert inbox de gerentes do tenant tem 1 linha | M | 4.13 |
+| **4.16** | Atualizar `CADENCIAS_CRM.md` §6.4/§14.3 marcando 3.27 RESOLVIDO via Epic 4 | XS | 4.13 |
+
+### Wave 4 — Core FE (portal bell + dropdown + página)
+
+| ID | Título curto | Tamanho | Dependências |
+|----|--------------|---------|--------------|
+| **4.17** | Tipos TS em `src/lib/shared/types/notificacao.ts` + adapter `src/lib/api/notificacoes-inbox.ts` | M | 4.8 |
+| **4.18** | Hook `useNotificacoesInbox(activeTenantId)` com react-query polling 60s, `useMarcarLida`, `useMarcarTodasLidas` — padrão copiado de `use-notificacoes-aluno` | M | 4.17 |
+| **4.19** | `<NotificationBellPortal />` — usa `Sheet side="right"` (padrão do bell aluno), badge numérico + ícone `!` condicional para URGENTE, lista agrupada por data | L | 4.18 |
+| **4.20** | Integrar bell no header operador (`src/components/shared/header.tsx` — investigar local exato), visível apenas em rotas `(portal)` e `(backoffice)` | S | 4.19 |
+| **4.21** | Página `/notificacoes` com lista completa + filtros (tipo, severidade, lida/não-lida) + paginação cursor | M | 4.17 |
+
+### Wave 5 — Admin SaaS (emissão GLOBAL + dogfood)
+
+| ID | Título curto | Tamanho | Dependências |
+|----|--------------|---------|--------------|
+| **4.22** | Página `/admin/notificacoes/emitir` (backoffice) — form react-hook-form + zod (padrão `onTouched + canSave` do CLAUDE.md) — autoriza só PLATAFORMA | L | 4.12 |
+| **4.23** | Audience picker component — select de escopo + campos condicionais | M | 4.22 |
+| **4.24** | Página `/admin/notificacoes/historico` — audit log de emissões manuais | M | 4.22 |
+| **4.25** | Listener `ContaVencidaEvent` em `modulo-financeiro` (ou equivalente) — emite inbox com bucket na key (dogfood + teste real) | M | 4.5 |
+
+---
+
+## Waves descartadas / adiadas
+
+| Wave original | Status | Motivo |
+|---|---|---|
+| W6 Preferências por usuário | Adiada | `NotificacaoPreferenciaEntity` já existe (por aluno). Extender para operador é epic futuro. |
+| W7 Dogfood múltiplos domínios | Reduzida | Apenas 4.25 como exemplo. Outros domínios evoluem quando priorizado. |
+| W8 SSE real-time | Adiada | Copiar padrão `ConversasSseController` é trivial quando quiser; single-pod atual funciona sem isso. Polling 60s é suficiente. |
+
+---
+
+## Métricas de sucesso
+
+1. **Adoção:** % de operadores que abriram o sino ≥1x/semana (alvo: >70% em 30d)
+2. **Engagement:** taxa de click em CTA (alvo: >25% URGENTE, >5% INFO)
+3. **Dedupe:** contagem de `INSERT ON CONFLICT` evitados (monitorar)
+4. **Storage:** tamanho de `notificacao_inbox` após 90d (alvo: <500MB por tenant grande)
+5. **Zero regressão** no sino do aluno (não quebrar `notification-bell.tsx`)
+
+## Riscos
+
+| Risco | Prob | Impact | Mitigação |
+|---|---|---|---|
+| Eager fan-out explodir em academia gigante | Baixa | Médio | TTL agressivo + índices por user_id + monitoring |
+| Hub existente ter acoplamento oculto | Média | Alto | SP-5 já mapeou; Wave 1 inclui testes de regressão no fluxo aluno |
+| Query do audience GLOBAL lenta (escan em `auth.users`) | Média | Baixo | Cache do set de userIds ativos com TTL 5min |
+| SSE se tornar demanda urgente | Baixa | Baixo | Polling 60s aceita volume; migração trivial quando precisar |
+
+---
+
+## Schema consolidado (Wave 1)
+
+```sql
+-- Estender existente:
+ALTER TABLE notificacao_evento
+  ADD COLUMN idempotency_key VARCHAR(200) NULL,
+  ADD COLUMN expires_at TIMESTAMP NULL;
+
+CREATE UNIQUE INDEX notificacao_evento_idempotency_uq
+  ON notificacao_evento(idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+
+CREATE INDEX notificacao_evento_expira_idx
+  ON notificacao_evento(expires_at)
+  WHERE expires_at IS NOT NULL;
+
+-- Nova tabela:
+CREATE TABLE notificacao_inbox (
+  id UUID PRIMARY KEY,
+  evento_id UUID NOT NULL REFERENCES notificacao_evento(id) ON DELETE CASCADE,
+  tenant_id UUID NULL,
+  rede_id UUID NULL,
+  user_id UUID NOT NULL,
+  titulo VARCHAR(200) NOT NULL,
+  mensagem VARCHAR(1000) NOT NULL,
+  severidade VARCHAR(20) NOT NULL,
+  acao_url VARCHAR(500) NULL,
+  acao_label VARCHAR(100) NULL,
+  requer_acao BOOLEAN NOT NULL DEFAULT false,
+  criada_em TIMESTAMP NOT NULL DEFAULT now(),
+  expira_em TIMESTAMP NOT NULL,
+  lida_em TIMESTAMP NULL,
+  acao_executada_em TIMESTAMP NULL,
+  CONSTRAINT notificacao_inbox_severidade_chk CHECK (severidade IN ('INFO','AVISO','URGENTE'))
+);
+
+CREATE INDEX notificacao_inbox_user_criada_idx ON notificacao_inbox(user_id, criada_em DESC);
+CREATE INDEX notificacao_inbox_user_naolida_idx ON notificacao_inbox(user_id, lida_em) WHERE lida_em IS NULL;
+CREATE INDEX notificacao_inbox_tenant_idx ON notificacao_inbox(tenant_id) WHERE tenant_id IS NOT NULL;
+CREATE INDEX notificacao_inbox_expira_idx ON notificacao_inbox(expira_em);
+```
 
 ---
 
 ## Handoff
 
-**Próximo passo:** `@sm *draft 4.1` — Wave 1 primeiro, sequencial até 4.8 (schema é base).
+**Próximo passo:** `@sm *draft 4.1` (migration + coluna) → sequencial Wave 1.
 
-**Sequenciamento obrigatório:**
-- Waves 1 → 2 → 3 → 4 devem ir em ordem (schema → endpoints → integração CRM → FE).
-- Wave 3 **substitui Story 3.27** — confirmar com PO antes de começar.
-- Wave 5 (admin) pode ir em paralelo com Wave 4.
-- Wave 6 (preferências) só depois da 4 estabilizada.
-- Wave 7 (dogfooding outros domínios) incremental, pode paralelizar por domínio.
-- Wave 8 (SSE) última, opcional — polling é suficiente até volume crescer.
+**Sequenciamento:**
+- Wave 1 → 2 → 3 → 4 → 5.
+- Wave 3 **substitui Story 3.27** — já marcada como substituída.
+- Wave 2 (endpoints) pode paralelizar com Wave 3 (listener CRM) — não conflita.
+- Wave 4 (FE portal) depende de Wave 2 (endpoints). Padrão a copiar: `src/components/cliente/notification-bell.tsx` + `src/lib/query/use-notificacoes-aluno.ts`.
+- Wave 5 (admin) só depois da 4 estabilizada.
 
-**Responsáveis por fase:**
-- `@architect` — spikes SP-1 a SP-4 + ADR do módulo novo
+**Responsáveis:**
 - `@sm *draft` — cada story
-- `@po *validate-story-draft` — 10-point checklist
-- `@dev` — implementação
+- `@po *validate-story-draft` — checklist 10-point
+- `@dev` — implementação (**reusa `NotificacaoHubService` existente — não criar paralelo**)
 - `@qa *qa-gate` — ao final de cada story
 - `@devops *push` — PR e merge
 
-**Story 3.27 (Cadências):** marcar como "Substituída pelo Epic 4 Wave 3 (stories 4.13-4.16)" antes de começar Wave 3.
-
 ---
 
-*— Pax + Aria, desenhando a fundação de avisos do sistema 📢*
+*— Pax + Aria, construindo em cima do que já está feito 📢*
