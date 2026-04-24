@@ -22,9 +22,22 @@
 
 ---
 
-## Descobertas dos spikes (crítico — lê antes de continuar)
+## Descobertas dos spikes + Wave 1 implementada (crítico — lê antes de continuar)
 
-Após SP-1 a SP-5, descobrimos que **grande parte da infraestrutura de notificação JÁ EXISTE**:
+**Atualização 2026-04-24:** Wave 1 BE **IMPLEMENTADA e mergeada em main** (commits `8895f167` → `5f868c1c`, 8 commits). 124 testes no módulo-notificacoes (+13 novos), zero regressão em outros módulos, build completo verde.
+
+### Correções ao plano original (descobertas durante implementação)
+
+- **`user_id` é `BIGINT`, não `UUID`** — `auth.users.id` é bigint identity na V1 baseline. `NotificacaoInboxEntity.userId = Long`. Afeta Wave 2 (DTOs) e Wave 4 (tipos TS).
+- **Enum canal real é `NotificacaoCanal`** (não `CanalNotificacao` como eu tinha no epic). Valor novo: `NotificacaoCanal.IN_APP`.
+- **Colunas `auth` reais:** `users.enabled` (não `ativo`), `roles.name` (não `nome`). Queries do `AudienceResolver` ajustadas.
+- **Padrão de campos:** `NotificacaoInboxEntity` segue convenção do módulo — campos `public`, `LocalDateTime` (não `Instant`).
+- **Defaults de canais preservados:** `[EMAIL, PUSH, SMS, WHATSAPP]` — `IN_APP` só quando pedido explicitamente no command. Evita regressão em testes existentes.
+- **ShedLock** adicionado como `compileOnly` em `modulo-notificacoes/build.gradle` (runtime fica em `modulo-app`).
+- **Record `PublicarEventoCommand`** estendido sem quebrar 18 emissores existentes via constructors legados delegados.
+- **DI opcional:** `NotificacaoInboxRepository` e `AudienceResolver` injetados via `@Autowired(required=false)` setters em `NotificacaoHubService` — testes antigos não quebram.
+
+### Resumo dos achados originais dos spikes
 
 ### SP-1 — Roles granulares ✅ existem
 
@@ -308,17 +321,20 @@ Endpoint admin valida `UserKind=PLATAFORMA` antes de aceitar `AudienceTipo=GLOBA
 
 Cada story pronta para `@sm *draft`.
 
-### Wave 1 — Extensão do `modulo-notificacoes` BE
+### Wave 1 — Extensão do `modulo-notificacoes` BE ✅ CONCLUÍDA (2026-04-24)
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.1** | Migration `V{ts}__notificacao_inbox.sql` + adicionar `idempotency_key` e `expires_at` em `notificacao_evento` | M | — |
-| **4.2** | `NotificacaoInboxEntity` + `NotificacaoInboxRepository` + query paginada por user+unidade | M | 4.1 |
-| **4.3** | Estender `PublicarEventoCommand` com campos IN_APP + audience + severidade + idempotency + TTL | S | 4.1 |
-| **4.4** | `AudienceResolver` — service que resolve GLOBAL/REDE/TENANT/ROLE/USUARIO → `List<UUID>` de user_ids via queries em `auth.users`, `user_tenant_membership`, `user_roles` | L | — |
-| **4.5** | Estender `NotificacaoHubService.publicar()` com idempotência (ON CONFLICT) + fan-out inbox + fallback TTL por tipo | L | 4.2, 4.3, 4.4 |
-| **4.6** | `NotificacaoMaintenanceJob` (@Scheduled + ShedLock) — purga inbox + eventos órfãos | S | 4.1 |
-| **4.7** | Enum `CanalNotificacao.IN_APP` adicionado + `NotificacaoSeveridade` enum + `AudienceTipo` enum | XS | — |
+Migração `V202604241907__notificacao_inbox_e_idempotency.sql` criada. Branch `feat/notificacoes-epic4-wave1` mergeada em main via fast-forward. Worktree removido, branch deletada. 124 testes passando no módulo (+13 novos).
+
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.1** | Migration notificacao_inbox + idempotency + TTL | ✅ | `8895f167` |
+| **4.2** | `NotificacaoInboxEntity` + Repository (userId `Long`, não UUID) | ✅ | `5c25c2d9` |
+| **4.3** | Estender `PublicarEventoCommand` com IN_APP + audience + TTL (retrocompatível via legacy constructors) | ✅ | `fa4b8581` |
+| **4.4** | `AudienceResolver` GLOBAL/REDE/TENANT/ROLE/USUARIO → `List<Long>` via queries nativas em `auth.users`, `user_tenant_membership`, `user_roles`, `roles` | ✅ | `469b026e` |
+| **4.5** | `NotificacaoHubService.publicar()` com idempotência (`ON CONFLICT`) + fan-out inbox + TTL por tipo | ✅ | `714abeb3` |
+| **4.6** | `NotificacaoMaintenanceJob` @Scheduled + ShedLock (`notificacao_maintenance_job`, cron 03:00) | ✅ | `16bafbc4` |
+| **4.7** | `NotificacaoCanal.IN_APP` + enum `NotificacaoSeveridade` + `AudienceTipo` | ✅ | `faafad45` |
+| — | Testes Wave 1 | ✅ | `5f868c1c` |
 
 ### Wave 2 — Endpoints REST para portal inbox
 
