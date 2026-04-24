@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import type {
   CategoriaContaPagar,
   ContaPagar,

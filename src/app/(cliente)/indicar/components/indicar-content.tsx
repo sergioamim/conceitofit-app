@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { z } from "zod";
 import {
   AlertTriangle,

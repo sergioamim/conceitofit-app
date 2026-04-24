@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { ApiRequestError } from "@/lib/api/http";
 import { Check, Copy, KeyRound, Mail, MessageCircle, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";

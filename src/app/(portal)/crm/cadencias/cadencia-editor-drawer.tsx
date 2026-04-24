@@ -1,6 +1,6 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect } from "react";

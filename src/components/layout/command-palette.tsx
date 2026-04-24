@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { Command } from "cmdk";

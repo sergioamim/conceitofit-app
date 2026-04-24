@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { z } from "zod";
 import { motion } from "framer-motion";
 import {
@@ -108,7 +108,7 @@ export function CampanhasContent({
   // Form
   const form = useForm<CampanhaFormData>({
     resolver: zodResolver(campanhaSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: {
       nome: "",
       tipo: "NPS",
@@ -121,12 +121,7 @@ export function CampanhasContent({
     },
   });
 
-  // Manual required-fields watcher to avoid running zodResolver on mount,
-  // which would surface a ZodError in the Next.js dev overlay before the
-  // modal is even opened. "onTouched" keeps inline errors after first blur.
-  const watchedNome = form.watch("nome");
-  const watchedPergunta = form.watch("pergunta");
-  const canSave = Boolean(watchedNome?.trim()) && Boolean(watchedPergunta?.trim());
+  const canSave = form.formState.isValid;
 
   // Mutations
   const createMutation = useMutation({

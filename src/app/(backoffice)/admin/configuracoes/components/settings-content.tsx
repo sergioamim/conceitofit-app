@@ -2,7 +2,7 @@
 /* eslint-disable max-lines */
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { AlertTriangle, CheckCircle2, Clock3, Link2, RefreshCcw, ServerCrash } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useFieldArray, useForm, type UseFormRegisterReturn } from "react-hook-form";

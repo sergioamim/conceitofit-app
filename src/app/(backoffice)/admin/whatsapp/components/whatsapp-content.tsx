@@ -2,7 +2,7 @@
 
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import {
   CheckCircle2,
   MessageSquare,

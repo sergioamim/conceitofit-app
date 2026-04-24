@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";

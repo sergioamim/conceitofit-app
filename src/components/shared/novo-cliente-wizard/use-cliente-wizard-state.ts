@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { createAlunoService } from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -101,20 +101,12 @@ export function useClienteWizardState(callbacks: {
 
   const form = useForm<ClienteWizardForm>({
     resolver: zodResolver(clienteWizardSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: DEFAULT_VALUES,
   });
 
   const draft = useFormDraft({ key: "novo_cliente_wizard", form });
-  const { control, formState: { isDirty }, trigger, getValues, reset } = form;
-
-  // Manual watch dos required fields para evitar rodar o zodResolver no mount
-  // (dispararia ZodError no Next dev overlay antes do usuário tocar o form).
-  const watchedNome = useWatch({ control, name: "nome" });
-  const watchedTelefone = useWatch({ control, name: "telefone" });
-  const canSave =
-    Boolean(watchedNome?.trim()) &&
-    Boolean(watchedTelefone?.replace(/\D/g, "").length >= 10);
+  const { formState: { isDirty, isValid }, trigger, getValues, reset } = form;
 
   function fullReset() {
     setShowComplementary(false);
@@ -152,7 +144,7 @@ export function useClienteWizardState(callbacks: {
     loading,
     form,
     draft,
-    isDirty, canSave,
+    isDirty, isValid,
     fullReset,
     handleCreateOnly,
   };

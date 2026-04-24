@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ZodError } from "zod";
 import {
   publicCheckoutFormSchema,
   publicSignupFormSchema,
@@ -31,7 +30,7 @@ test.describe("zod resolver forms", () => {
 
   test("propaga mensagens do schema quando o valor é inválido", async () => {
     const resolver = zodResolver(publicCheckoutFormSchema);
-    await expect(async () => resolver(
+    const result = await resolver(
       {
         planId: "",
         formaPagamento: "CARTAO_CREDITO",
@@ -43,21 +42,19 @@ test.describe("zod resolver forms", () => {
       },
       {},
       {} as never
-    )).rejects.toMatchObject({
-      issues: expect.arrayContaining([
-        expect.objectContaining({
-          path: ["planId"],
-          message: "Selecione um plano para concluir a adesão.",
-        }),
-        expect.objectContaining({
-          path: ["parcelas"],
-          message: "Informe ao menos uma parcela.",
-        }),
-        expect.objectContaining({
-          path: ["aceitarTermos"],
-          message: "Aceite os termos da adesão para continuar.",
-        }),
-      ]),
+    );
+
+    // @hookform/resolvers v5 retorna { values: {}, errors: { [field]: { type, message } } }
+    // em vez de lançar ZodError — contrato oficial do react-hook-form resolver.
+    expect(result.values).toEqual({});
+    expect(result.errors.planId).toMatchObject({
+      message: "Selecione um plano para concluir a adesão.",
+    });
+    expect(result.errors.parcelas).toMatchObject({
+      message: "Informe ao menos uma parcela.",
+    });
+    expect(result.errors.aceitarTermos).toMatchObject({
+      message: "Aceite os termos da adesão para continuar.",
     });
   });
 });

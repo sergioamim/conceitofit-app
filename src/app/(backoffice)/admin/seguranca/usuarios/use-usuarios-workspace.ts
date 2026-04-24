@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useRouter, useSearchParams } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Power, Shield } from "lucide-react";
 import { listGlobalAcademias, listGlobalUnidades } from "@/backoffice/lib/admin";
 import { createGlobalSecurityUser } from "@/backoffice/lib/seguranca";

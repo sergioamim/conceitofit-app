@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatDateTimeBR } from "@/lib/formatters";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
   getStorefrontTheme,
