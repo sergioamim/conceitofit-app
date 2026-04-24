@@ -73,7 +73,7 @@ export function VincularAgregadorModal({
 
   const form = useForm<VincularAgregadorForm>({
     resolver: zodResolver(vincularAgregadorSchema),
-    mode: "onBlur",
+    mode: "onTouched",
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -82,8 +82,14 @@ export function VincularAgregadorModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = form;
+
+  const canSave =
+    Boolean(watch("agregador")) &&
+    Boolean(watch("usuarioExternoId")?.trim()) &&
+    Boolean(watch("dataInicio"));
 
   // Inicializa dataInicio com hoje (no client) toda vez que o modal abre.
   // Evita usar `new Date()` no defaultValues (hidratação SSR).
@@ -151,7 +157,9 @@ export function VincularAgregadorModal({
           data-testid="vincular-agregador-form"
         >
           <div className="space-y-1.5">
-            <Label htmlFor="vincular-agregador-tipo">Tipo de agregador</Label>
+            <Label htmlFor="vincular-agregador-tipo">
+              Tipo de agregador <span className="text-destructive">*</span>
+            </Label>
             <Controller
               control={control}
               name="agregador"
@@ -183,7 +191,9 @@ export function VincularAgregadorModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="vincular-agregador-usuario-externo">ID externo do usuário</Label>
+            <Label htmlFor="vincular-agregador-usuario-externo">
+              ID externo do usuário <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="vincular-agregador-usuario-externo"
               autoComplete="off"
@@ -199,7 +209,9 @@ export function VincularAgregadorModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="vincular-agregador-data-inicio">Data de início</Label>
+            <Label htmlFor="vincular-agregador-data-inicio">
+              Data de início <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="vincular-agregador-data-inicio"
               type="date"
@@ -222,7 +234,7 @@ export function VincularAgregadorModal({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || !canSave}>
               {submitting ? (
                 <>
                   <Loader2 className="size-3.5 animate-spin" />

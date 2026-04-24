@@ -106,10 +106,25 @@ export function EditarContaPagarModal({
   initialForm,
   onSubmit,
 }: EditarContaPagarModalProps) {
-  const { register, control, handleSubmit, reset, setValue, watch } = useForm<ContaPagarFormValues>({
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+  } = useForm<ContaPagarFormValues>({
     resolver: zodResolver(contaPagarFormSchema),
+    mode: "onTouched",
     defaultValues: initialForm,
   });
+
+  const canSave =
+    Boolean(watch("tipoContaId")) &&
+    Boolean(watch("fornecedor")?.trim()) &&
+    Boolean(watch("descricao")?.trim()) &&
+    Boolean(watch("dataVencimento")) &&
+    Boolean(watch("valorOriginal")?.trim());
 
   const formValues = useWatch({ control }) as ContaPagarFormValues;
 
@@ -422,7 +437,7 @@ export function EditarContaPagarModal({
             <Button type="button" variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
-            <Button type="submit">Salvar alterações</Button>
+            <Button type="submit" disabled={!canSave}>Salvar alterações</Button>
           </DialogFooter>
         </form>
       </DialogContent>

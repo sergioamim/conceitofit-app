@@ -55,7 +55,8 @@ export function ReceberPagamentoModal({
     register,
     control,
     handleSubmit,
-    formState: { errors, isValid },
+    watch,
+    formState: { errors },
   } = useForm<ReceberPagamentoFormValues>({
     resolver: zodResolver(receberPagamentoSchema),
     defaultValues: {
@@ -64,8 +65,14 @@ export function ReceberPagamentoModal({
       codigoTransacao: "",
       observacoes: "",
     },
-    mode: "onChange",
+    mode: "onTouched",
   });
+
+  const requiresCodigo = (value: string) => value === "CARTAO_CREDITO" || value === "CARTAO_DEBITO";
+  const canSave =
+    Boolean(watch("dataPagamento")) &&
+    Boolean(watch("formaPagamento")) &&
+    (!requiresCodigo(watch("formaPagamento") as string) || Boolean(watch("codigoTransacao")?.trim()));
   const formaPagamento = useWatch({ control, name: "formaPagamento" });
 
   function onSubmit(values: ReceberPagamentoFormValues) {
@@ -160,7 +167,7 @@ export function ReceberPagamentoModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit" disabled={!isValid}>
+            <Button type="submit" disabled={!canSave}>
               Confirmar
             </Button>
           </DialogFooter>

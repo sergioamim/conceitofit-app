@@ -68,10 +68,18 @@ export function NovaContaPagarModal({
 
   const formMethods = useForm<ContaPagarFormValues>({
     resolver: zodResolver(contaPagarFormSchema),
+    mode: "onTouched",
     defaultValues: makeDefault(),
   });
 
-  const { handleSubmit, reset, setValue, control } = formMethods;
+  const { handleSubmit, reset, setValue, control, watch } = formMethods;
+
+  const canSave =
+    Boolean(watch("tipoContaId")) &&
+    Boolean(watch("fornecedor")?.trim()) &&
+    Boolean(watch("descricao")?.trim()) &&
+    Boolean(watch("dataVencimento")) &&
+    Boolean(watch("valorOriginal")?.trim());
   const formValues = useWatch({ control }) as ContaPagarFormValues;
 
   const [registrarComoPaga, setRegistrarComoPaga] = useState(false);
@@ -160,7 +168,7 @@ export function NovaContaPagarModal({
               >
                 Cancelar
               </Button>
-              <Button type="submit">Salvar conta</Button>
+              <Button type="submit" disabled={!canSave}>Salvar conta</Button>
             </DialogFooter>
           </form>
         </FormProvider>

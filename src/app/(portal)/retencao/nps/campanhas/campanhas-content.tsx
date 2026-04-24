@@ -26,6 +26,7 @@ import {
 } from "@/lib/api/nps";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -82,6 +83,7 @@ export function CampanhasContent({
 }) {
   const { tenantId } = useTenantContext();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,6 +108,7 @@ export function CampanhasContent({
   // Form
   const form = useForm<CampanhaFormData>({
     resolver: zodResolver(campanhaSchema),
+    mode: "onTouched",
     defaultValues: {
       nome: "",
       tipo: "NPS",
@@ -117,6 +120,13 @@ export function CampanhasContent({
       ativo: true,
     },
   });
+
+  // Manual required-fields watcher to avoid running zodResolver on mount,
+  // which would surface a ZodError in the Next.js dev overlay before the
+  // modal is even opened. "onTouched" keeps inline errors after first blur.
+  const watchedNome = form.watch("nome");
+  const watchedPergunta = form.watch("pergunta");
+  const canSave = Boolean(watchedNome?.trim()) && Boolean(watchedPergunta?.trim());
 
   // Mutations
   const createMutation = useMutation({
@@ -195,11 +205,17 @@ export function CampanhasContent({
     setDispararLoading(campanhaId);
     try {
       await dispararNpsCampanhaApi({ tenantId, campanhaId });
-      alert("Campanha disparada com sucesso!");
+      toast({
+        title: "Campanha disparada",
+        description: "As notificações serão enviadas aos alunos elegíveis.",
+      });
     } catch (err) {
-      alert(
-        `Erro ao disparar: ${err instanceof Error ? err.message : "Erro desconhecido"}`,
-      );
+      toast({
+        variant: "destructive",
+        title: "Erro ao disparar campanha",
+        description:
+          err instanceof Error ? err.message : "Tente novamente em instantes.",
+      });
     } finally {
       setDispararLoading(null);
     }
@@ -336,11 +352,14 @@ export function CampanhasContent({
             className="space-y-4 py-2"
           >
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome</Label>
+              <Label htmlFor="nome">
+                Nome <span className="text-gym-danger">*</span>
+              </Label>
               <Input
                 id="nome"
                 {...form.register("nome")}
                 placeholder="Nome da campanha"
+                aria-invalid={form.formState.errors.nome ? "true" : "false"}
                 className="bg-secondary border-border"
               />
               {form.formState.errors.nome && (
@@ -393,11 +412,14 @@ export function CampanhasContent({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pergunta">Pergunta</Label>
+              <Label htmlFor="pergunta">
+                Pergunta <span className="text-gym-danger">*</span>
+              </Label>
               <Textarea
                 id="pergunta"
                 {...form.register("pergunta")}
                 placeholder="De 0 a 10, qual a probabilidade de voce recomendar nossa academia?"
+                aria-invalid={form.formState.errors.pergunta ? "true" : "false"}
                 className="bg-secondary border-border min-h-[80px]"
               />
               {form.formState.errors.pergunta && (
@@ -465,7 +487,7 @@ export function CampanhasContent({
               </Button>
               <Button
                 type="submit"
-                disabled={saving}
+                disabled={saving || !canSave}
                 className="bg-gym-accent text-black hover:bg-gym-accent/90"
               >
                 {saving

@@ -104,11 +104,15 @@ export function ServicoModal({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ServicoFormValues>({
     resolver: zodResolver(servicoFormSchema),
+    mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
+
+  const canSave = Boolean(watch("nome")?.trim());
   const tipoCobranca = useWatch({ control, name: "tipoCobranca" });
 
   useEffect(() => {
@@ -299,7 +303,7 @@ export function ServicoModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+            <Button type="submit" disabled={!canSave}>{initial ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

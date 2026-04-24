@@ -42,11 +42,15 @@ export function CargoModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<CargoFormValues>({
     resolver: zodResolver(cargoFormSchema),
+    mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
+
+  const canSave = Boolean(watch("nome")?.trim());
 
   useEffect(() => {
     reset(toFormValues(initial));
@@ -92,7 +96,7 @@ export function CargoModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+            <Button type="submit" disabled={!canSave}>{initial ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

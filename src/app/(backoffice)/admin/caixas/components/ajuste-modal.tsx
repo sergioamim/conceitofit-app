@@ -165,7 +165,7 @@ export function AjusteModal({
       formaPagamento: undefined,
       motivo: "",
     },
-    mode: "onBlur",
+    mode: "onTouched",
   });
 
   const {
@@ -181,6 +181,12 @@ export function AjusteModal({
   const motivo = watch("motivo") ?? "";
   const formaPagamento = watch("formaPagamento");
   const motivoLength = motivo.length;
+  const valorNum = Number(watch("valor"));
+  const canSave =
+    Boolean(tipo) &&
+    Number.isFinite(valorNum) &&
+    valorNum > 0 &&
+    motivoLength >= MOTIVO_MIN;
 
   const hintMotivo = useMemo(
     () =>
@@ -352,7 +358,9 @@ export function AjusteModal({
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ajuste-valor">Valor (R$)</Label>
+                    <Label htmlFor="ajuste-valor">
+                      Valor (R$) <span className="text-gym-danger">*</span>
+                    </Label>
                     <Input
                       id="ajuste-valor"
                       type="number"
@@ -402,7 +410,7 @@ export function AjusteModal({
 
                 <div className="space-y-1.5">
                   <Label htmlFor="ajuste-motivo">
-                    Motivo (mínimo {MOTIVO_MIN} caracteres)
+                    Motivo (mínimo {MOTIVO_MIN} caracteres) <span className="text-gym-danger">*</span>
                   </Label>
                   <Textarea
                     id="ajuste-motivo"
@@ -444,7 +452,7 @@ export function AjusteModal({
                   >
                     Cancelar
                   </Button>
-                  <Button type="submit" disabled={submitting}>
+                  <Button type="submit" disabled={submitting || !canSave}>
                     {submitting ? (
                       <>
                         <Loader2 className="mr-2 size-4 animate-spin" />

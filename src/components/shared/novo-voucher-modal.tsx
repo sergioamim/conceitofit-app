@@ -92,9 +92,11 @@ export function NovoVoucherModal({
     clearErrors,
     control,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<NovoVoucherFormValues>({
     resolver: zodResolver(novoVoucherStepSchema),
+    mode: "onTouched",
     defaultValues: DEFAULT_VALUES,
   });
   const prazoDeterminado = useWatch({ control, name: "prazoDeterminado" });
@@ -104,10 +106,24 @@ export function NovoVoucherModal({
   const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
   const aplicarEm = useWatch({ control, name: "aplicarEm" }) ?? [];
 
+  const canAdvance =
+    Boolean(tipo?.trim()) &&
+    Boolean(watch("nome")?.trim()) &&
+    Boolean(watch("periodoInicio")) &&
+    (!prazoDeterminado || Boolean(watch("periodoFim"))) &&
+    (ilimitada || Boolean(watch("quantidade")?.trim())) &&
+    (codigoTipo !== "UNICO" || Boolean(watch("codigoUnicoCustom")?.trim()));
+
   useEffect(() => {
     if (!open || !tenantId) return;
     void listPlanosApi({ tenantId, apenasAtivos: true }).then(setPlanos);
   }, [open, tenantId]);
+
+  useEffect(() => {
+    if (!open) return;
+    const hoje = new Date().toISOString().slice(0, 10);
+    setValue("periodoInicio", hoje, { shouldValidate: true, shouldDirty: false });
+  }, [open, setValue]);
 
   function resetAll() {
     setStep(1);
@@ -312,7 +328,7 @@ export function NovoVoucherModal({
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose} className="border-border">Cancelar</Button>
-              <Button type="submit">Próximo</Button>
+              <Button type="submit" disabled={!canAdvance}>Próximo</Button>
             </DialogFooter>
           </form>
         ) : (

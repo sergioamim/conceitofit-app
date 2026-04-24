@@ -52,15 +52,23 @@ export function SangriaModal({
   const form = useForm<SangriaFormData>({
     resolver: zodResolver(SangriaSchema),
     defaultValues: { valor: 0, motivo: "", autorizadoPor: "" },
-    mode: "onBlur",
+    mode: "onTouched",
   });
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
     reset,
   } = form;
+
+  const valorSangria = Number(watch("valor"));
+  const canSave =
+    Number.isFinite(valorSangria) &&
+    valorSangria > 0 &&
+    (watch("motivo")?.length ?? 0) >= 5 &&
+    Boolean(watch("autorizadoPor")?.trim());
 
   async function onSubmit(data: SangriaFormData): Promise<void> {
     setSubmitting(true);
@@ -102,7 +110,9 @@ export function SangriaModal({
           noValidate
         >
           <div className="space-y-1.5">
-            <Label htmlFor="sangria-valor">Valor (R$)</Label>
+            <Label htmlFor="sangria-valor">
+              Valor (R$) <span className="text-gym-danger">*</span>
+            </Label>
             <Input
               id="sangria-valor"
               type="number"
@@ -118,7 +128,9 @@ export function SangriaModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="sangria-motivo">Motivo</Label>
+            <Label htmlFor="sangria-motivo">
+              Motivo <span className="text-gym-danger">*</span>
+            </Label>
             <Textarea
               id="sangria-motivo"
               rows={3}
@@ -137,7 +149,7 @@ export function SangriaModal({
 
           <div className="space-y-1.5">
             <Label htmlFor="sangria-autorizadoPor">
-              Autorizado por (UUID do gerente)
+              Autorizado por (UUID do gerente) <span className="text-gym-danger">*</span>
             </Label>
             <Input
               id="sangria-autorizadoPor"
@@ -166,7 +178,7 @@ export function SangriaModal({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || !canSave}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />

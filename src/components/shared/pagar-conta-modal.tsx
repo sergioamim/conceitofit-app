@@ -83,11 +83,15 @@ export function PagarContaModal({
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<PagamentoFormValues>({
     resolver: zodResolver(pagamentoFormSchema),
+    mode: "onTouched",
     defaultValues: defaultValues(todayISO),
   });
+
+  const canSave = Boolean(watch("dataPagamento")) && Boolean(watch("formaPagamento"));
 
   // Reset form when a new conta is selected
   useEffect(() => {
@@ -117,7 +121,7 @@ export function PagarContaModal({
           <div className="space-y-3">
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Data de pagamento
+                Data de pagamento *
               </label>
               <Input
                 type="date"
@@ -131,7 +135,7 @@ export function PagarContaModal({
 
             <div className="space-y-1">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Forma de pagamento
+                Forma de pagamento *
               </label>
               <Controller
                 control={control}
@@ -187,7 +191,7 @@ export function PagarContaModal({
             <Button variant="outline" className="border-border" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
-            <Button type="submit">Confirmar pagamento</Button>
+            <Button type="submit" disabled={!canSave}>Confirmar pagamento</Button>
           </DialogFooter>
         </form>
       </DialogContent>

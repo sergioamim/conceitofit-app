@@ -62,7 +62,7 @@ export function FecharCaixaModal({
   const form = useForm<FecharCaixaFormData>({
     resolver: zodResolver(FecharCaixaSchema),
     defaultValues: { valorInformado: 0, observacoes: "" },
-    mode: "onBlur",
+    mode: "onTouched",
   });
 
   const {
@@ -72,6 +72,9 @@ export function FecharCaixaModal({
     formState: { errors },
     reset,
   } = form;
+
+  const valorInformadoValue = Number(form.watch("valorInformado"));
+  const canSave = Number.isFinite(valorInformadoValue) && valorInformadoValue >= 0;
 
   const valorInformado = useWatch({ control, name: "valorInformado" });
   const valorNumero =
@@ -133,7 +136,9 @@ export function FecharCaixaModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="valorInformado">Valor conferido no caixa (R$)</Label>
+            <Label htmlFor="valorInformado">
+              Valor conferido no caixa (R$) <span className="text-gym-danger">*</span>
+            </Label>
             <Input
               id="valorInformado"
               type="number"
@@ -190,7 +195,7 @@ export function FecharCaixaModal({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || !canSave}>
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 size-4 animate-spin" />

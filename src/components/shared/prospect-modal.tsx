@@ -76,11 +76,18 @@ function ProspectModalComponent({
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<ProspectFormValues>({
     resolver: zodResolver(prospectFormSchema),
+    mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
+
+  const canSave =
+    Boolean(watch("nome")?.trim()) &&
+    Boolean(watch("telefone")?.trim()) &&
+    Boolean(watch("origem")?.trim());
 
   const origemOptions = useMemo(
     () =>
@@ -185,7 +192,7 @@ function ProspectModalComponent({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Origem</label>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Origem *</label>
                 <Controller
                   control={control}
                   name="origem"
@@ -252,7 +259,7 @@ function ProspectModalComponent({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={!canSave}>
               Salvar
             </Button>
           </DialogFooter>

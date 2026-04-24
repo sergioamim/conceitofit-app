@@ -84,16 +84,25 @@ export function EditarVoucherModal({
     handleSubmit,
     reset,
     setValue,
+    watch,
     clearErrors,
     formState: { errors },
   } = useForm<EditarVoucherFormValues>({
     resolver: zodResolver(editarVoucherFormSchema),
+    mode: "onTouched",
     defaultValues: buildDefaultValues(voucher),
   });
   const prazoDeterminado = useWatch({ control, name: "prazoDeterminado" });
   const ilimitada = useWatch({ control, name: "ilimitada" });
   const planoIds = useWatch({ control, name: "planoIds" }) ?? [];
   const aplicarEm = useWatch({ control, name: "aplicarEm" }) ?? [];
+
+  const canSave =
+    Boolean(watch("tipo")?.trim()) &&
+    Boolean(watch("nome")?.trim()) &&
+    Boolean(watch("periodoInicio")) &&
+    (!prazoDeterminado || Boolean(watch("periodoFim"))) &&
+    (ilimitada || Boolean(watch("quantidade")?.trim()));
 
   useEffect(() => {
     reset(buildDefaultValues(voucher));
@@ -402,7 +411,7 @@ export function EditarVoucherModal({
             <Button variant="secondary" onClick={onClose} disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || !canSave}>
               {saving ? "Salvando…" : "Salvar alterações"}
             </Button>
           </DialogFooter>

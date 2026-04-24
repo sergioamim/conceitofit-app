@@ -89,8 +89,11 @@ export function AtividadeModal({
     formState: { errors },
   } = useForm<AtividadeFormValues>({
     resolver: zodResolver(atividadeFormSchema),
+    mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
+
+  const canSave = Boolean(watch("nome")?.trim()) && Boolean(watch("categoria")?.trim());
 
   const [iconSearch, setIconSearch] = useState("");
 
@@ -276,7 +279,7 @@ export function AtividadeModal({
             <Button variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+            <Button type="submit" disabled={!canSave}>{initial ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

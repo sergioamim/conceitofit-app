@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, type ReactNode } from "react";
+import { useEffect, useId, useMemo, type ReactNode } from "react";
 import {
   useForm,
+  useWatch,
   Controller,
   FormProvider,
   type DefaultValues,
@@ -364,10 +365,27 @@ export function CrudModal<T extends FieldValues>({
 
   const form = useForm<T>({
     resolver: zodResolver(resolvedSchema),
+    mode: "onTouched",
     defaultValues: { ...suggestionDefaults, ...(initial ?? {}) } as DefaultValues<T>,
   });
 
-  const { handleSubmit, reset } = form;
+  const { handleSubmit, reset, control } = form;
+
+  // Compute required fields from config to drive Salvar disabled state without
+  // relying on formState.isValid (which would force initial zodResolver run and
+  // trigger the Next.js dev overlay with a ZodError).
+  const requiredFieldNames = useMemo(
+    () =>
+      fields
+        .filter((f) => f.type === "suggestion" || (f.required && (f.type === "text" || f.type === "textarea")))
+        .map((f) => f.name),
+    [fields]
+  );
+  const watchedValues = useWatch({ control, name: requiredFieldNames as Path<T>[] });
+  const canSave =
+    requiredFieldNames.length === 0 ||
+    (Array.isArray(watchedValues) &&
+      watchedValues.every((v) => (typeof v === "string" ? v.trim().length > 0 : Boolean(v))));
 
   useEffect(() => {
     reset({ ...suggestionDefaults, ...(initial ?? {}) } as DefaultValues<T>);
@@ -408,7 +426,7 @@ export function CrudModal<T extends FieldValues>({
               <Button type="button" variant="outline" onClick={onClose} className="border-border">
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={!canSave}>
                 {isEditing
                   ? (editSubmitLabel ?? "Salvar")
                   : (submitLabel ?? "Criar")}

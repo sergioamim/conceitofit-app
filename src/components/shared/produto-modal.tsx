@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const produtoFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome do produto."),
-  sku: z.string(),
+  sku: requiredTrimmedString("Informe o SKU do produto."),
   codigoBarras: z.string(),
   categoria: z.string(),
   marca: z.string(),
@@ -93,11 +93,15 @@ export function ProdutoModal({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ProdutoFormValues>({
     resolver: zodResolver(produtoFormSchema),
+    mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
+
+  const canSave = Boolean(watch("nome")?.trim()) && Boolean(watch("sku")?.trim());
   const controlaEstoque = useWatch({ control, name: "controlaEstoque" });
 
   useEffect(() => {
@@ -271,7 +275,7 @@ export function ProdutoModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit">{initial ? "Salvar" : "Criar"}</Button>
+            <Button type="submit" disabled={!canSave}>{initial ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
