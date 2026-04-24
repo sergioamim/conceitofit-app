@@ -351,14 +351,30 @@ Branch `feat/notificacoes-epic4-wave2` mergeada via fast-forward em main. 5483 t
 
 **Implementação criou:** `NotificacaoInboxService` (modulo-notificacoes), `NotificacaoInboxController` + `NotificacaoAdminController` + `OperadorAuthContextService` (modulo-app), `NotificacaoNaoEncontradaException`. Auth segue padrão de `AppClienteIdentidadeService` (parse JWT via `JwtTokenProvider.getUserId(token)`). Audit best-effort via `AuditService` (modulo-core) + SLF4J Marker `AUDIT`.
 
-### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27)
+### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27) ✅ CONCLUÍDA (2026-04-24)
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.13** | `CadenciaEscaladaListener` em `modulo-crm` — consume `CadenciaEscaladaEvent` → chama `notificacaoHubService.publicar()` com `AudienceTipo=ROLE(tenantId, "GERENTE")`, `CanalNotificacao.IN_APP`, severidade URGENTE, metadata completo | M | 4.5 |
-| **4.14** | Remover `log.warn` de `CrmProcessOverdueService.executarAcaoEscalacao()` — agora depende só do evento publicado | XS | 4.13 |
-| **4.15** | Testes integração: escalação → assert inbox de gerentes do tenant tem 1 linha | M | 4.13 |
-| **4.16** | Atualizar `CADENCIAS_CRM.md` §6.4/§14.3 marcando 3.27 RESOLVIDO via Epic 4 | XS | 4.13 |
+Branch `feat/notificacoes-epic4-wave3` mergeada via fast-forward em main. Listener **mora em `modulo-app`** (não `modulo-crm`) — ArchUnit proíbe dep direta crm→notificacoes.
+
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.13** | `CadenciaEscaladaListener` em `modulo-app/application/event/` — `@EventListener + @Async`, idempotency `cadencia-escalada-{execucao}-{regra}`, severidade URGENTE, `acaoUrl=/crm/cadencias?execucao=X`, TTL 14d | ✅ | `0added63` |
+| **4.14** | Remover `log.warn` stub de `CrmProcessOverdueService.executarAcaoEscalacao()` — evento continua publicado, listener consome | ✅ | `0303ceeb` |
+| **4.15** | `CadenciaEscaladaListenerTest` (4 cenários) + reforço em `CrmProcessOverdueServiceTest` | ✅ | `c6577ea3` |
+| **4.16** | Atualizar `CADENCIAS_CRM.md` §6.4/§14.3 fechando 3.27 via Epic 4 | ✅ | `11f0209f` |
+
+Tests: modulo-crm 184→185, modulo-app 401→405. Zero regressão.
+
+### Wave 4 — Core FE portal (bell + dropdown + página) ✅ CONCLUÍDA (2026-04-24)
+
+Branch `feat/notificacoes-epic4-wave4` mergeada via merge commit `0075b8a` em main (main avançou com fix de middleware durante implementação). TSC limpo, ESLint sem erros novos.
+
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.17** | Tipos TS + adapter `/api/v1/notificacoes/inbox` — userId: `number` (BIGINT) | ✅ | `4f077a8` |
+| **4.18** | Hook `useNotificacoesInbox` (polling 60s) + `useContadoresInbox` (polling 30s) + mutations | ✅ | `df97752` |
+| **4.19** | `<NotificationBellPortal />` com Sheet right, badge numérico + `!` alerta urgente estático, agrupamento por dia (Hoje/Ontem/Esta semana/Mais antigas) com sticky headers | ✅ | `e48d7bd` |
+| **4.20** | Integração: `AppTopbar` (portal) entre ShoppingCart e OnboardingStatusBadge + `AdminShellFrame` (backoffice) ao lado do ModeBadge | ✅ | `3db7883` |
+| **4.21** | Página `/notificacoes` com `useInfiniteQuery` + botão "Carregar mais" + filtro severidade client-side + toggle "apenas não-lidas" server-side | ✅ | `d737a15` |
 
 ### Wave 4 — Core FE (portal bell + dropdown + página)
 
