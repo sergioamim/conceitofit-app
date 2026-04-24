@@ -43,6 +43,7 @@ export function WhatsAppProviderConfig({ config, tenantId, isLoading }: Props) {
 
   const form = useForm<WhatsAppProviderConfigValues>({
     resolver: zodResolver(whatsAppProviderConfigSchema),
+    mode: "onChange",
     values: {
       provedor: config?.provedor ?? "EVOLUTION_API",
       apiUrl: config?.apiUrl ?? "",
@@ -202,7 +203,7 @@ export function WhatsAppProviderConfig({ config, tenantId, isLoading }: Props) {
         </div>
 
         <div className="flex gap-2 pt-2">
-          <Button type="submit" disabled={saveConfig.isPending}>
+          <Button type="submit" disabled={saveConfig.isPending || !form.formState.isValid}>
             {saveConfig.isPending ? "Salvando..." : "Salvar configuração"}
           </Button>
           <Button

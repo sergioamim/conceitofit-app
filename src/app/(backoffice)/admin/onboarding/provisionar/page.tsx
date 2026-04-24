@@ -149,6 +149,7 @@ export default function AdminProvisionarAcademiaPage() {
 
   const form = useForm<AdminOnboardingProvisionFormValues>({
     resolver: zodResolver(adminOnboardingProvisionFormSchema),
+    mode: "onChange",
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -159,7 +160,7 @@ export default function AdminProvisionarAcademiaPage() {
     reset,
     setError,
     watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = form;
 
   const values = watch();
@@ -259,10 +260,13 @@ export default function AdminProvisionarAcademiaPage() {
             <CardContent>
               <form className="space-y-5" onSubmit={handleSubmit(submitProvision)}>
                 <div className="space-y-1.5">
-                  <Label htmlFor="provision-academia-nome">Nome da academia</Label>
+                  <Label htmlFor="provision-academia-nome">
+                    Nome da academia <span className="text-gym-danger">*</span>
+                  </Label>
                   <Input
                     id="provision-academia-nome"
                     {...register("academiaNome")}
+                    aria-invalid={errors.academiaNome ? "true" : "false"}
                     className="border-border bg-secondary"
                     placeholder="Ex: Academia Conceito Fit Copacabana"
                   />
@@ -273,7 +277,9 @@ export default function AdminProvisionarAcademiaPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="provision-cnpj">CNPJ</Label>
+                    <Label htmlFor="provision-cnpj">
+                      CNPJ <span className="text-gym-danger">*</span>
+                    </Label>
                     <Controller
                       control={control}
                       name="cnpj"
@@ -282,6 +288,7 @@ export default function AdminProvisionarAcademiaPage() {
                           id="provision-cnpj"
                           value={field.value}
                           onChange={(event) => field.onChange(formatCnpj(event.target.value))}
+                          aria-invalid={errors.cnpj ? "true" : "false"}
                           className="border-border bg-secondary"
                           placeholder="00.000.000/0000-00"
                         />
@@ -293,7 +300,9 @@ export default function AdminProvisionarAcademiaPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="provision-telefone">Telefone</Label>
+                    <Label htmlFor="provision-telefone">
+                      Telefone <span className="text-gym-danger">*</span>
+                    </Label>
                     <Controller
                       control={control}
                       name="telefone"
@@ -302,6 +311,7 @@ export default function AdminProvisionarAcademiaPage() {
                           id="provision-telefone"
                           value={field.value}
                           onChange={field.onChange}
+                          aria-invalid={errors.telefone ? "true" : "false"}
                           className="border-border bg-secondary"
                           placeholder="(21) 99999-0000"
                         />
@@ -314,10 +324,13 @@ export default function AdminProvisionarAcademiaPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="provision-unidade-principal">Nome da unidade principal</Label>
+                  <Label htmlFor="provision-unidade-principal">
+                    Nome da unidade principal <span className="text-gym-danger">*</span>
+                  </Label>
                   <Input
                     id="provision-unidade-principal"
                     {...register("unidadePrincipalNome")}
+                    aria-invalid={errors.unidadePrincipalNome ? "true" : "false"}
                     className="border-border bg-secondary"
                     placeholder="Ex: Copacabana Matriz"
                   />
@@ -328,10 +341,13 @@ export default function AdminProvisionarAcademiaPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="provision-admin-nome">Nome do administrador</Label>
+                    <Label htmlFor="provision-admin-nome">
+                      Nome do administrador <span className="text-gym-danger">*</span>
+                    </Label>
                     <Input
                       id="provision-admin-nome"
                       {...register("adminNome")}
+                      aria-invalid={errors.adminNome ? "true" : "false"}
                       className="border-border bg-secondary"
                       placeholder="Ex: Mariana Costa"
                     />
@@ -341,11 +357,14 @@ export default function AdminProvisionarAcademiaPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="provision-admin-email">E-mail do administrador</Label>
+                    <Label htmlFor="provision-admin-email">
+                      E-mail do administrador <span className="text-gym-danger">*</span>
+                    </Label>
                     <Input
                       id="provision-admin-email"
                       type="email"
                       {...register("adminEmail")}
+                      aria-invalid={errors.adminEmail ? "true" : "false"}
                       className="border-border bg-secondary"
                       placeholder="mariana@academia.com"
                     />
@@ -362,7 +381,7 @@ export default function AdminProvisionarAcademiaPage() {
                 ) : null}
 
                 <div className="flex flex-wrap gap-3">
-                  <Button type="submit" disabled={submitting}>
+                  <Button type="submit" disabled={submitting || !isValid}>
                     {submitting ? "Provisionando..." : "Provisionar academia"}
                   </Button>
                   <Button

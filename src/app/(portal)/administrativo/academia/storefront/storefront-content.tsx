@@ -70,6 +70,7 @@ export function StorefrontConfigContent() {
 
   const form = useForm<StorefrontThemeFormValues>({
     resolver: zodResolver(storefrontThemeSchema),
+    mode: "onChange",
     defaultValues: {
       logoUrl: "",
       faviconUrl: "",
@@ -349,7 +350,7 @@ export function StorefrontConfigContent() {
         </Card>
 
         <div className="flex items-center gap-3">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !form.formState.isValid}>
             {saving ? "Salvando..." : existingTheme ? "Atualizar tema" : "Salvar tema"}
           </Button>
           {(existingTheme?.dataAtualizacao ?? existingTheme?.updatedAt) && (

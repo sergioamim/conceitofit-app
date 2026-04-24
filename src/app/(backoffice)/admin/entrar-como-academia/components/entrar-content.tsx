@@ -226,6 +226,7 @@ export function EntrarContent() {
 
   const form = useForm<EntrarComoForm>({
     resolver: zodResolver(entrarComoSchema),
+    mode: "onChange",
     defaultValues: { justificativa: "" },
   });
 

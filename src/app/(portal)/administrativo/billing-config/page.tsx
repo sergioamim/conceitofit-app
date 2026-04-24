@@ -69,6 +69,7 @@ export default function BillingConfigPage() {
 
   const form = useForm<BillingConfigForm>({
     resolver: zodResolver(billingConfigSchema),
+    mode: "onChange",
     defaultValues: {
       provedorAtivo: "PAGARME",
       chaveApi: "",
@@ -288,7 +289,7 @@ export default function BillingConfigPage() {
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || !form.formState.isValid}>
             {saving ? "Salvando..." : configExistente ? "Atualizar configuração" : "Criar configuração"}
           </Button>
           <Button type="button" variant="outline" onClick={handleTestConnection} disabled={testing}>

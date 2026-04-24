@@ -179,6 +179,7 @@ export function SettingsContent() {
 
   const form = useForm<GlobalConfigFormValues>({
     resolver: zodResolver(globalConfigFormSchema),
+    mode: "onChange",
     defaultValues: globalConfigToForm(EMPTY_GLOBAL_CONFIG),
   });
 
@@ -248,7 +249,10 @@ export function SettingsContent() {
                 <RefreshCcw className="mr-2 size-4" />
                 Atualizar
               </Button>
-              <Button onClick={form.handleSubmit(handleSave)} disabled={saving || loading}>
+              <Button
+                onClick={form.handleSubmit(handleSave)}
+                disabled={saving || loading || !form.formState.isValid}
+              >
                 {saving ? "Salvando..." : "Salvar alterações"}
               </Button>
             </div>
