@@ -104,21 +104,29 @@ Continua fantasma no BE:
 3. O módulo fica como **pronto para ligar** quando o BE entregar `/agenda/aulas/*`. Não deletar: o código tem normalizers, tipos e ordenação bem estruturados que serão reaproveitados.
 4. A página `/reservas` e `/meus-treinos` (portal aluno) devem renderizar estado vazio ou "em preparação" quando a flag está off
 
-### 5. `src/lib/api/crm-cadencias.ts` → **MANTER (já tem graceful degradation)**
+### 5. `src/lib/api/crm-cadencias.ts` → **IMPLEMENTADO (2026-04-24) — ver Epic 3**
 
-**Estado BE (2026-04-10):** Nenhum `@RequestMapping` para `/api/v1/crm/cadencias/*`. 100% fantasma.
+**Status histórico (2026-04-10):** Nenhum `@RequestMapping` para `/api/v1/crm/cadencias/*`. 100% fantasma.
+**Status atual (2026-04-24):** **IMPLEMENTADO.** Backend Java agora expõe o módulo completo (`/api/v1/crm/cadencias/*`, `/execucoes`, `/trigger`, `/escalation-rules`, `/process-overdue`) e o FE foi evoluído com editor completo + trigger manual + CRUD de escalação + golden path E2E. Task #545 **concluída**.
+
+**Referência de entrega:** Epic 3 — Cadências CRM (Waves 1-6).
+- Wave 1-2: migrations + endpoints BE.
+- Wave 3: CRUD base + listas.
+- Wave 4 (Stories 3.15-3.18): drawer de edição + trigger manual.
+- Wave 5 (Stories 3.19-3.20): CRUD UI de regras de escalação.
+- Wave 6 (Stories 3.22 + 3.24): golden path Playwright + flip da feature flag (`NEXT_PUBLIC_CRM_CADENCIAS_ENABLED` default **true**) + remoção do placeholder "Em preparação".
 
 **Consumidores FE:**
 - `src/lib/tenant/crm/cadence-engine.ts`
-- `src/app/(portal)/crm/cadencias/page.tsx`
+- `src/app/(portal)/crm/cadencias/page.tsx` (+ tabs extraídos)
 - `src/app/(portal)/crm/cadence-executions-panel.tsx`
 
-**Análise:** Este arquivo **já tem tratamento consciente de indisponibilidade**: toda chamada está envolta em `mapUnavailableCapability` que converte `404/405/501` em erro amigável ("Backend ainda não expõe ... neste ambiente"). É um "fantasma consciente", não código morto.
+**Ações já executadas:**
+1. Feature flag `isCrmCadenciasEnabled()` mantida como override explícito, mas default passou de `false` → `true`.
+2. Placeholder `CrmCadenciasEmPreparacao` removido — a tela renderiza diretamente o conteúdo ativo.
+3. `graceful degradation` via `mapUnavailableCapability` **mantido** por segurança em ambientes que ainda não tenham o backend atualizado (o operador continua recebendo mensagem amigável em vez de stack trace).
 
-**Ação:**
-1. **Nenhuma mudança de código** — o graceful degradation já está adequado
-2. Header de aviso apontando para este ADR e para a task #545 (CRM cadências — low priority, bloqueada por este módulo)
-3. Adicionar feature flag opcional `CRM_CADENCIAS_ENABLED` apenas para esconder a **tela** `/crm/cadencias` proativamente (default `false`)
+**Próximos passos:** nenhum — módulo sai do escopo deste ADR e vira manutenção padrão do Epic 3.
 
 ## Impacto transversal
 
@@ -129,7 +137,7 @@ Continua fantasma no BE:
 | `isBillingRecurrenteEnabled()` | `NEXT_PUBLIC_BILLING_RECORRENTE_ENABLED` | `false` | billing.ts + telas admin billing |
 | `isWhatsappIntegrationEnabled()` | `NEXT_PUBLIC_WHATSAPP_INTEGRATION_ENABLED` | `false` | whatsapp.ts + telas admin whatsapp |
 | `isReservasAulasEnabled()` | `NEXT_PUBLIC_RESERVAS_AULAS_ENABLED` | `false` | reservas.ts + /reservas + portal aluno |
-| `isCrmCadenciasEnabled()` | `NEXT_PUBLIC_CRM_CADENCIAS_ENABLED` | `false` | tela /crm/cadencias |
+| `isCrmCadenciasEnabled()` | `NEXT_PUBLIC_CRM_CADENCIAS_ENABLED` | **`true`** (2026-04-24) | tela /crm/cadencias |
 
 ### Tasks futuras criadas por este ADR
 
@@ -144,7 +152,7 @@ Continua fantasma no BE:
 
 4. **Reservas de aulas full-stack** — já coberta parcialmente pelo PRD Q2 Épico 3.1 (task 26 do PRD) para o portal do aluno, mas precisa tasks de implementação BE
 
-5. **Task #545 (CRM cadências)** — permanece bloqueada pelo backend, tem dependency declarada para #551 neste task-master
+5. **Task #545 (CRM cadências)** — **CONCLUÍDA em 2026-04-24** via Epic 3 (Waves 1-6). Backend passou a expor `/api/v1/crm/cadencias/*` completo; FE entrega editor, trigger manual, escalação e Playwright golden path (`tests/e2e/cadencias-golden-path.spec.ts`). Feature flag default flipou para `true`.
 
 ## Consequências
 
