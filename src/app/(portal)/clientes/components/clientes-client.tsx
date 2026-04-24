@@ -81,7 +81,8 @@ function ClientesPageContent() {
               setVincularAgregadorAlunoId(created.id);
               return;
             }
-            // CTA "Salvar": permanece na listagem (já recarregada acima).
+            // CTA "Salvar": redireciona para o perfil do cliente recém-criado.
+            ws.router.push(`/clientes/${encodeURIComponent(created.id)}`);
           }}
         />
       ) : null}

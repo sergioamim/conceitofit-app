@@ -112,7 +112,18 @@ export function useVendaWorkspace() {
       if (!alunosLoaded) await loadAlunos();
 
       const currentTenantId = tenantIdRef.current;
-      const alvoCarregado = alunos.find((a) => a.id === prefillClienteId);
+      let alvoCarregado = alunos.find((a) => a.id === prefillClienteId);
+
+      // Cache pode estar stale — aluno recém-criado no wizard "Novo cliente"
+      // chega aqui via query param `clienteId`. Força reload antes de cair no
+      // fallback cross-tenant (que é mais lento + trocaria de unidade sem
+      // necessidade).
+      if (!alvoCarregado) {
+        await loadAlunos({ force: true });
+        if (cancelled) return;
+        alvoCarregado = alunos.find((a) => a.id === prefillClienteId);
+      }
+
       if (alvoCarregado) {
         if (cancelled) return;
         setClienteId(alvoCarregado.id);

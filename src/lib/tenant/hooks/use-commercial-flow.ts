@@ -78,8 +78,9 @@ export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }
   const [isentarMatricula, setIsentarMatricula] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const loadAlunos = useCallback(async () => {
-    if (!tenantId || alunosLoaded) return;
+  const loadAlunos = useCallback(async (options?: { force?: boolean }) => {
+    if (!tenantId) return;
+    if (alunosLoaded && !options?.force) return;
     try {
       const loaded = await listAlunosService({ tenantId });
       setAlunos(loaded);
