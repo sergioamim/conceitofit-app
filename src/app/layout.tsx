@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Sans, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { Toaster } from "sonner";
 import Script from "next/script";
 import { AppQueryProvider } from "@/lib/query/query-provider";
 import { getAppEnv } from "@/lib/env";
@@ -84,6 +85,13 @@ export default function RootLayout({
             {children}
             <ServiceWorkerRegister />
             <InstallPrompt />
+            <Toaster
+              theme="dark"
+              position="bottom-right"
+              richColors
+              closeButton
+              duration={4500}
+            />
           </AppQueryProvider>
         </ThemeProvider>
       </body>
