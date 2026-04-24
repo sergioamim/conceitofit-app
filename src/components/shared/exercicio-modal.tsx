@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,11 +53,16 @@ export function ExercicioModal({
     control,
     handleSubmit,
     reset,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting },
   } = useForm<ExercicioForm>({
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: toFormState(initial),
   });
+
+  // Manual watch dos required fields para evitar rodar o resolver no mount
+  // (onChange dispararia ZodError no dev overlay antes do modal abrir).
+  const watchedNome = useWatch({ control, name: "nome" });
+  const canSave = Boolean(watchedNome?.trim());
 
   useEffect(() => {
     reset(toFormState(initial));
@@ -170,7 +175,7 @@ export function ExercicioModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || !isValid}>
+            <Button type="submit" disabled={isSubmitting || !canSave}>
               {initial?.id ? "Salvar exercício" : "Criar exercício"}
             </Button>
           </DialogFooter>

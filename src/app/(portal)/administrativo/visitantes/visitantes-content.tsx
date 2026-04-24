@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
@@ -144,7 +144,7 @@ export function VisitantesContent() {
 
   const form = useForm<RegistrarFormValues>({
     resolver: zodResolver(registrarSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       nome: "",
       documento: "",
@@ -157,6 +157,16 @@ export function VisitantesContent() {
       observacoes: "",
     },
   });
+
+  // Manual watch dos required fields para evitar rodar o zodResolver no mount.
+  const watchedNome = useWatch({ control: form.control, name: "nome" }) ?? "";
+  const watchedValidoAte = useWatch({ control: form.control, name: "validoAte" }) ?? "";
+  const watchedTipo = useWatch({ control: form.control, name: "tipo" });
+  const canSaveVisitante =
+    Boolean(watchedNome?.trim()) &&
+    watchedNome.trim().length >= 2 &&
+    Boolean(watchedValidoAte?.trim()) &&
+    Boolean(watchedTipo);
 
   const registrarMutation = useMutation({
     mutationFn: (data: RegistrarVisitantePayload) =>
@@ -533,7 +543,7 @@ export function VisitantesContent() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={registrarMutation.isPending || !form.formState.isValid}>
+              <Button type="submit" disabled={registrarMutation.isPending || !canSaveVisitante}>
                 <UserPlus className="size-4" />
                 {registrarMutation.isPending ? "Cadastrando..." : "Cadastrar e gerar código"}
               </Button>

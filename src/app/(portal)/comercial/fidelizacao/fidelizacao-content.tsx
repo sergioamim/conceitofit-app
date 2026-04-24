@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Award, Gift, Loader2, Plus, RefreshCcw, ArrowRightLeft } from "lucide-react";
@@ -129,7 +129,7 @@ export function FidelizacaoContent() {
 
   const campanhaForm = useForm<CampanhaFormData>({
     resolver: zodResolver(campanhaSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       nome: "",
       descricao: "",
@@ -140,6 +140,10 @@ export function FidelizacaoContent() {
       dataFim: "",
     },
   });
+
+  // Manual watch do required: nome. Pontos têm default e aceitam 0.
+  const watchedCampanhaNome = useWatch({ control: campanhaForm.control, name: "nome" }) ?? "";
+  const canSaveCampanhaForm = Boolean(watchedCampanhaNome?.trim());
 
   function openCreateCampanha() {
     setEditingCampanha(null);
@@ -221,7 +225,7 @@ export function FidelizacaoContent() {
 
   const indicacaoForm = useForm<IndicacaoFormData>({
     resolver: zodResolver(indicacaoSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       campanhaId: "",
       indicadorAlunoId: "",
@@ -232,6 +236,15 @@ export function FidelizacaoContent() {
       observacoes: "",
     },
   });
+
+  // Manual watch dos required fields do formulário de indicação.
+  const watchedIndicacaoCampanhaId = useWatch({ control: indicacaoForm.control, name: "campanhaId" }) ?? "";
+  const watchedIndicacaoIndicador = useWatch({ control: indicacaoForm.control, name: "indicadorAlunoId" }) ?? "";
+  const watchedIndicacaoIndicadoNome = useWatch({ control: indicacaoForm.control, name: "indicadoNome" }) ?? "";
+  const canSaveIndicacaoForm =
+    Boolean(watchedIndicacaoCampanhaId?.trim()) &&
+    Boolean(watchedIndicacaoIndicador?.trim()) &&
+    Boolean(watchedIndicacaoIndicadoNome?.trim());
 
   function openCreateIndicacao() {
     indicacaoForm.reset();
@@ -289,9 +302,13 @@ export function FidelizacaoContent() {
 
   const resgateForm = useForm<ResgateFormData>({
     resolver: zodResolver(resgateSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: { pontos: 0, descricao: "" },
   });
+
+  // Manual watch do required: pontos (>=1). z.coerce faz string→number.
+  const watchedResgatePontos = useWatch({ control: resgateForm.control, name: "pontos" });
+  const canSaveResgateForm = Number(watchedResgatePontos) >= 1;
 
   function openExtrato(row: SaldoResumo) {
     setExtratoAlunoId(row.alunoId);
@@ -710,7 +727,7 @@ export function FidelizacaoContent() {
               <Button type="button" variant="outline" className="border-border" onClick={() => setCampanhaModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={savingCampanha || !campanhaForm.formState.isValid}>
+              <Button type="submit" disabled={savingCampanha || !canSaveCampanhaForm}>
                 {savingCampanha ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
@@ -796,7 +813,7 @@ export function FidelizacaoContent() {
               <Button type="button" variant="outline" className="border-border" onClick={() => setIndicacaoModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={savingIndicacao || !indicacaoForm.formState.isValid}>
+              <Button type="submit" disabled={savingIndicacao || !canSaveIndicacaoForm}>
                 {savingIndicacao ? "Registrando..." : "Registrar indicação"}
               </Button>
             </DialogFooter>
@@ -838,7 +855,7 @@ export function FidelizacaoContent() {
               <Button type="button" variant="outline" className="border-border" onClick={() => setResgateModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={resgatarPontos.isPending || !resgateForm.formState.isValid}>
+              <Button type="submit" disabled={resgatarPontos.isPending || !canSaveResgateForm}>
                 {resgatarPontos.isPending ? "Resgatando..." : "Resgatar"}
               </Button>
             </DialogFooter>

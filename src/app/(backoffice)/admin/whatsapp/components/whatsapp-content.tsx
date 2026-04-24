@@ -225,9 +225,18 @@ export function WhatsappContent() {
 
   const form = useForm<WhatsAppTemplateFormValues>({
     resolver: zodResolver(whatsAppTemplateFormSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: EMPTY_FORM,
   });
+
+  // Manual watch dos required fields para evitar rodar o zodResolver no mount.
+  const watchedTplNome = form.watch("nome");
+  const watchedTplSlug = form.watch("slug");
+  const watchedTplConteudo = form.watch("conteudo");
+  const canSaveTemplate =
+    Boolean(watchedTplNome?.trim()) &&
+    Boolean(watchedTplSlug?.trim()) &&
+    Boolean(watchedTplConteudo?.trim());
 
   const loadData = useCallback(async () => {
     if (!tenantContext.tenantResolved || !tenantId) {
@@ -915,7 +924,7 @@ export function WhatsappContent() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!form.formState.isValid}>
+              <Button type="submit" disabled={!canSaveTemplate}>
                 {editingId ? "Salvar" : "Criar"}
               </Button>
             </div>

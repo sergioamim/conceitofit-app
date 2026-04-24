@@ -72,7 +72,7 @@ export default function AcessoUnidadePage() {
         initialPerfilIds: true,
       })
     ),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       name: "",
       email: "",
@@ -82,13 +82,19 @@ export default function AcessoUnidadePage() {
   });
   const grantAccessForm = useForm<GrantAccessFormValues>({
     resolver: zodResolver(grantAccessFormSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       tenantId: tenantContext.tenantId || "",
       userId: "",
       userQuery: "",
     },
   });
+  // Manual watch dos required fields do createUserForm (name + email) para
+  // evitar rodar o zodResolver no mount (dev overlay exibiria ZodError).
+  const watchedCreateName = useWatch({ control: createUserForm.control, name: "name" }) ?? "";
+  const watchedCreateEmail = useWatch({ control: createUserForm.control, name: "email" }) ?? "";
+  const canSaveCreateUser =
+    Boolean(watchedCreateName?.trim()) && Boolean(watchedCreateEmail?.trim());
   const createProfileIds = useWatch({ control: createUserForm.control, name: "initialPerfilIds" }) ?? [];
   const tenantId = useWatch({ control: grantAccessForm.control, name: "tenantId" }) ?? "";
   const selectedUserId = useWatch({ control: grantAccessForm.control, name: "userId" }) ?? "";
@@ -452,7 +458,7 @@ export default function AcessoUnidadePage() {
             <div className="md:col-span-2 flex justify-end">
               <Button
                 type="submit"
-                disabled={saving || loading || !effectiveTenantId || !createUserForm.formState.isValid}
+                disabled={saving || loading || !effectiveTenantId || !canSaveCreateUser}
               >
                 {saving ? "Criando..." : "Criar usuário"}
               </Button>

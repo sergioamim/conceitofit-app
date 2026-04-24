@@ -97,9 +97,9 @@ export function NovoCartaoModal({
     setError,
     clearErrors,
     control,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<NovoCartaoFormValues>({
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       titular: "",
       titularEhCliente: true,
@@ -113,6 +113,16 @@ export function NovoCartaoModal({
   const titularEhCliente = useWatch({ control, name: "titularEhCliente" });
   const cpfTitular = useWatch({ control, name: "cpfTitular" }) ?? "";
   const validade = useWatch({ control, name: "validade" }) ?? "";
+  const watchedTitular = useWatch({ control, name: "titular" }) ?? "";
+  const watchedCvv = useWatch({ control, name: "cvv" }) ?? "";
+  // Manual required-fields watcher para evitar rodar validação no mount.
+  // CPF do titular é condicional (só obrigatório quando !titularEhCliente).
+  const canSave =
+    Boolean(watchedTitular?.trim()) &&
+    numero.replace(/\D/g, "").length >= 12 &&
+    validade.length >= 4 &&
+    watchedCvv.length >= 3 &&
+    (titularEhCliente || Boolean(cpfTitular?.trim()));
   const bandeiraDetectada = detectBandeira(numero);
   const bandeiraVisual = bandeiraDetectada
     ? {
@@ -300,7 +310,7 @@ export function NovoCartaoModal({
             <Button type="button" variant="outline" onClick={onClose} className="border-border">
               Cancelar
             </Button>
-            <Button type="submit" disabled={!isValid}>Salvar</Button>
+            <Button type="submit" disabled={!canSave}>Salvar</Button>
           </DialogFooter>
         </form>
       </DialogContent>

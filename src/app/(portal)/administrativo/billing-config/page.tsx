@@ -8,7 +8,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default function BillingConfigPage() {
 
   const form = useForm<BillingConfigForm>({
     resolver: zodResolver(billingConfigSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: {
       provedorAtivo: "PAGARME",
       chaveApi: "",
@@ -80,6 +80,10 @@ export default function BillingConfigPage() {
       multaAtraso: 2,
     },
   });
+
+  // Manual watch do required: chaveApi (min 1). Demais campos têm default.
+  const watchedChaveApi = useWatch({ control: form.control, name: "chaveApi" }) ?? "";
+  const canSave = Boolean(watchedChaveApi?.trim());
 
   // Populate form when config loads from server
   useEffect(() => {
@@ -289,7 +293,7 @@ export default function BillingConfigPage() {
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving || !form.formState.isValid}>
+          <Button type="submit" disabled={saving || !canSave}>
             {saving ? "Salvando..." : configExistente ? "Atualizar configuração" : "Criar configuração"}
           </Button>
           <Button type="button" variant="outline" onClick={handleTestConnection} disabled={testing}>

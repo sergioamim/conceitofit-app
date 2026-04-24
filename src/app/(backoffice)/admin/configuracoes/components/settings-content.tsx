@@ -179,9 +179,24 @@ export function SettingsContent() {
 
   const form = useForm<GlobalConfigFormValues>({
     resolver: zodResolver(globalConfigFormSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: globalConfigToForm(EMPTY_GLOBAL_CONFIG),
   });
+
+  // Manual watch dos required fields para evitar rodar o zodResolver no mount.
+  // Templates vêm pré-populados do default; verificamos apenas que existe >= 1
+  // com assunto/bodyHtml preenchidos (+ termsVersion e termsOfUseHtml).
+  const watchedTermsVersion = form.watch("termsVersion");
+  const watchedTermsHtml = form.watch("termsOfUseHtml");
+  const watchedTemplates = form.watch("emailTemplates");
+  const canSave =
+    Boolean(watchedTermsVersion?.trim()) &&
+    Boolean(watchedTermsHtml?.trim()) &&
+    Array.isArray(watchedTemplates) &&
+    watchedTemplates.length > 0 &&
+    watchedTemplates.every(
+      (t) => Boolean(t?.assunto?.trim()) && Boolean(t?.bodyHtml?.trim()),
+    );
 
   const { fields } = useFieldArray({
     control: form.control,
@@ -251,7 +266,7 @@ export function SettingsContent() {
               </Button>
               <Button
                 onClick={form.handleSubmit(handleSave)}
-                disabled={saving || loading || !form.formState.isValid}
+                disabled={saving || loading || !canSave}
               >
                 {saving ? "Salvando..." : "Salvar alterações"}
               </Button>

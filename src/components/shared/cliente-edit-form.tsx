@@ -78,12 +78,28 @@ export function ClienteEditForm({
     reset,
     watch,
     setValue,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: buildForm(aluno),
   });
+
+  // Manual watch dos required fields para evitar rodar o zodResolver no mount
+  // (dispararia ZodError no dev overlay).
+  const watchedNome = watch("nome");
+  const watchedEmail = watch("email");
+  const watchedTelefone = watch("telefone");
+  const watchedCpf = watch("cpf");
+  const watchedDataNascimento = watch("dataNascimento");
+  const watchedSexo = watch("sexo");
+  const canSave =
+    Boolean(watchedNome?.trim()) &&
+    Boolean(watchedEmail?.trim()) &&
+    Boolean(watchedTelefone?.trim()) &&
+    Boolean(watchedCpf?.trim()) &&
+    Boolean(watchedDataNascimento?.trim()) &&
+    Boolean(watchedSexo?.trim());
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -341,7 +357,7 @@ export function ClienteEditForm({
         <Button type="button" variant="outline" className="border-border" onClick={onCancel}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={loading || !isValid}>
+        <Button type="submit" disabled={loading || !canSave}>
           {loading ? "Salvando..." : "Salvar alterações"}
         </Button>
       </div>

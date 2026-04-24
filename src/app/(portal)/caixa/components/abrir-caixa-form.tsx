@@ -50,14 +50,19 @@ export function AbrirCaixaForm({
       valorAbertura: 0,
       observacoes: "",
     },
-    mode: "onChange",
+    mode: "onTouched",
   });
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid },
+    watch,
+    formState: { errors },
   } = form;
+
+  // Manual watch do required: caixaCatalogoId (UUID). valorAbertura aceita 0.
+  const watchedCaixaCatalogoId = watch("caixaCatalogoId");
+  const canSave = Boolean(watchedCaixaCatalogoId?.trim());
 
   async function onSubmit(data: AbrirCaixaFormData): Promise<void> {
     setSubmitting(true);
@@ -198,7 +203,7 @@ export function AbrirCaixaForm({
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={submitting || !isValid}>
+        <Button type="submit" disabled={submitting || !canSave}>
           {submitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />

@@ -149,7 +149,7 @@ export default function AdminProvisionarAcademiaPage() {
 
   const form = useForm<AdminOnboardingProvisionFormValues>({
     resolver: zodResolver(adminOnboardingProvisionFormSchema),
-    mode: "onChange",
+    mode: "onTouched",
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -160,8 +160,23 @@ export default function AdminProvisionarAcademiaPage() {
     reset,
     setError,
     watch,
-    formState: { errors, isValid },
+    formState: { errors },
   } = form;
+
+  // Manual watch dos required fields para evitar rodar o zodResolver no mount.
+  const watchedAcademiaNome = watch("academiaNome");
+  const watchedCnpj = watch("cnpj");
+  const watchedUnidadePrincipal = watch("unidadePrincipalNome");
+  const watchedAdminNome = watch("adminNome");
+  const watchedAdminEmail = watch("adminEmail");
+  const watchedTelefone = watch("telefone");
+  const canSave =
+    Boolean(watchedAcademiaNome?.trim()) &&
+    Boolean(watchedCnpj?.trim()) &&
+    Boolean(watchedUnidadePrincipal?.trim()) &&
+    Boolean(watchedAdminNome?.trim()) &&
+    Boolean(watchedAdminEmail?.trim()) &&
+    Boolean(watchedTelefone?.trim());
 
   const values = watch();
   const credentialsText = useMemo(
@@ -381,7 +396,7 @@ export default function AdminProvisionarAcademiaPage() {
                 ) : null}
 
                 <div className="flex flex-wrap gap-3">
-                  <Button type="submit" disabled={submitting || !isValid}>
+                  <Button type="submit" disabled={submitting || !canSave}>
                     {submitting ? "Provisionando..." : "Provisionar academia"}
                   </Button>
                   <Button
