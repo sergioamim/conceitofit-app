@@ -11,6 +11,18 @@
 
 ---
 
+## Glossário (domínio ConceitoFit)
+
+| Termo de código | Termo de negócio | Significado |
+|---|---|---|
+| `tenant_id` / `TENANT` | **Unidade** / Filial | Unidade operacional isolada (cada filial da academia é um tenant) |
+| `rede_id` / `REDE` | **Academia** / Rede | Organização-mãe que agrupa 1+ unidades (uma Academia tem N Unidades) |
+| `PLATAFORMA` | SaaS admin | Operadores do ConceitoFit que gerenciam o produto |
+
+**Convenção deste doc:** mantemos `tenant`/`rede` nos nomes técnicos (padrão multi-tenant do código existente), e usamos Unidade/Academia na prosa. Nomes de enum preservam `TENANT`/`REDE` para consistência com o resto do stack.
+
+---
+
 ## Objetivo do épico
 
 Construir um sistema **global e event-driven** de notificações in-app para o ConceitoFit. Qualquer domínio (CRM, Financeiro, Operacional, Comercial) emite eventos → `NotificacaoService` resolve audience (GLOBAL / REDE / TENANT / ROLE / USUARIO) → usuário vê no sino do header.
@@ -37,12 +49,14 @@ Construir um sistema **global e event-driven** de notificações in-app para o C
 ```java
 public enum AudienceTipo {
   GLOBAL,    // todos usuários do SaaS (emissor restrito a PLATAFORMA)
-  REDE,      // todos de uma rede (multi-unidade) — sempre visível independente do tenant ativo
-  TENANT,    // todos de uma academia — só visível quando unidade ativa == tenant
-  ROLE,      // usuários com role X dentro de um tenant — só visível quando unidade ativa == tenant + user tem role
-  USUARIO    // 1 usuário específico — sempre visível independente do tenant ativo
+  REDE,      // todos de uma Academia/Rede (cobre N Unidades) — sempre visível independente da unidade ativa
+  TENANT,    // todos de uma Unidade específica — só visível quando unidade ativa == esse tenant
+  ROLE,      // usuários com role X em uma Unidade — só visível quando unidade ativa == tenant + user tem a role
+  USUARIO    // 1 usuário específico — sempre visível independente da unidade ativa
 }
 ```
+
+**Nota sobre REDE:** se um usuário tem acesso à Academia (ex: diretor geral), a notificação `AudienceTipo=REDE` aparece pra ele **em qualquer Unidade ativa** (inclusive se ele acabou de trocar de filial no switcher). Notificação `AudienceTipo=TENANT` é o oposto — só aparece quando aquela unidade específica está ativa na sessão.
 
 ### D2 — Lazy fan-out (não eager)
 
@@ -68,22 +82,24 @@ Exemplos:
 - `CONTA_VENCIDA`: `{contaId, valor, diasVencida, fornecedorNome}`
 - `PAGAMENTO_RECEBIDO`: `{pagamentoId, valor, clienteNome, contratoId}`
 
-### D5 — Filtro por unidade ativa no FE
+### D5 — Filtro por Unidade ativa no FE
 
-Query do sino passa `activeTenantId` (da sessão). BE filtra:
+Query do sino passa `activeTenantId` (Unidade ativa da sessão). BE filtra:
 
 ```sql
 WHERE EXISTS (
   SELECT 1 FROM notificacao_audience a WHERE a.notificacao_id = n.id AND (
     (a.tipo = 'GLOBAL')                                                       -- sempre
     OR (a.tipo = 'USUARIO' AND a.user_id = :userId)                           -- sempre
-    OR (a.tipo = 'REDE'    AND a.rede_id = ANY(:userRedeIds))                 -- sempre (user tem acesso)
-    OR (a.tipo = 'TENANT'  AND a.tenant_id = :activeTenantId)                 -- só quando ativo
+    OR (a.tipo = 'REDE'    AND a.rede_id = ANY(:userRedeIds))                 -- sempre (user tem acesso à Academia)
+    OR (a.tipo = 'TENANT'  AND a.tenant_id = :activeTenantId)                 -- só quando Unidade ativa == tenant
     OR (a.tipo = 'ROLE'    AND a.tenant_id = :activeTenantId
-                          AND a.role = ANY(:userRolesNoTenant))               -- só quando ativo E com role
+                          AND a.role = ANY(:userRolesNoTenant))               -- só quando Unidade ativa E com role
   )
 )
 ```
+
+**Intuição:** usuário com acesso à Academia inteira (diretor, gerente regional) mantém notificações da Academia visíveis mesmo trocando de Unidade. Já notificações específicas de uma Unidade só aparecem quando ele está "dentro" dela.
 
 ### D6 — TTL obrigatório + purga hard
 
@@ -205,7 +221,7 @@ Cada story pronta para `@sm *draft`. `@sm` expande título, descrição, tasks t
 | Spike | Pergunta | Bloqueia |
 |-------|----------|----------|
 | **SP-1** | Quais roles existem no sistema? `userKind-taxonomy` da memória menciona PLATAFORMA/OPERADOR/CLIENTE — mas role granular (GERENTE_COMERCIAL, RECEPCIONISTA, etc.) vive onde? | 4.4 validação + 4.13 audience |
-| **SP-2** | Como descobrir `userRedeIds` do usuário? Entidade `Rede` existe em qual módulo? Relacionamento com `Usuario` / `Academia`? | 4.5 query D5 |
+| **SP-2** | Como descobrir `userRedeIds` (ids das Academias que o user tem acesso)? No domínio ConceitoFit: Academia/Rede agrupa N Unidades/Tenants. Entidade `Academia` existe em qual módulo? Tabela de associação user↔academia vs user↔tenant? | 4.5 query D5 |
 | **SP-3** | SSE no stack atual — `spring-web` SseEmitter funciona bem com múltiplos pods atrás de LB? Precisa sticky session? | 4.32 |
 | **SP-4** | UI padrão de `popover` no projeto — shadcn Popover ou DropdownMenu? Conferir componentes existentes no header | 4.20 |
 
@@ -213,8 +229,8 @@ Cada story pronta para `@sm *draft`. `@sm` expande título, descrição, tasks t
 
 ## Dependências externas
 
-- **Módulo Auth / User** (existe) — leitura de `userId`, `userRoles`, `userRedeIds`, `userKind` via sessão
-- **Módulo Comercial / Rede** (existe? spike SP-2) — entidade Rede
+- **Módulo Auth / User** (existe) — leitura de `userId`, `userRoles`, `userRedeIds` (Academias acessíveis), `activeTenantId` (Unidade ativa), `userKind` via sessão
+- **Módulo de Academias/Redes** (existe? spike SP-2) — entidade Academia agrupando Unidades
 - **Módulo CRM** (existe) — emite `CadenciaEscaladaEvent` já (Wave 3 do Epic 3)
 - **Módulo Financeiro** — precisa emitir `ContaVencidaEvent` / `PagamentoRecebidoEvent` (Wave 7 pode incluir adição desses eventos se ainda não existirem)
 
