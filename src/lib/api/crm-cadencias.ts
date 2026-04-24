@@ -134,7 +134,7 @@ export async function listCrmEscalationRulesApi(input: {
   }
 }
 
-async function createCrmEscalationRuleApi(input: {
+export async function createCrmEscalationRuleApi(input: {
   tenantId: string;
   data: Omit<CrmEscalationRule, "id" | "tenantId">;
 }): Promise<CrmEscalationRule> {
@@ -150,7 +150,7 @@ async function createCrmEscalationRuleApi(input: {
   }
 }
 
-async function updateCrmEscalationRuleApi(input: {
+export async function updateCrmEscalationRuleApi(input: {
   tenantId: string;
   id: string;
   data: Partial<Omit<CrmEscalationRule, "id" | "tenantId">>;
@@ -167,7 +167,7 @@ async function updateCrmEscalationRuleApi(input: {
   }
 }
 
-async function deleteCrmEscalationRuleApi(input: {
+export async function deleteCrmEscalationRuleApi(input: {
   tenantId: string;
   id: string;
 }): Promise<void> {
