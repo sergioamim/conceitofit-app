@@ -39,9 +39,15 @@ export function isReservasAulasEnabled(): boolean {
   return readBooleanFlag(process.env.NEXT_PUBLIC_RESERVAS_AULAS_ENABLED, false);
 }
 
-/** Execuções de cadências CRM (trigger, escalation, process-overdue). */
+/**
+ * Execuções de cadências CRM (trigger, escalation, process-overdue).
+ *
+ * Default: `true` desde Epic 3 (Wave 6, Story 3.24) — BE passou a expor
+ * `/api/v1/crm/cadencias/*` completo. Para desabilitar explicitamente em
+ * um ambiente específico, setar `NEXT_PUBLIC_CRM_CADENCIAS_ENABLED=false`.
+ */
 export function isCrmCadenciasEnabled(): boolean {
-  return readBooleanFlag(process.env.NEXT_PUBLIC_CRM_CADENCIAS_ENABLED, false);
+  return readBooleanFlag(process.env.NEXT_PUBLIC_CRM_CADENCIAS_ENABLED, true);
 }
 
 /** Drawer "Próximas Ações" no perfil do cliente (Perfil v3 — Wave 2). */
