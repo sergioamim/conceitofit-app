@@ -10,7 +10,13 @@
  */
 
 import { useMemo } from "react";
-import { Controller, type Control, useWatch } from "react-hook-form";
+import {
+  Controller,
+  type Control,
+  type FieldValues,
+  type Path,
+  useWatch,
+} from "react-hook-form";
 import {
   Select,
   SelectContent,
@@ -88,10 +94,9 @@ const ROLE_OPTIONS: Array<{ value: NotificacaoRoleAudience; label: string }> = [
 // Props
 // ---------------------------------------------------------------------------
 
-export interface AudiencePickerProps<T extends AudiencePickerFormShape> {
+export interface AudiencePickerProps<T extends FieldValues> {
   /** Control do react-hook-form do form container. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  control: Control<T, any>;
+  control: Control<T>;
   /** Se true, desabilita os controles (ex.: durante submit). */
   disabled?: boolean;
 }
@@ -100,14 +105,14 @@ export interface AudiencePickerProps<T extends AudiencePickerFormShape> {
 // Componente
 // ---------------------------------------------------------------------------
 
-export function AudiencePicker<T extends AudiencePickerFormShape>({
+export function AudiencePicker<T extends FieldValues>({
   control,
   disabled,
 }: AudiencePickerProps<T>) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const audienceTipo = useWatch({ control: control as any, name: "audienceTipo" }) as
-    | NotificacaoAudienceTipo
-    | undefined;
+  const audienceTipo = useWatch({
+    control,
+    name: "audienceTipo" as Path<T>,
+  }) as NotificacaoAudienceTipo | undefined;
 
   const activeOption = useMemo(
     () => AUDIENCE_OPTIONS.find((o) => o.value === audienceTipo),
@@ -122,8 +127,7 @@ export function AudiencePicker<T extends AudiencePickerFormShape>({
         </Label>
         <Controller
           control={control}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name={"audienceTipo" as any}
+                    name={"audienceTipo" as Path<T>}
           render={({ field }) => (
             <Select
               value={(field.value as string | undefined) ?? undefined}
@@ -174,8 +178,7 @@ export function AudiencePicker<T extends AudiencePickerFormShape>({
 // Sub-pickers — usam o control já tipado
 // ---------------------------------------------------------------------------
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function RedePicker<T extends AudiencePickerFormShape>({ control, disabled }: { control: Control<T, any>; disabled?: boolean }) {
+function RedePicker<T extends FieldValues>({ control, disabled }: { control: Control<T>; disabled?: boolean }) {
   const { data: academias, isLoading, error } = useAdminAcademias();
 
   if (isLoading) {
@@ -197,8 +200,7 @@ function RedePicker<T extends AudiencePickerFormShape>({ control, disabled }: { 
         </Label>
         <Controller
           control={control}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name={"redeId" as any}
+                    name={"redeId" as Path<T>}
           render={({ field }) => (
             <Input
               id="redeId"
@@ -224,8 +226,7 @@ function RedePicker<T extends AudiencePickerFormShape>({ control, disabled }: { 
       </Label>
       <Controller
         control={control}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        name={"redeId" as any}
+                name={"redeId" as Path<T>}
         render={({ field }) => (
           <Select
             value={(field.value as string | undefined) ?? undefined}
@@ -252,8 +253,7 @@ function RedePicker<T extends AudiencePickerFormShape>({ control, disabled }: { 
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function TenantPicker<T extends AudiencePickerFormShape>({ control, disabled }: { control: Control<T, any>; disabled?: boolean }) {
+function TenantPicker<T extends FieldValues>({ control, disabled }: { control: Control<T>; disabled?: boolean }) {
   const { data: unidades, isLoading, error } = useAdminUnidades();
 
   if (isLoading) {
@@ -275,8 +275,7 @@ function TenantPicker<T extends AudiencePickerFormShape>({ control, disabled }: 
         </Label>
         <Controller
           control={control}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          name={"tenantId" as any}
+                    name={"tenantId" as Path<T>}
           render={({ field }) => (
             <Input
               id="tenantId"
@@ -302,8 +301,7 @@ function TenantPicker<T extends AudiencePickerFormShape>({ control, disabled }: 
       </Label>
       <Controller
         control={control}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        name={"tenantId" as any}
+                name={"tenantId" as Path<T>}
         render={({ field }) => (
           <Select
             value={(field.value as string | undefined) ?? undefined}
@@ -328,8 +326,7 @@ function TenantPicker<T extends AudiencePickerFormShape>({ control, disabled }: 
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function RolePicker<T extends AudiencePickerFormShape>({ control, disabled }: { control: Control<T, any>; disabled?: boolean }) {
+function RolePicker<T extends FieldValues>({ control, disabled }: { control: Control<T>; disabled?: boolean }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor="role">
@@ -337,8 +334,7 @@ function RolePicker<T extends AudiencePickerFormShape>({ control, disabled }: { 
       </Label>
       <Controller
         control={control}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        name={"role" as any}
+                name={"role" as Path<T>}
         render={({ field }) => (
           <Select
             value={(field.value as string | undefined) ?? undefined}
@@ -365,8 +361,7 @@ function RolePicker<T extends AudiencePickerFormShape>({ control, disabled }: { 
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function UserIdPicker<T extends AudiencePickerFormShape>({ control, disabled }: { control: Control<T, any>; disabled?: boolean }) {
+function UserIdPicker<T extends FieldValues>({ control, disabled }: { control: Control<T>; disabled?: boolean }) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor="userId">
@@ -374,8 +369,7 @@ function UserIdPicker<T extends AudiencePickerFormShape>({ control, disabled }: 
       </Label>
       <Controller
         control={control}
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        name={"userId" as any}
+                name={"userId" as Path<T>}
         render={({ field }) => (
           <Input
             id="userId"
