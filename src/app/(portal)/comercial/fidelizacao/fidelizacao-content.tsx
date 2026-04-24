@@ -129,6 +129,7 @@ export function FidelizacaoContent() {
 
   const campanhaForm = useForm<CampanhaFormData>({
     resolver: zodResolver(campanhaSchema),
+    mode: "onChange",
     defaultValues: {
       nome: "",
       descricao: "",
@@ -220,6 +221,7 @@ export function FidelizacaoContent() {
 
   const indicacaoForm = useForm<IndicacaoFormData>({
     resolver: zodResolver(indicacaoSchema),
+    mode: "onChange",
     defaultValues: {
       campanhaId: "",
       indicadorAlunoId: "",
@@ -287,6 +289,7 @@ export function FidelizacaoContent() {
 
   const resgateForm = useForm<ResgateFormData>({
     resolver: zodResolver(resgateSchema),
+    mode: "onChange",
     defaultValues: { pontos: 0, descricao: "" },
   });
 
@@ -645,8 +648,14 @@ export function FidelizacaoContent() {
 
           <form onSubmit={campanhaForm.handleSubmit(handleSaveCampanha)} className="grid gap-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input {...campanhaForm.register("nome")} className="border-border bg-secondary" />
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Nome <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                {...campanhaForm.register("nome")}
+                aria-invalid={campanhaForm.formState.errors.nome ? "true" : "false"}
+                className="border-border bg-secondary"
+              />
               {campanhaForm.formState.errors.nome && (
                 <p className="text-xs text-gym-danger">{campanhaForm.formState.errors.nome.message}</p>
               )}
@@ -701,7 +710,7 @@ export function FidelizacaoContent() {
               <Button type="button" variant="outline" className="border-border" onClick={() => setCampanhaModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={savingCampanha}>
+              <Button type="submit" disabled={savingCampanha || !campanhaForm.formState.isValid}>
                 {savingCampanha ? "Salvando..." : "Salvar"}
               </Button>
             </DialogFooter>
@@ -720,9 +729,12 @@ export function FidelizacaoContent() {
 
           <form onSubmit={indicacaoForm.handleSubmit(handleSaveIndicacao)} className="grid gap-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Campanha *</label>
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Campanha <span className="text-gym-danger">*</span>
+              </label>
               <select
                 {...indicacaoForm.register("campanhaId")}
+                aria-invalid={indicacaoForm.formState.errors.campanhaId ? "true" : "false"}
                 className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
               >
                 <option value="">Selecione...</option>
@@ -736,16 +748,29 @@ export function FidelizacaoContent() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">ID Aluno Indicador *</label>
-              <Input {...indicacaoForm.register("indicadorAlunoId")} className="border-border bg-secondary" placeholder="UUID do aluno" />
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                ID Aluno Indicador <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                {...indicacaoForm.register("indicadorAlunoId")}
+                aria-invalid={indicacaoForm.formState.errors.indicadorAlunoId ? "true" : "false"}
+                className="border-border bg-secondary"
+                placeholder="UUID do aluno"
+              />
               {indicacaoForm.formState.errors.indicadorAlunoId && (
                 <p className="text-xs text-gym-danger">{indicacaoForm.formState.errors.indicadorAlunoId.message}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome do indicado *</label>
-              <Input {...indicacaoForm.register("indicadoNome")} className="border-border bg-secondary" />
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Nome do indicado <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                {...indicacaoForm.register("indicadoNome")}
+                aria-invalid={indicacaoForm.formState.errors.indicadoNome ? "true" : "false"}
+                className="border-border bg-secondary"
+              />
               {indicacaoForm.formState.errors.indicadoNome && (
                 <p className="text-xs text-gym-danger">{indicacaoForm.formState.errors.indicadoNome.message}</p>
               )}
@@ -771,7 +796,7 @@ export function FidelizacaoContent() {
               <Button type="button" variant="outline" className="border-border" onClick={() => setIndicacaoModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={savingIndicacao}>
+              <Button type="submit" disabled={savingIndicacao || !indicacaoForm.formState.isValid}>
                 {savingIndicacao ? "Registrando..." : "Registrar indicação"}
               </Button>
             </DialogFooter>
@@ -790,8 +815,15 @@ export function FidelizacaoContent() {
 
           <form onSubmit={resgateForm.handleSubmit(handleResgate)} className="grid gap-3">
             <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Quantidade de pontos *</label>
-              <Input type="number" {...resgateForm.register("pontos")} className="border-border bg-secondary" />
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Quantidade de pontos <span className="text-gym-danger">*</span>
+              </label>
+              <Input
+                type="number"
+                {...resgateForm.register("pontos")}
+                aria-invalid={resgateForm.formState.errors.pontos ? "true" : "false"}
+                className="border-border bg-secondary"
+              />
               {resgateForm.formState.errors.pontos && (
                 <p className="text-xs text-gym-danger">{resgateForm.formState.errors.pontos.message}</p>
               )}
@@ -806,7 +838,7 @@ export function FidelizacaoContent() {
               <Button type="button" variant="outline" className="border-border" onClick={() => setResgateModalOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={resgatarPontos.isPending}>
+              <Button type="submit" disabled={resgatarPontos.isPending || !resgateForm.formState.isValid}>
                 {resgatarPontos.isPending ? "Resgatando..." : "Resgatar"}
               </Button>
             </DialogFooter>

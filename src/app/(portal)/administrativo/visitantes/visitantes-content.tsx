@@ -144,6 +144,7 @@ export function VisitantesContent() {
 
   const form = useForm<RegistrarFormValues>({
     resolver: zodResolver(registrarSchema),
+    mode: "onChange",
     defaultValues: {
       nome: "",
       documento: "",
@@ -430,8 +431,15 @@ export function VisitantesContent() {
           <form onSubmit={form.handleSubmit(onSubmitRegistrar)} className="space-y-4 py-2">
             <div className="grid gap-3 md:grid-cols-2">
               <div>
-                <Label htmlFor="nome">Nome *</Label>
-                <Input id="nome" className="mt-1 border-border bg-secondary" {...form.register("nome")} />
+                <Label htmlFor="nome">
+                  Nome <span className="text-gym-danger">*</span>
+                </Label>
+                <Input
+                  id="nome"
+                  {...form.register("nome")}
+                  aria-invalid={form.formState.errors.nome ? "true" : "false"}
+                  className="mt-1 border-border bg-secondary"
+                />
                 {form.formState.errors.nome ? (
                   <p className="mt-1 text-[11px] text-gym-danger">{form.formState.errors.nome.message}</p>
                 ) : null}
@@ -471,12 +479,15 @@ export function VisitantesContent() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="validoAte">Válido até *</Label>
+                <Label htmlFor="validoAte">
+                  Válido até <span className="text-gym-danger">*</span>
+                </Label>
                 <Input
                   id="validoAte"
                   type="datetime-local"
-                  className="mt-1 border-border bg-secondary"
                   {...form.register("validoAte")}
+                  aria-invalid={form.formState.errors.validoAte ? "true" : "false"}
+                  className="mt-1 border-border bg-secondary"
                 />
               </div>
             </div>
@@ -522,7 +533,7 @@ export function VisitantesContent() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={registrarMutation.isPending}>
+              <Button type="submit" disabled={registrarMutation.isPending || !form.formState.isValid}>
                 <UserPlus className="size-4" />
                 {registrarMutation.isPending ? "Cadastrando..." : "Cadastrar e gerar código"}
               </Button>

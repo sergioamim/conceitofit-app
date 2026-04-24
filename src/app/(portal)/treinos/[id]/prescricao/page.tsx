@@ -97,6 +97,7 @@ export default function TreinoPrescricaoPage() {
 
   const form = useForm<PrescricaoFormValues>({
     resolver: zodResolver(prescricaoSchema),
+    mode: "onChange",
     defaultValues: {
       frequenciaPlanejadaSemana: "",
       quantidadePrevistaExecucoes: "",

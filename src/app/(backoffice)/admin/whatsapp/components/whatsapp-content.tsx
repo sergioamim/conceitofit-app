@@ -225,6 +225,7 @@ export function WhatsappContent() {
 
   const form = useForm<WhatsAppTemplateFormValues>({
     resolver: zodResolver(whatsAppTemplateFormSchema),
+    mode: "onChange",
     defaultValues: EMPTY_FORM,
   });
 
@@ -806,8 +807,14 @@ export function WhatsappContent() {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="tpl-nome">Nome</Label>
-              <Input id="tpl-nome" {...form.register("nome")} />
+              <Label htmlFor="tpl-nome">
+                Nome <span className="text-gym-danger">*</span>
+              </Label>
+              <Input
+                id="tpl-nome"
+                {...form.register("nome")}
+                aria-invalid={form.formState.errors.nome ? "true" : "false"}
+              />
               {form.formState.errors.nome && (
                 <p className="text-xs text-gym-danger">
                   {form.formState.errors.nome.message}
@@ -856,13 +863,15 @@ export function WhatsappContent() {
 
             <div className="space-y-2">
               <Label htmlFor="tpl-conteudo">
-                Conteudo (use {"{{VARIAVEL}}"} para placeholders)
+                Conteudo (use {"{{VARIAVEL}}"} para placeholders){" "}
+                <span className="text-gym-danger">*</span>
               </Label>
               <Textarea
                 id="tpl-conteudo"
-                className="min-h-28"
                 placeholder="Ola {{NOME}}, seja bem-vindo a {{ACADEMIA}}!"
                 {...form.register("conteudo")}
+                aria-invalid={form.formState.errors.conteudo ? "true" : "false"}
+                className="min-h-28"
               />
               {form.formState.errors.conteudo && (
                 <p className="text-xs text-gym-danger">
@@ -906,7 +915,7 @@ export function WhatsappContent() {
               >
                 Cancelar
               </Button>
-              <Button type="submit">
+              <Button type="submit" disabled={!form.formState.isValid}>
                 {editingId ? "Salvar" : "Criar"}
               </Button>
             </div>
