@@ -317,6 +317,7 @@ export async function listPlanosApi(input: {
   tenantId: string;
   apenasAtivos?: boolean;
   tipo?: TipoPlano;
+  size?: number;
 }): Promise<Plano[]> {
   const response = await withTenantContextRetry(() =>
     apiRequest<PlanoListApiResponse>({
@@ -325,6 +326,7 @@ export async function listPlanosApi(input: {
         tenantId: input.tenantId,
         apenasAtivos: input.apenasAtivos ?? false,
         tipo: input.tipo,
+        size: input.size ?? 200,
       },
     })
   );

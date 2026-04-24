@@ -21,27 +21,27 @@ export function PlanosClient() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [filtroAtivo, setFiltroAtivo] = useState<"ATIVOS" | typeof FILTER_ALL>("ATIVOS");
   const loadingRef = useRef(false);
-  const initialLoadDoneRef = useRef(false);
 
   const loadPlanos = useCallback(async () => {
     if (!tenantId || loadingRef.current) return;
     loadingRef.current = true;
     try {
-      const response = await listPlanosService({ tenantId, apenasAtivos: false });
+      const response = await listPlanosService({
+        tenantId,
+        apenasAtivos: filtroAtivo === "ATIVOS",
+      });
       setPlanos(response);
     } finally {
       loadingRef.current = false;
     }
-  }, [tenantId]);
+  }, [tenantId, filtroAtivo]);
 
   useEffect(() => {
-    if (!tenantResolved || !tenantId || initialLoadDoneRef.current) return;
-    initialLoadDoneRef.current = true;
+    if (!tenantResolved || !tenantId) return;
     void loadPlanos();
   }, [loadPlanos, tenantId, tenantResolved]);
 
   useEffect(() => {
-    initialLoadDoneRef.current = false;
     setPlanos([]);
   }, [tenantId]);
 
@@ -61,8 +61,7 @@ export function PlanosClient() {
     reload();
   }
 
-  const planosFiltrados =
-    filtroAtivo === "ATIVOS" ? planos.filter((p) => p.ativo) : planos;
+  const planosFiltrados = planos;
 
   return (
     <div className="space-y-6">
