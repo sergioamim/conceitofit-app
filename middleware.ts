@@ -174,8 +174,16 @@ function isSandboxActive(request: NextRequest): boolean {
   const raw = request.cookies.get(SESSION_CLAIMS_COOKIE)?.value;
   if (!raw) return false;
   try {
-    const parsed = JSON.parse(raw) as { sandbox_mode?: unknown };
-    return parsed.sandbox_mode === true;
+    const parsed = JSON.parse(raw) as {
+      sandboxMode?: unknown;
+      sessionMode?: unknown;
+    };
+    if (parsed.sandboxMode === true) return true;
+    // Quando PLATAFORMA entra em unidade via /admin/entrar-como-academia, o
+    // backend emite `sessionMode: "BACKOFFICE_TO_OPERATIONAL"`. Esse é o
+    // indicador canônico de "impersonation ativa" — usado também em
+    // `(portal)/layout-client.tsx`, `auth-redirect.ts` e `session.ts`.
+    return parsed.sessionMode === "BACKOFFICE_TO_OPERATIONAL";
   } catch {
     return false;
   }

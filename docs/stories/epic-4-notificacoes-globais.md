@@ -22,9 +22,22 @@
 
 ---
 
-## Descobertas dos spikes (crítico — lê antes de continuar)
+## Descobertas dos spikes + Wave 1 implementada (crítico — lê antes de continuar)
 
-Após SP-1 a SP-5, descobrimos que **grande parte da infraestrutura de notificação JÁ EXISTE**:
+**Atualização 2026-04-24:** Wave 1 BE **IMPLEMENTADA e mergeada em main** (commits `8895f167` → `5f868c1c`, 8 commits). 124 testes no módulo-notificacoes (+13 novos), zero regressão em outros módulos, build completo verde.
+
+### Correções ao plano original (descobertas durante implementação)
+
+- **`user_id` é `BIGINT`, não `UUID`** — `auth.users.id` é bigint identity na V1 baseline. `NotificacaoInboxEntity.userId = Long`. Afeta Wave 2 (DTOs) e Wave 4 (tipos TS).
+- **Enum canal real é `NotificacaoCanal`** (não `CanalNotificacao` como eu tinha no epic). Valor novo: `NotificacaoCanal.IN_APP`.
+- **Colunas `auth` reais:** `users.enabled` (não `ativo`), `roles.name` (não `nome`). Queries do `AudienceResolver` ajustadas.
+- **Padrão de campos:** `NotificacaoInboxEntity` segue convenção do módulo — campos `public`, `LocalDateTime` (não `Instant`).
+- **Defaults de canais preservados:** `[EMAIL, PUSH, SMS, WHATSAPP]` — `IN_APP` só quando pedido explicitamente no command. Evita regressão em testes existentes.
+- **ShedLock** adicionado como `compileOnly` em `modulo-notificacoes/build.gradle` (runtime fica em `modulo-app`).
+- **Record `PublicarEventoCommand`** estendido sem quebrar 18 emissores existentes via constructors legados delegados.
+- **DI opcional:** `NotificacaoInboxRepository` e `AudienceResolver` injetados via `@Autowired(required=false)` setters em `NotificacaoHubService` — testes antigos não quebram.
+
+### Resumo dos achados originais dos spikes
 
 ### SP-1 — Roles granulares ✅ existem
 
@@ -308,36 +321,60 @@ Endpoint admin valida `UserKind=PLATAFORMA` antes de aceitar `AudienceTipo=GLOBA
 
 Cada story pronta para `@sm *draft`.
 
-### Wave 1 — Extensão do `modulo-notificacoes` BE
+### Wave 1 — Extensão do `modulo-notificacoes` BE ✅ CONCLUÍDA (2026-04-24)
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.1** | Migration `V{ts}__notificacao_inbox.sql` + adicionar `idempotency_key` e `expires_at` em `notificacao_evento` | M | — |
-| **4.2** | `NotificacaoInboxEntity` + `NotificacaoInboxRepository` + query paginada por user+unidade | M | 4.1 |
-| **4.3** | Estender `PublicarEventoCommand` com campos IN_APP + audience + severidade + idempotency + TTL | S | 4.1 |
-| **4.4** | `AudienceResolver` — service que resolve GLOBAL/REDE/TENANT/ROLE/USUARIO → `List<UUID>` de user_ids via queries em `auth.users`, `user_tenant_membership`, `user_roles` | L | — |
-| **4.5** | Estender `NotificacaoHubService.publicar()` com idempotência (ON CONFLICT) + fan-out inbox + fallback TTL por tipo | L | 4.2, 4.3, 4.4 |
-| **4.6** | `NotificacaoMaintenanceJob` (@Scheduled + ShedLock) — purga inbox + eventos órfãos | S | 4.1 |
-| **4.7** | Enum `CanalNotificacao.IN_APP` adicionado + `NotificacaoSeveridade` enum + `AudienceTipo` enum | XS | — |
+Migração `V202604241907__notificacao_inbox_e_idempotency.sql` criada. Branch `feat/notificacoes-epic4-wave1` mergeada em main via fast-forward. Worktree removido, branch deletada. 124 testes passando no módulo (+13 novos).
 
-### Wave 2 — Endpoints REST para portal inbox
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.1** | Migration notificacao_inbox + idempotency + TTL | ✅ | `8895f167` |
+| **4.2** | `NotificacaoInboxEntity` + Repository (userId `Long`, não UUID) | ✅ | `5c25c2d9` |
+| **4.3** | Estender `PublicarEventoCommand` com IN_APP + audience + TTL (retrocompatível via legacy constructors) | ✅ | `fa4b8581` |
+| **4.4** | `AudienceResolver` GLOBAL/REDE/TENANT/ROLE/USUARIO → `List<Long>` via queries nativas em `auth.users`, `user_tenant_membership`, `user_roles`, `roles` | ✅ | `469b026e` |
+| **4.5** | `NotificacaoHubService.publicar()` com idempotência (`ON CONFLICT`) + fan-out inbox + TTL por tipo | ✅ | `714abeb3` |
+| **4.6** | `NotificacaoMaintenanceJob` @Scheduled + ShedLock (`notificacao_maintenance_job`, cron 03:00) | ✅ | `16bafbc4` |
+| **4.7** | `NotificacaoCanal.IN_APP` + enum `NotificacaoSeveridade` + `AudienceTipo` | ✅ | `faafad45` |
+| — | Testes Wave 1 | ✅ | `5f868c1c` |
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.8** | `GET /api/v1/notificacoes/inbox?tenantId={activeId}&limit=50&cursor=&apenasNaoLidas=false` — paginado com filtro D6 | M | 4.2 |
-| **4.9** | `POST /api/v1/notificacoes/inbox/{id}/marcar-lida` + `POST /inbox/{id}/acao` — idempotentes | S | 4.2 |
-| **4.10** | `POST /api/v1/notificacoes/inbox/marcar-todas-lidas?tenantId=` — atomiza várias | S | 4.2 |
-| **4.11** | `GET /api/v1/notificacoes/inbox/contadores?tenantId=` — retorna `{naoLidas, urgentesNaoLidas}` para badge | S | 4.2 |
-| **4.12** | `POST /api/v1/notificacoes/admin/emitir` — endpoint manual (valida `UserKind=PLATAFORMA` para GLOBAL) + audit log | M | 4.5 |
+### Wave 2 — Endpoints REST para portal inbox ✅ CONCLUÍDA (2026-04-24)
 
-### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27)
+Branch `feat/notificacoes-epic4-wave2` mergeada via fast-forward em main. 5483 tests no monolito (0 falhas), `modulo-notificacoes` foi de 124 → 141 (+17). Worktree e branch removidos.
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.13** | `CadenciaEscaladaListener` em `modulo-crm` — consume `CadenciaEscaladaEvent` → chama `notificacaoHubService.publicar()` com `AudienceTipo=ROLE(tenantId, "GERENTE")`, `CanalNotificacao.IN_APP`, severidade URGENTE, metadata completo | M | 4.5 |
-| **4.14** | Remover `log.warn` de `CrmProcessOverdueService.executarAcaoEscalacao()` — agora depende só do evento publicado | XS | 4.13 |
-| **4.15** | Testes integração: escalação → assert inbox de gerentes do tenant tem 1 linha | M | 4.13 |
-| **4.16** | Atualizar `CADENCIAS_CRM.md` §6.4/§14.3 marcando 3.27 RESOLVIDO via Epic 4 | XS | 4.13 |
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.8** | `GET /inbox` paginado com cursor base64 + filtro D6 | ✅ | `2094cf86` + `85635b27` |
+| **4.9** | `POST /inbox/{id}/marcar-lida` + `POST /inbox/{id}/acao` (idempotentes) | ✅ | `85635b27` |
+| **4.10** | `POST /inbox/marcar-todas-lidas?tenantId=` (UPDATE atômico no repo) | ✅ | `85635b27` |
+| **4.11** | `GET /inbox/contadores?tenantId=` retornando `{naoLidas, urgentesNaoLidas}` | ✅ | `85635b27` |
+| **4.12** | `POST /admin/emitir` com `@PreAuthorize("hasRole('PLATAFORMA')")` + double-check userKind para GLOBAL + audit log | ✅ | `d9e6f545` |
+| — | Testes Wave 2 (37 novos) | ✅ | `cdd0b480` |
+
+**Implementação criou:** `NotificacaoInboxService` (modulo-notificacoes), `NotificacaoInboxController` + `NotificacaoAdminController` + `OperadorAuthContextService` (modulo-app), `NotificacaoNaoEncontradaException`. Auth segue padrão de `AppClienteIdentidadeService` (parse JWT via `JwtTokenProvider.getUserId(token)`). Audit best-effort via `AuditService` (modulo-core) + SLF4J Marker `AUDIT`.
+
+### Wave 3 — Substitui `NOTIFICAR_GESTOR` (fecha Story 3.27) ✅ CONCLUÍDA (2026-04-24)
+
+Branch `feat/notificacoes-epic4-wave3` mergeada via fast-forward em main. Listener **mora em `modulo-app`** (não `modulo-crm`) — ArchUnit proíbe dep direta crm→notificacoes.
+
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.13** | `CadenciaEscaladaListener` em `modulo-app/application/event/` — `@EventListener + @Async`, idempotency `cadencia-escalada-{execucao}-{regra}`, severidade URGENTE, `acaoUrl=/crm/cadencias?execucao=X`, TTL 14d | ✅ | `0added63` |
+| **4.14** | Remover `log.warn` stub de `CrmProcessOverdueService.executarAcaoEscalacao()` — evento continua publicado, listener consome | ✅ | `0303ceeb` |
+| **4.15** | `CadenciaEscaladaListenerTest` (4 cenários) + reforço em `CrmProcessOverdueServiceTest` | ✅ | `c6577ea3` |
+| **4.16** | Atualizar `CADENCIAS_CRM.md` §6.4/§14.3 fechando 3.27 via Epic 4 | ✅ | `11f0209f` |
+
+Tests: modulo-crm 184→185, modulo-app 401→405. Zero regressão.
+
+### Wave 4 — Core FE portal (bell + dropdown + página) ✅ CONCLUÍDA (2026-04-24)
+
+Branch `feat/notificacoes-epic4-wave4` mergeada via merge commit `0075b8a` em main (main avançou com fix de middleware durante implementação). TSC limpo, ESLint sem erros novos.
+
+| ID | Título curto | Status | Commit |
+|----|--------------|--------|--------|
+| **4.17** | Tipos TS + adapter `/api/v1/notificacoes/inbox` — userId: `number` (BIGINT) | ✅ | `4f077a8` |
+| **4.18** | Hook `useNotificacoesInbox` (polling 60s) + `useContadoresInbox` (polling 30s) + mutations | ✅ | `df97752` |
+| **4.19** | `<NotificationBellPortal />` com Sheet right, badge numérico + `!` alerta urgente estático, agrupamento por dia (Hoje/Ontem/Esta semana/Mais antigas) com sticky headers | ✅ | `e48d7bd` |
+| **4.20** | Integração: `AppTopbar` (portal) entre ShoppingCart e OnboardingStatusBadge + `AdminShellFrame` (backoffice) ao lado do ModeBadge | ✅ | `3db7883` |
+| **4.21** | Página `/notificacoes` com `useInfiniteQuery` + botão "Carregar mais" + filtro severidade client-side + toggle "apenas não-lidas" server-side | ✅ | `d737a15` |
 
 ### Wave 4 — Core FE (portal bell + dropdown + página)
 
