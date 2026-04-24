@@ -17,6 +17,7 @@ export async function listConveniosApi(apenasAtivos?: boolean): Promise<Convenio
   });
   return response.map((item) => ({
     ...item,
+    permiteVoucherAcumulado: item.permiteVoucherAcumulado ?? true,
     tipoDesconto: item.tipoDesconto ?? "PERCENTUAL",
     descontoPercentual: toNumber(item.descontoPercentual, 0),
     descontoValor:
@@ -25,6 +26,8 @@ export async function listConveniosApi(apenasAtivos?: boolean): Promise<Convenio
         : toNumber(item.descontoValor, 0),
     planoIds: toArray(item.planoIds),
     formasPagamentoPermitidas: toArray(item.formasPagamentoPermitidas),
+    validoDe: item.validoDe ?? undefined,
+    validoAte: item.validoAte ?? undefined,
   }));
 }
 

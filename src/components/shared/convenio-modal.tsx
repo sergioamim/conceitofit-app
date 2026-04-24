@@ -29,16 +29,22 @@ import { cn } from "@/lib/utils";
 type EscopoPlanos = "TODOS" | "ESPECIFICOS";
 type EscopoPagamento = "TODAS" | "ESPECIFICAS";
 
+type EscopoVigencia = "SEM_LIMITE" | "INTERVALO";
+
 type ConvenioFormValues = {
   nome: string;
   tipoDesconto: TipoDescontoConvenio;
   descontoPercentual: string;
   descontoValor: string;
   ativo: boolean;
+  permiteVoucherAcumulado: boolean;
   escopoPlanos: EscopoPlanos;
   planoIds: string[];
   escopoPagamento: EscopoPagamento;
   formasPagamentoPermitidas: string[];
+  escopoVigencia: EscopoVigencia;
+  validoDe: string;
+  validoAte: string;
   observacoes: string;
 };
 
@@ -59,10 +65,14 @@ function toFormValues(initial?: Convenio | null): ConvenioFormValues {
       descontoPercentual: "0",
       descontoValor: "",
       ativo: true,
+      permiteVoucherAcumulado: true,
       escopoPlanos: "TODOS",
       planoIds: [],
       escopoPagamento: "TODAS",
       formasPagamentoPermitidas: [],
+      escopoVigencia: "SEM_LIMITE",
+      validoDe: "",
+      validoAte: "",
       observacoes: "",
     };
   }
@@ -70,16 +80,21 @@ function toFormValues(initial?: Convenio | null): ConvenioFormValues {
   const temFormas = Boolean(
     initial.formasPagamentoPermitidas && initial.formasPagamentoPermitidas.length > 0,
   );
+  const temVigencia = Boolean(initial.validoDe || initial.validoAte);
   return {
     nome: initial.nome,
     tipoDesconto: initial.tipoDesconto ?? "PERCENTUAL",
     descontoPercentual: String(initial.descontoPercentual ?? 0),
     descontoValor: initial.descontoValor != null ? String(initial.descontoValor) : "",
     ativo: initial.ativo,
+    permiteVoucherAcumulado: initial.permiteVoucherAcumulado ?? true,
     escopoPlanos: temPlanos ? "ESPECIFICOS" : "TODOS",
     planoIds: initial.planoIds ?? [],
     escopoPagamento: temFormas ? "ESPECIFICAS" : "TODAS",
     formasPagamentoPermitidas: (initial.formasPagamentoPermitidas ?? []) as string[],
+    escopoVigencia: temVigencia ? "INTERVALO" : "SEM_LIMITE",
+    validoDe: initial.validoDe ?? "",
+    validoAte: initial.validoAte ?? "",
     observacoes: initial.observacoes ?? "",
   };
 }
@@ -123,6 +138,9 @@ export function ConvenioModal({
   const descontoValorWatch = watch("descontoValor");
   const escopoPlanosWatch = watch("escopoPlanos");
   const escopoPagamentoWatch = watch("escopoPagamento");
+  const escopoVigenciaWatch = watch("escopoVigencia");
+  const validoDeWatch = watch("validoDe");
+  const validoAteWatch = watch("validoAte");
   const ativoWatch = watch("ativo");
   const planoIdsWatch = watch("planoIds") ?? [];
   const formasPermitidasWatch = watch("formasPagamentoPermitidas") ?? [];
@@ -140,11 +158,24 @@ export function ConvenioModal({
   const descontoValido =
     tipoDescontoWatch === "PERCENTUAL" ? descontoPercentualValido : descontoValorValido;
 
+  // Validação de vigência: quando INTERVALO, exige ao menos uma ponta.
+  // Se ambas preenchidas, validoDe <= validoAte.
+  const vigenciaValida =
+    escopoVigenciaWatch === "SEM_LIMITE" ||
+    (() => {
+      const de = validoDeWatch?.trim();
+      const ate = validoAteWatch?.trim();
+      if (!de && !ate) return false;
+      if (de && ate && de > ate) return false;
+      return true;
+    })();
+
   const canSave =
     Boolean(nomeWatch?.trim()) &&
     descontoValido &&
     (escopoPlanosWatch === "TODOS" || planoIdsWatch.length > 0) &&
-    (escopoPagamentoWatch === "TODAS" || formasPermitidasWatch.length > 0);
+    (escopoPagamentoWatch === "TODAS" || formasPermitidasWatch.length > 0) &&
+    vigenciaValida;
 
   // Preview
   const precoExemplo = 150;
@@ -186,6 +217,7 @@ export function ConvenioModal({
       {
         nome,
         ativo: values.ativo,
+        permiteVoucherAcumulado: values.permiteVoucherAcumulado,
         tipoDesconto: values.tipoDesconto,
         descontoPercentual: isPercentual ? desconto : 0,
         descontoValor: isPercentual ? undefined : valorFixo,
@@ -196,6 +228,14 @@ export function ConvenioModal({
         formasPagamentoPermitidas:
           values.escopoPagamento === "ESPECIFICAS" && values.formasPagamentoPermitidas.length > 0
             ? (values.formasPagamentoPermitidas as TipoFormaPagamento[])
+            : undefined,
+        validoDe:
+          values.escopoVigencia === "INTERVALO" && values.validoDe.trim()
+            ? values.validoDe
+            : undefined,
+        validoAte:
+          values.escopoVigencia === "INTERVALO" && values.validoAte.trim()
+            ? values.validoAte
             : undefined,
         observacoes: values.observacoes.trim() || undefined,
       },
@@ -383,6 +423,29 @@ export function ConvenioModal({
                 render={({ field }) => (
                   <Switch
                     id="convenio-ativo"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
+              <div>
+                <Label htmlFor="convenio-acumula-voucher" className="cursor-pointer">
+                  Acumula com voucher
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Quando desativado, se o cliente aplicar um voucher na venda,
+                  o desconto deste convênio é ignorado (voucher vence).
+                </p>
+              </div>
+              <Controller
+                control={control}
+                name="permiteVoucherAcumulado"
+                render={({ field }) => (
+                  <Switch
+                    id="convenio-acumula-voucher"
                     checked={field.value}
                     onCheckedChange={field.onChange}
                   />
@@ -605,6 +668,106 @@ export function ConvenioModal({
                     Selecione ao menos uma forma ou troque para &quot;Todas as formas&quot;.
                   </p>
                 ) : null}
+              </div>
+            ) : null}
+          </section>
+
+          {/* ----------------------- Vigência ----------------------- */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Vigência
+            </h3>
+
+            <Controller
+              control={control}
+              name="escopoVigencia"
+              render={({ field }) => (
+                <div className="grid gap-2" role="radiogroup" aria-label="Vigência do convênio">
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+                      field.value === "SEM_LIMITE"
+                        ? "border-gym-accent bg-gym-accent/10"
+                        : "border-border hover:bg-secondary/60",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="escopoVigencia"
+                      value="SEM_LIMITE"
+                      checked={field.value === "SEM_LIMITE"}
+                      onChange={() => field.onChange("SEM_LIMITE")}
+                      className="mt-0.5 accent-gym-accent"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Sem limite de tempo</p>
+                      <p className="text-xs text-muted-foreground">
+                        O convênio vale enquanto estiver ativo.
+                      </p>
+                    </div>
+                  </label>
+                  <label
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors",
+                      field.value === "INTERVALO"
+                        ? "border-gym-accent bg-gym-accent/10"
+                        : "border-border hover:bg-secondary/60",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="escopoVigencia"
+                      value="INTERVALO"
+                      checked={field.value === "INTERVALO"}
+                      onChange={() => field.onChange("INTERVALO")}
+                      className="mt-0.5 accent-gym-accent"
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Intervalo de datas</p>
+                      <p className="text-xs text-muted-foreground">
+                        Útil para campanhas e convênios renovados anualmente.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              )}
+            />
+
+            {escopoVigenciaWatch === "INTERVALO" ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="convenio-valido-de">Válido de</Label>
+                  <Input
+                    id="convenio-valido-de"
+                    type="date"
+                    {...register("validoDe")}
+                    className="border-border bg-secondary"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="convenio-valido-ate">Válido até</Label>
+                  <Input
+                    id="convenio-valido-ate"
+                    type="date"
+                    {...register("validoAte")}
+                    className="border-border bg-secondary"
+                  />
+                </div>
+                {!vigenciaValida ? (
+                  <p className="col-span-2 text-xs text-gym-danger">
+                    {validoDeWatch?.trim() && validoAteWatch?.trim() && validoDeWatch > validoAteWatch
+                      ? "Data inicial precisa ser anterior ou igual à final."
+                      : "Preencha ao menos uma das datas ou troque para \"Sem limite\"."}
+                  </p>
+                ) : (
+                  <p className="col-span-2 text-xs text-muted-foreground">
+                    {validoDeWatch && validoAteWatch
+                      ? "Convênio vale apenas dentro do intervalo."
+                      : validoDeWatch
+                      ? "Sem data fim — válido indefinidamente a partir da data inicial."
+                      : "Sem data início — válido até a data final informada."}
+                  </p>
+                )}
               </div>
             ) : null}
           </section>

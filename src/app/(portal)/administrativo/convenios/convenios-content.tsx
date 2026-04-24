@@ -103,6 +103,7 @@ export function ConveniosContent({ initialData, initialPlanos, tenantId }: Conve
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Desconto</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Planos</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pagamento</th>
+              <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Vigência</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
               <th scope="col" className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
             </tr>
@@ -123,6 +124,15 @@ export function ConveniosContent({ initialData, initialPlanos, tenantId }: Conve
                   {c.formasPagamentoPermitidas && c.formasPagamentoPermitidas.length > 0
                     ? `${c.formasPagamentoPermitidas.length} forma${c.formasPagamentoPermitidas.length === 1 ? "" : "s"}`
                     : "Todas"}
+                </td>
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {c.validoDe || c.validoAte
+                    ? (c.validoDe && c.validoAte
+                        ? `${c.validoDe} → ${c.validoAte}`
+                        : c.validoDe
+                          ? `A partir de ${c.validoDe}`
+                          : `Até ${c.validoAte}`)
+                    : "Sem limite"}
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <span className={cn(
@@ -160,7 +170,7 @@ export function ConveniosContent({ initialData, initialPlanos, tenantId }: Conve
             ))}
             {convenios.length === 0 && (
               <tr>
-                <td colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhum convênio cadastrado
                 </td>
               </tr>
