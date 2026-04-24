@@ -3,7 +3,7 @@
 **Criado por:** @po (Pax) + @architect (Aria) — sessão de debate com user
 **Data:** 2026-04-24
 **Revisado:** 2026-04-24 após spikes SP-1 a SP-5 descobrirem sistema pré-existente
-**Status:** Ready for `@sm *draft`
+**Status:** ✅ **COMPLETO — Todas as 5 Waves mergeadas em main + pushed** (2026-04-24)
 **Escopo:**
 - BE: **ESTENDE** `modulo-notificacoes` existente (não cria módulo novo)
 - FE: novo pacote `src/components/portal/notifications/` — `NotificationBell` do portal operador (paralelo ao `src/components/cliente/notification-bell.tsx` já existente para aluno)
@@ -386,14 +386,36 @@ Branch `feat/notificacoes-epic4-wave4` mergeada via merge commit `0075b8a` em ma
 | **4.20** | Integrar bell no header operador (`src/components/shared/header.tsx` — investigar local exato), visível apenas em rotas `(portal)` e `(backoffice)` | S | 4.19 |
 | **4.21** | Página `/notificacoes` com lista completa + filtros (tipo, severidade, lida/não-lida) + paginação cursor | M | 4.17 |
 
-### Wave 5 — Admin SaaS (emissão GLOBAL + dogfood)
+### Wave 5 — Admin SaaS (emissão GLOBAL + dogfood) ✅ CONCLUÍDA (2026-04-24)
 
-| ID | Título curto | Tamanho | Dependências |
-|----|--------------|---------|--------------|
-| **4.22** | Página `/admin/notificacoes/emitir` (backoffice) — form react-hook-form + zod (padrão `onTouched + canSave` do CLAUDE.md) — autoriza só PLATAFORMA | L | 4.12 |
-| **4.23** | Audience picker component — select de escopo + campos condicionais | M | 4.22 |
-| **4.24** | Página `/admin/notificacoes/historico` — audit log de emissões manuais | M | 4.22 |
-| **4.25** | Listener `ContaVencidaEvent` em `modulo-financeiro` (ou equivalente) — emite inbox com bucket na key (dogfood + teste real) | M | 4.5 |
+Entregue em 2 worktrees paralelos. BE: fast-forward merge, FE: fast-forward merge (com stash/pop para WIP do user). Epic 4 **100% concluído** — todas as 5 Waves em main + produção.
+
+**Wave 5 BE** (academia-java, 3 commits, +13 testes novos: modulo-app 405→413, modulo-notificacoes 141→146)
+
+| ID | Título | Status | Commit |
+|----|--------|--------|--------|
+| **4.25** | `ContaPagarVencidaEvent` record + `ContaPagarVencidaListener` em modulo-app com dedupe por bucket (1/7/15/30 dias) + audience `ROLE("FINANCEIRO")` | ✅ | `21a0ff3f` |
+| — | Endpoint `GET /api/v1/notificacoes/admin/historico` paginado (extensão do `NotificacaoAdminController`) + `NotificacaoHistoricoService` | ✅ | `11ff6282` |
+| — | Testes Wave 5 BE | ✅ | `7fdade99` |
+
+**Wave 5 FE** (academia-app, 5 commits, TSC+ESLint limpos)
+
+| ID | Título | Status | Commit |
+|----|--------|--------|--------|
+| **4.22** | Página `/admin/notificacoes/emitir` (backoffice) com guard PLATAFORMA (server component + cookie session) + form `mode:"onTouched"` + `canSave` manual | ✅ | `7ba8e75` |
+| **4.23** | `<AudiencePicker />` genérico com campos condicionais (GLOBAL/REDE/TENANT/ROLE/USUARIO), reutilizando `useAdminAcademias`/`useAdminUnidades` existentes | ✅ | `686621a` |
+| **4.24** | Página `/admin/notificacoes/historico` com `useInfiniteQuery` + filtro audience + busca + degradação graciosa se BE ainda não expõe endpoint | ✅ | `095deea` |
+| — | Tipos TS + adapter emitir/histórico | ✅ | `2546d3a` |
+| — | Navegação backoffice (sidebar) com grupo "Notificações" | ✅ | `b0eb5f2` |
+
+### Detalhes da entrega
+
+- **Evento novo:** `ContaPagarVencidaEvent` criado em `modulo-financeiro/domain/event/` — publisher concreto (job de dunning) fica para story futura; evento pronto para consumo
+- **Dedupe:** `idempotencyKey = "conta-vencida-{contaId}-{bucket}"` → máximo 4 notificações por conta no ciclo (bucket 1/7/15/30)
+- **Identificação de emissão manual:** filtro `origem = "ADMIN_BACKOFFICE"` (string persistida pelo `NotificacaoAdminController.emitir()` da Wave 2)
+- **`emitidoPorEmail` no histórico:** fica `null` — Wave 2 não persiste email no evento; cross-lookup com `audit_log` fica como story futura
+- **Guard PLATAFORMA no FE:** server component lê cookie `fc_session_claims`, normaliza via `normalizeUserKind`, redireciona para `/admin` se não autorizado. Reforça o guard global do layout
+- **Graceful degradation FE ↔ BE:** se endpoint histórico retornar erro, UI mostra card "Histórico indisponível — aguardando deploy do backend" com retry
 
 ---
 
