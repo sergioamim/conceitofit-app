@@ -10,13 +10,16 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  deleteCrmCadenciaApi,
   listCrmCadenciasApi,
   updateCrmCadenciaApi,
 } from "@/lib/api/crm";
+import { ApiRequestError } from "@/lib/api/http";
 import {
   listCrmCadenceExecutionsApi,
   listCrmEscalationRulesApi,
@@ -56,6 +59,7 @@ type ActiveTab = "cadencias" | "execucoes" | "escalacao";
 
 export default function CrmCadenciasPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const tenantContext = useTenantContext();
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
@@ -110,6 +114,32 @@ export default function CrmCadenciasPage() {
     } catch (error) {
       toast({
         title: "Erro",
+        description: normalizeErrorMessage(error),
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleDeleteCadencia(cadencia: CrmCadencia) {
+    try {
+      await deleteCrmCadenciaApi({ tenantId, id: cadencia.id });
+      toast({ title: "Cadência deletada" });
+      void queryClient.invalidateQueries({
+        queryKey: ["crm", "cadencias", tenantId],
+      });
+      void loadData();
+    } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 409) {
+        toast({
+          title: "Não foi possível deletar",
+          description:
+            "Há execuções em andamento. Desative a cadência primeiro (toggle Ativar/Desativar).",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Erro ao deletar",
         description: normalizeErrorMessage(error),
         variant: "destructive",
       });
@@ -305,6 +335,7 @@ export default function CrmCadenciasPage() {
                 onEdit={handleOpenEdit}
                 onTrigger={handleOpenTrigger}
                 onToggle={(c) => void handleToggleCadencia(c)}
+                onDelete={(c) => void handleDeleteCadencia(c)}
               />
             </TabsContent>
 

@@ -1,6 +1,17 @@
 "use client";
 
-import { Pencil, Send } from "lucide-react";
+import { Pencil, Send, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +29,7 @@ export interface CadenciasListTabProps {
   onEdit: (cadencia: CrmCadencia) => void;
   onTrigger: (cadencia: CrmCadencia) => void;
   onToggle: (cadencia: CrmCadencia) => void;
+  onDelete: (cadencia: CrmCadencia) => void;
 }
 
 export function CadenciasListTab({
@@ -26,6 +38,7 @@ export function CadenciasListTab({
   onEdit,
   onTrigger,
   onToggle,
+  onDelete,
 }: CadenciasListTabProps) {
   return (
     <div className="space-y-4">
@@ -113,6 +126,36 @@ export function CadenciasListTab({
                   >
                     {cadencia.ativo ? "Desativar" : "Ativar"}
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-border text-gym-danger hover:text-gym-danger"
+                      >
+                        <Trash2 className="mr-1.5 size-3.5" />
+                        Deletar
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Deletar cadência?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja deletar &quot;{cadencia.nome}
+                          &quot;? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-gym-danger text-white hover:bg-gym-danger/90"
+                          onClick={() => onDelete(cadencia)}
+                        >
+                          Deletar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </CardContent>
