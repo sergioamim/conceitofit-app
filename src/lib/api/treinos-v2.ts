@@ -4,7 +4,7 @@ import type {
   TreinoV2AssignmentFilter,
   TreinoV2AssignmentJob,
   TreinoV2AssignmentMode,
-  TreinoV2Block,
+  TreinoV2Sessao,
   TreinoV2DefaultObjective,
   TreinoV2ExerciseMediaType,
   TreinoV2ExerciseType,
@@ -97,7 +97,7 @@ interface UpsertTreinoV2TemplateRequest {
   descricao?: string;
   categoria?: string;
   versaoSimplificadaHabilitada?: boolean;
-  blocos: TreinoV2Block[];
+  sessoes: TreinoV2Sessao[];
 }
 
 interface TreinoV2EditorResponse {

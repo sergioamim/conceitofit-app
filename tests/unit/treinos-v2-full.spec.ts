@@ -7,7 +7,7 @@ import {
   buildTreinoV2SaveInput,
   buildTreinoV2Template,
   buildTreinoV2TemplateSnapshot,
-  createEmptyTreinoV2Block,
+  createEmptyTreinoV2Sessao,
   parseExercicioV2Metadata,
   parseTreinoV2Metadata,
   serializeExercicioV2Descricao,
@@ -88,7 +88,7 @@ function makeTemplate(overrides: Partial<TreinoV2Template> = {}): TreinoV2Templa
     precisaRevisao: false,
     versao: 1,
     versaoSimplificadaHabilitada: true,
-    blocos: [
+    sessoes: [
       {
         id: "bl-1",
         nome: "A - Base",
@@ -143,7 +143,7 @@ test.describe("treinos v2 full", () => {
         templateStatus: "EM_REVISAO",
         versao: seed.versao + 1,
         versaoSimplificadaHabilitada: true,
-        blocos: seed.blocos,
+        sessoes: seed.sessoes,
       },
     });
 
@@ -192,7 +192,7 @@ test.describe("treinos v2 full", () => {
         totalSemanas: templateSeed.totalSemanas,
         categoria: templateSeed.categoria,
         versao: 4,
-        blocos: templateSeed.blocos,
+        sessoes: templateSeed.sessoes,
       },
       publishedAt: "2026-03-14T10:00:00.000Z",
     });
@@ -248,7 +248,7 @@ test.describe("treinos v2 full", () => {
 
   test("cobre progressao de itens, historico de atribuicao e contagem de jobs", () => {
     const editor = buildTreinoV2EditorSeed(makeTreino());
-    const secondBlock = createEmptyTreinoV2Block(1);
+    const secondBlock = createEmptyTreinoV2Sessao(1);
     secondBlock.itens.push({
       id: "it-2",
       exerciseId: "ex-2",
@@ -260,7 +260,7 @@ test.describe("treinos v2 full", () => {
       carga: createTreinoV2MetricField("70"),
       intervalo: createTreinoV2MetricField("75"),
     });
-    editor.blocos = [editor.blocos[0] ?? createEmptyTreinoV2Block(0), secondBlock];
+    editor.sessoes = [editor.sessoes[0] ?? createEmptyTreinoV2Sessao(0), secondBlock];
     editor.templateStatus = "PUBLICADO";
     editor.versaoSimplificadaHabilitada = true;
 
@@ -343,7 +343,7 @@ test.describe("treinos v2 full", () => {
       nome: "",
       frequenciaSemanal: 0,
       totalSemanas: 0,
-      blocos: [
+      sessoes: [
         {
           id: "bl-1",
           nome: "A - Base",

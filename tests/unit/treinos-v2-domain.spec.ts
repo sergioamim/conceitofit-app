@@ -24,7 +24,7 @@ function makeTemplate(overrides: Partial<TreinoV2Template> = {}): TreinoV2Templa
     precisaRevisao: false,
     versao: 3,
     versaoSimplificadaHabilitada: true,
-    blocos: [
+    sessoes: [
       {
         id: "bl-1",
         nome: "A - Posterior",
@@ -55,7 +55,7 @@ test.describe("treinos v2 domain", () => {
       nome: "",
       frequenciaSemanal: 0,
       totalSemanas: undefined,
-      blocos: [
+      sessoes: [
         {
           id: "bl-1",
           nome: "A - Revisao",

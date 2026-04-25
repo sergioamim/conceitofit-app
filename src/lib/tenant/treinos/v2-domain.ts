@@ -42,8 +42,8 @@ export type TreinoV2ValidationCode =
   | "TEMPLATE_NOME_OBRIGATORIO"
   | "TEMPLATE_FREQUENCIA_OBRIGATORIA"
   | "TEMPLATE_TOTAL_SEMANAS_OBRIGATORIO"
-  | "TEMPLATE_SEM_BLOCOS"
-  | "BLOCO_SEM_ITENS"
+  | "TEMPLATE_SEM_SESSOES"
+  | "SESSAO_SEM_ITENS"
   | "ITEM_EXERCICIO_OBRIGATORIO"
   | "ITEM_SERIES_INVALIDO"
   | "ITEM_REPETICOES_INVALIDO"
@@ -77,7 +77,7 @@ export interface TreinoV2ExerciseItem {
   tecnicas?: TreinoV2Technique[];
 }
 
-export interface TreinoV2Block {
+export interface TreinoV2Sessao {
   id: string;
   nome: string;
   ordem: number;
@@ -108,7 +108,7 @@ export interface TreinoV2Template {
   precisaRevisao: boolean;
   versao: number;
   versaoSimplificadaHabilitada: boolean;
-  blocos: TreinoV2Block[];
+  sessoes: TreinoV2Sessao[];
   validationIssues?: TreinoV2ValidationIssue[];
 }
 
@@ -123,7 +123,7 @@ export interface TreinoV2TemplateSnapshot {
   totalSemanas?: number;
   descricao?: string;
   categoria?: string;
-  blocos: TreinoV2Block[];
+  sessoes: TreinoV2Sessao[];
   validationIssues: TreinoV2ValidationIssue[];
 }
 
@@ -302,19 +302,19 @@ export function validateTreinoV2Template(template: TreinoV2Template): TreinoV2Va
     );
   }
 
-  if (template.blocos.length === 0) {
-    issues.push(buildIssue("TEMPLATE_SEM_BLOCOS", "blocos", "Template precisa ter ao menos um bloco."));
+  if (template.sessoes.length === 0) {
+    issues.push(buildIssue("TEMPLATE_SEM_SESSOES", "sessoes", "Template precisa ter ao menos uma sessao."));
   }
 
-  template.blocos.forEach((bloco, blocoIndex) => {
-    if (bloco.itens.length === 0) {
+  template.sessoes.forEach((sessao, sessaoIndex) => {
+    if (sessao.itens.length === 0) {
       issues.push(
-        buildIssue("BLOCO_SEM_ITENS", `blocos.${blocoIndex}.itens`, "Bloco precisa ter ao menos um exercicio.", "WARNING"),
+        buildIssue("SESSAO_SEM_ITENS", `sessoes.${sessaoIndex}.itens`, "Sessao precisa ter ao menos um exercicio.", "WARNING"),
       );
     }
 
-    bloco.itens.forEach((item, itemIndex) => {
-      const basePath = `blocos.${blocoIndex}.itens.${itemIndex}`;
+    sessao.itens.forEach((item, itemIndex) => {
+      const basePath = `sessoes.${sessaoIndex}.itens.${itemIndex}`;
 
       if (!item.exerciseId && !item.exerciseNome?.trim()) {
         issues.push(buildIssue("ITEM_EXERCICIO_OBRIGATORIO", `${basePath}.exerciseId`, "Item precisa de exercicio."));

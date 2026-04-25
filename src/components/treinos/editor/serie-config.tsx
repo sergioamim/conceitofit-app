@@ -25,22 +25,22 @@ import { TECHNIQUE_OPTIONS } from "./types";
 
 type SerieConfigProps = {
   editor: TreinoV2EditorSeed;
-  activeBlockId: string;
+  activeSessaoId: string;
   canEditCargaOnly: boolean;
   canManageCatalog: boolean;
   catalog: TreinoV2CatalogExercise[];
-  onActiveBlockChange: (blockId: string) => void;
-  onAddBlock: () => void;
-  onDuplicateBlock: (blockId: string) => void;
-  onMoveBlock: (blockId: string, direction: -1 | 1) => void;
-  onRemoveBlock: (blockId: string) => void;
-  onUpdateBlockName: (blockId: string, name: string) => void;
+  onActiveSessaoChange: (sessaoId: string) => void;
+  onAddSessao: () => void;
+  onDuplicateSessao: (sessaoId: string) => void;
+  onMoveSessao: (sessaoId: string, direction: -1 | 1) => void;
+  onRemoveSessao: (sessaoId: string) => void;
+  onUpdateSessaoName: (sessaoId: string, name: string) => void;
   onUpdateItem: (
-    blockId: string,
+    sessaoId: string,
     itemId: string,
-    updater: (item: TreinoV2EditorSeed["blocos"][number]["itens"][number]) => TreinoV2EditorSeed["blocos"][number]["itens"][number],
+    updater: (item: TreinoV2EditorSeed["sessoes"][number]["itens"][number]) => TreinoV2EditorSeed["sessoes"][number]["itens"][number],
   ) => void;
-  onAddEmptyItem: (blockId: string) => void;
+  onAddEmptyItem: (sessaoId: string) => void;
   onDuplicateItem: (itemId: string) => void;
   onMoveItem: (itemId: string, direction: -1 | 1) => void;
   onRemoveItem: (itemId: string) => void;
@@ -49,16 +49,16 @@ type SerieConfigProps = {
 
 export function SerieConfig({
   editor,
-  activeBlockId,
+  activeSessaoId,
   canEditCargaOnly,
   canManageCatalog,
   catalog,
-  onActiveBlockChange,
-  onAddBlock,
-  onDuplicateBlock,
-  onMoveBlock,
-  onRemoveBlock,
-  onUpdateBlockName,
+  onActiveSessaoChange,
+  onAddSessao,
+  onDuplicateSessao,
+  onMoveSessao,
+  onRemoveSessao,
+  onUpdateSessaoName,
   onUpdateItem,
   onAddEmptyItem,
   onDuplicateItem,
@@ -66,7 +66,7 @@ export function SerieConfig({
   onRemoveItem,
   onToggleTechnique,
 }: SerieConfigProps) {
-  const activeBlock = editor.blocos.find((block) => block.id === activeBlockId) ?? editor.blocos[0] ?? null;
+  const activeSessao = editor.sessoes.find((sessao) => sessao.id === activeSessaoId) ?? editor.sessoes[0] ?? null;
 
   return (
     <Card className="border-border bg-card">
@@ -78,58 +78,58 @@ export function SerieConfig({
               Abas horizontais para organizar a montagem em blocos nomeados.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={onAddBlock}>
+          <Button variant="outline" size="sm" onClick={onAddSessao}>
             <Plus className="mr-2 size-4" />
             Novo bloco
           </Button>
         </div>
 
-        <Tabs value={activeBlock?.id} onValueChange={onActiveBlockChange}>
+        <Tabs value={activeSessao?.id} onValueChange={onActiveSessaoChange}>
           <TabsList className="h-auto flex-wrap justify-start gap-1 bg-transparent p-0">
-            {editor.blocos.map((block) => (
+            {editor.sessoes.map((sessao) => (
               <TabsTrigger
-                key={block.id}
-                value={block.id}
+                key={sessao.id}
+                value={sessao.id}
                 className="gap-2 border border-border bg-secondary/40 px-3 py-2 data-[state=active]:border-gym-accent data-[state=active]:bg-gym-accent/10"
               >
                 <GripVertical className="size-3.5 text-muted-foreground" />
-                {block.nome}
+                {sessao.nome}
               </TabsTrigger>
             ))}
           </TabsList>
-          {editor.blocos.map((block, index) => (
-            <TabsContent key={block.id} value={block.id} className="space-y-4 pt-4">
+          {editor.sessoes.map((sessao, index) => (
+            <TabsContent key={sessao.id} value={sessao.id} className="space-y-4 pt-4">
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-secondary/30 p-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Label htmlFor={`bloco-nome-${block.id}`}>Nome do bloco</Label>
+                  <Label htmlFor={`bloco-nome-${sessao.id}`}>Nome do bloco</Label>
                   <Input
-                    id={`bloco-nome-${block.id}`}
-                    value={block.nome}
-                    onChange={(event) => onUpdateBlockName(block.id, event.target.value)}
+                    id={`bloco-nome-${sessao.id}`}
+                    value={sessao.nome}
+                    onChange={(event) => onUpdateSessaoName(sessao.id, event.target.value)}
                     className="w-32"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => onMoveBlock(block.id, -1)} disabled={index === 0}>
+                  <Button variant="outline" size="sm" onClick={() => onMoveSessao(sessao.id, -1)} disabled={index === 0}>
                     <ChevronLeft className="size-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onMoveBlock(block.id, 1)}
-                    disabled={index === editor.blocos.length - 1}
+                    onClick={() => onMoveSessao(sessao.id, 1)}
+                    disabled={index === editor.sessoes.length - 1}
                   >
                     <ChevronRight className="size-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => onDuplicateBlock(block.id)}>
+                  <Button variant="outline" size="sm" onClick={() => onDuplicateSessao(sessao.id)}>
                     <Copy className="mr-2 size-4" />
                     Duplicar
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onRemoveBlock(block.id)}
-                    disabled={editor.blocos.length === 1}
+                    onClick={() => onRemoveSessao(sessao.id)}
+                    disabled={editor.sessoes.length === 1}
                   >
                     <Trash2 className="mr-2 size-4" />
                     Remover
@@ -138,12 +138,12 @@ export function SerieConfig({
               </div>
 
               <ExerciseGrid
-                block={block}
+                sessao={sessao}
                 catalog={catalog}
                 canEditCargaOnly={canEditCargaOnly}
                 canManageCatalog={canManageCatalog}
-                onUpdateItem={(itemId, updater) => onUpdateItem(block.id, itemId, updater)}
-                onAddEmptyItem={() => onAddEmptyItem(block.id)}
+                onUpdateItem={(itemId, updater) => onUpdateItem(sessao.id, itemId, updater)}
+                onAddEmptyItem={() => onAddEmptyItem(sessao.id)}
                 onDuplicateItem={onDuplicateItem}
                 onMoveItem={onMoveItem}
                 onRemoveItem={onRemoveItem}
@@ -158,7 +158,7 @@ export function SerieConfig({
 }
 
 function ExerciseGrid({
-  block,
+  sessao,
   catalog,
   canEditCargaOnly,
   canManageCatalog,
@@ -169,13 +169,13 @@ function ExerciseGrid({
   onRemoveItem,
   onToggleTechnique,
 }: {
-  block: TreinoV2EditorSeed["blocos"][number];
+  sessao: TreinoV2EditorSeed["sessoes"][number];
   catalog: TreinoV2CatalogExercise[];
   canEditCargaOnly: boolean;
   canManageCatalog: boolean;
   onUpdateItem: (
     itemId: string,
-    updater: (item: TreinoV2EditorSeed["blocos"][number]["itens"][number]) => TreinoV2EditorSeed["blocos"][number]["itens"][number],
+    updater: (item: TreinoV2EditorSeed["sessoes"][number]["itens"][number]) => TreinoV2EditorSeed["sessoes"][number]["itens"][number],
   ) => void;
   onAddEmptyItem: () => void;
   onDuplicateItem: (itemId: string) => void;
@@ -183,7 +183,7 @@ function ExerciseGrid({
   onRemoveItem: (itemId: string) => void;
   onToggleTechnique: (itemId: string, type: TreinoV2TechniqueType) => void;
 }) {
-  const isEmpty = block.itens.length === 0;
+  const isEmpty = sessao.itens.length === 0;
 
   return (
     <div className="space-y-3">
@@ -222,7 +222,7 @@ function ExerciseGrid({
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-card">
-              {block.itens.map((item, index) => {
+              {sessao.itens.map((item, index) => {
                 const selectedExercise = catalog.find((exercise) => exercise.id === item.exerciseId);
                 return (
                   <tr key={item.id}>
@@ -237,7 +237,7 @@ function ExerciseGrid({
                           size="icon"
                           aria-label="Mover item para direita"
                           onClick={() => onMoveItem(item.id, 1)}
-                          disabled={index === block.itens.length - 1}
+                          disabled={index === sessao.itens.length - 1}
                         >
                           <ChevronRight className="size-4" />
                         </Button>
