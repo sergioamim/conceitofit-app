@@ -178,6 +178,10 @@ export interface TreinoItem {
   cargaSugerida?: number;
   intervaloSegundos?: number;
   tempoExecucaoSegundos?: number;
+  /** Notação de tempo de execução (ex: "2-0-1"). Wave 2 do PRD V3. */
+  cadencia?: string;
+  /** Reps in Reserve (0-10). Wave 2 do PRD V3. */
+  rir?: number;
   observacao?: string;
   diasSemana?: string[];
   criadoEm?: LocalDateTime;
