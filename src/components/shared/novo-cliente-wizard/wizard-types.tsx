@@ -15,13 +15,23 @@ export type CriarAlunoComMatriculaResponse = Awaited<ReturnType<typeof createAlu
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-export async function checkUniqueness(tenantId: string, search: string) {
-  if (!search) return false;
+export type UniquenessResult = {
+  exists: boolean;
+  alunoId?: string;
+  alunoNome?: string;
+};
+
+export async function checkUniqueness(tenantId: string, search: string): Promise<UniquenessResult> {
+  if (!search) return { exists: false };
   try {
     const result = await checkAlunoDuplicidadeService({ tenantId, search });
-    return result.exists;
+    return {
+      exists: result.exists,
+      alunoId: result.alunoId,
+      alunoNome: result.alunoNome,
+    };
   } catch {
-    return false;
+    return { exists: false };
   }
 }
 

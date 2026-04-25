@@ -27,8 +27,10 @@ export function Step1Dados({
 
   const [cpfStatus, setCpfStatus] = useState<FieldAsyncFeedbackStatus>("idle");
   const [cpfMsg, setCpfMsg] = useState("");
+  const [cpfDuplicateId, setCpfDuplicateId] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<FieldAsyncFeedbackStatus>("idle");
   const [emailMsg, setEmailMsg] = useState("");
+  const [emailDuplicateId, setEmailDuplicateId] = useState<string | null>(null);
 
   const watchedCpf = useWatch({ control, name: "cpf" });
   const watchedEmail = useWatch({ control, name: "email" });
@@ -48,14 +50,20 @@ export function Step1Dados({
     const handler = setTimeout(async () => {
       setCpfStatus("loading");
       setCpfMsg("Checando disponibilidade...");
-      const exists = await checkUniqueness(tenantId, currentCpf);
-      if (exists) {
+      const result = await checkUniqueness(tenantId, currentCpf);
+      if (result.exists) {
         setCpfStatus("error");
-        setCpfMsg("Este CPF já está cadastrado.");
+        setCpfMsg(
+          result.alunoNome
+            ? `CPF já cadastrado para ${result.alunoNome}.`
+            : "Este CPF já está cadastrado.",
+        );
+        setCpfDuplicateId(result.alunoId ?? null);
         form.setError("cpf", { type: "manual", message: "CPF já cadastrado" });
       } else {
         setCpfStatus("success");
         setCpfMsg("CPF livre");
+        setCpfDuplicateId(null);
         if (errors.cpf?.type === "manual") form.clearErrors("cpf");
       }
     }, 600);
@@ -72,14 +80,20 @@ export function Step1Dados({
     const handler = setTimeout(async () => {
       setEmailStatus("loading");
       setEmailMsg("Checando disponibilidade...");
-      const exists = await checkUniqueness(tenantId, currentEmail);
-      if (exists) {
+      const result = await checkUniqueness(tenantId, currentEmail);
+      if (result.exists) {
         setEmailStatus("error");
-        setEmailMsg("E-mail já cadastrado vinculado a outro cliente.");
+        setEmailMsg(
+          result.alunoNome
+            ? `E-mail já cadastrado para ${result.alunoNome}.`
+            : "E-mail já cadastrado vinculado a outro cliente.",
+        );
+        setEmailDuplicateId(result.alunoId ?? null);
         form.setError("email", { type: "manual", message: "E-mail em uso" });
       } else {
         setEmailStatus("success");
         setEmailMsg("E-mail disponível");
+        setEmailDuplicateId(null);
         if (errors.email?.type === "manual") form.clearErrors("email");
       }
     }, 600);
@@ -122,6 +136,17 @@ export function Step1Dados({
             className={cn("bg-card", errors.email ? "border-destructive focus-ring-destructive" : "border-border")}
           />
           <FieldAsyncFeedback status={errors.email?.message ? "error" : emailStatus} message={errors.email?.message || emailMsg} />
+          {emailStatus === "error" && emailDuplicateId ? (
+            <a
+              href={`/clientes/${emailDuplicateId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium text-gym-accent underline underline-offset-2 hover:text-gym-accent/80"
+              data-testid="novo-cliente-email-duplicate-link"
+            >
+              Abrir perfil do cliente existente →
+            </a>
+          ) : null}
         </div>
 
         <div className="space-y-1.5">
@@ -175,6 +200,17 @@ export function Step1Dados({
             />
           )} />
           <FieldAsyncFeedback status={errors.cpf?.message ? "error" : cpfStatus} message={errors.cpf?.message || cpfMsg} />
+          {cpfStatus === "error" && cpfDuplicateId ? (
+            <a
+              href={`/clientes/${cpfDuplicateId}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs font-medium text-gym-accent underline underline-offset-2 hover:text-gym-accent/80"
+              data-testid="novo-cliente-cpf-duplicate-link"
+            >
+              Abrir perfil do cliente existente →
+            </a>
+          ) : null}
         </div>
 
         <div className="space-y-1.5">
