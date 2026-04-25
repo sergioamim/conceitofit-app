@@ -74,6 +74,10 @@ export interface TreinoV2ExerciseItem {
   repeticoes: TreinoV2MetricField;
   carga?: TreinoV2MetricField;
   intervalo?: TreinoV2MetricField;
+  /** Notação de tempo de execução (ex: "2-0-1", "explosivo"). Wave 2 do PRD. */
+  cadencia?: string;
+  /** Reps in Reserve (0-10). Quantas reps o aluno deixaria sobrando. Wave 2 do PRD. */
+  rir?: number;
   tecnicas?: TreinoV2Technique[];
 }
 

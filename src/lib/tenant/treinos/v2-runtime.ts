@@ -246,6 +246,8 @@ function mapTreinoItemToV2(item: TreinoItem, index: number) {
     repeticoes: createTreinoV2MetricField(repetitions),
     carga: item.cargaSugerida != null || item.carga != null ? createTreinoV2MetricField(item.cargaSugerida ?? item.carga) : undefined,
     intervalo: item.intervaloSegundos != null ? createTreinoV2MetricField(item.intervaloSegundos) : undefined,
+    cadencia: item.cadencia ?? undefined,
+    rir: item.rir ?? undefined,
     tecnicas: [],
   };
 }
