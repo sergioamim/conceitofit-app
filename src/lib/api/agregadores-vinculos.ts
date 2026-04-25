@@ -79,6 +79,29 @@ function mapVinculoError(error: ApiRequestError): Error {
 // ─── Public API ────────────────────────────────────────────────────────────
 
 /**
+ * Lista vínculos ATIVOS de um aluno com agregadores B2B.
+ *
+ * Usado no perfil do cliente para exibir ao lado do "Contrato ativo" —
+ * mesmo não sendo um contrato próprio, o vínculo com Wellhub/TotalPass
+ * é uma fonte de acesso operacional relevante.
+ */
+export async function listAgregadorVinculosDoAluno(input: {
+  tenantId: string;
+  alunoId: string;
+}): Promise<AgregadorVinculoResponse[]> {
+  try {
+    return await apiRequest<AgregadorVinculoResponse[]>({
+      path: "/api/v1/agregadores/vinculos",
+      query: { tenantId: input.tenantId, alunoId: input.alunoId },
+    });
+  } catch {
+    // Falhas silenciosas — o perfil renderiza o card principal mesmo sem
+    // dados de agregador.
+    return [];
+  }
+}
+
+/**
  * Cria um vínculo permanente entre um aluno e um agregador B2B.
  *
  * @throws Error com mensagem amigável (mapeada de 400/409/422 ou genérica).

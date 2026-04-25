@@ -2,19 +2,53 @@
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Calendar, ShieldCheck } from "lucide-react";
+import { Calendar, ShieldCheck, Link2 } from "lucide-react";
 import { formatBRL, formatDate } from "@/lib/formatters";
 import type { Plano } from "@/lib/types";
+import type { AgregadorVinculoResponse } from "@/lib/api/agregadores-vinculos";
+
+const AGREGADOR_LABEL: Record<string, string> = {
+  WELLHUB: "Wellhub",
+  TOTALPASS: "TotalPass",
+  OUTRO: "Agregador",
+};
+
+function AgregadorVinculoLine({ vinculo }: { vinculo: AgregadorVinculoResponse }) {
+  const label = AGREGADOR_LABEL[vinculo.agregador] ?? vinculo.agregador;
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-gym-teal/30 bg-gym-teal/5 p-2">
+      <Link2 className="mt-0.5 size-3.5 shrink-0 text-gym-teal" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-gym-teal">
+          Vínculo {label}
+        </p>
+        <p className="mt-0.5 truncate font-mono text-xs text-foreground">
+          {vinculo.usuarioExternoId}
+        </p>
+        {vinculo.cicloExpiraEm ? (
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            Ciclo até {formatDate(vinculo.cicloExpiraEm)}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Card "Plano ativo" do Resumo (Perfil v3 — Wave 3, AC3.2 + AC3.3).
  * Countdown em tipografia grande com cor condicional + linha de próxima
  * cobrança quando recorrente. Quando não há plano, renderiza CTA claro.
+ *
+ * Extensão: agregadorVinculos — quando o cliente tem vínculo B2B ativo
+ * (Wellhub/TotalPass), renderiza o vínculo como "contrato" alternativo
+ * (ou adicional, quando há plano próprio também).
  */
 export function ClientePlanoCard({
   planoAtivo,
   planoAtivoInfo,
   recorrente,
+  agregadorVinculos = [],
   onRenovar,
   onPausar,
   hoje,
@@ -22,11 +56,13 @@ export function ClientePlanoCard({
   planoAtivo: { dataFim: string; dataInicio?: string } | null;
   planoAtivoInfo?: Plano | null;
   recorrente?: { data: string; plano: { nome: string }; valor: number } | null;
+  agregadorVinculos?: AgregadorVinculoResponse[];
   onRenovar?: () => void;
   onPausar?: () => void;
   hoje?: Date;
 }) {
   const referencia = hoje ?? new Date();
+  const temVinculos = agregadorVinculos.length > 0;
 
   if (!planoAtivo) {
     return (
@@ -34,7 +70,18 @@ export function ClientePlanoCard({
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Plano ativo
         </p>
-        <p className="mt-3 text-sm text-muted-foreground">Cliente sem contrato ativo</p>
+        {temVinculos ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Sem plano próprio — acesso via agregador:
+            </p>
+            {agregadorVinculos.map((vinculo) => (
+              <AgregadorVinculoLine key={vinculo.id} vinculo={vinculo} />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">Cliente sem contrato ativo</p>
+        )}
       </div>
     );
   }
@@ -86,6 +133,14 @@ export function ClientePlanoCard({
               {formatDate(recorrente.data)} · {formatBRL(recorrente.valor)}
             </p>
           </div>
+        </div>
+      ) : null}
+
+      {temVinculos ? (
+        <div className="mt-3 space-y-2">
+          {agregadorVinculos.map((vinculo) => (
+            <AgregadorVinculoLine key={vinculo.id} vinculo={vinculo} />
+          ))}
         </div>
       ) : null}
 

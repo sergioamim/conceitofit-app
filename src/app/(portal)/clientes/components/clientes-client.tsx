@@ -96,8 +96,11 @@ function ClientesPageContent() {
           alunoId={vincularAgregadorAlunoId}
           tenantId={ws.tenantId}
           onSuccess={() => {
+            const alunoId = vincularAgregadorAlunoId;
             setVincularAgregadorAlunoId(null);
-            void ws.load();
+            if (alunoId) {
+              ws.router.push(`/clientes/${encodeURIComponent(alunoId)}`);
+            }
           }}
         />
       ) : null}

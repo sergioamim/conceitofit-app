@@ -24,6 +24,10 @@ import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { bloquearAcessoApi, desbloquearAcessoApi, excluirDadosPessoaisApi, excluirDadosSensiveisApi } from "@/lib/api/alunos";
+import {
+  listAgregadorVinculosDoAluno,
+  type AgregadorVinculoResponse,
+} from "@/lib/api/agregadores-vinculos";
 import { useClienteWorkspace } from "./use-cliente-workspace";
 import { ClienteDialogs } from "./cliente-dialogs";
 import { ClienteSidebar } from "./cliente-sidebar";
@@ -66,6 +70,21 @@ export default function ClienteDetalhePage() {
   const [mesclarOpen, setMesclarOpen] = useState(false);
   const [acoesOpen, setAcoesOpen] = useState(false);
   const [cartoesOpen, setCartoesOpen] = useState(false);
+  const [agregadorVinculos, setAgregadorVinculos] = useState<AgregadorVinculoResponse[]>([]);
+
+  // Carrega vínculos ATIVOS de agregadores B2B (Wellhub/TotalPass/...) para
+  // exibir no card "Plano ativo" como contrato alternativo — mesmo sem
+  // contrato próprio, o vínculo indica acesso operacional.
+  useEffect(() => {
+    const tenantId = w.aluno?.tenantId;
+    const alunoId = w.aluno?.id;
+    if (!tenantId || !alunoId) return;
+    let cancelled = false;
+    void listAgregadorVinculosDoAluno({ tenantId, alunoId }).then((items) => {
+      if (!cancelled) setAgregadorVinculos(items);
+    });
+    return () => { cancelled = true; };
+  }, [w.aluno?.tenantId, w.aluno?.id]);
 
   // Perfil v3 Wave 4 (AC4.7): deep-link `?tab=cartoes|editar` abre o
   // drawer/painel correspondente para preservar bookmarks após a
@@ -383,6 +402,7 @@ export default function ClienteDetalhePage() {
                   planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
                   planoAtivoInfo={w.planoAtivoInfo ?? null}
                   recorrente={w.recorrente}
+                  agregadorVinculos={agregadorVinculos}
                   onRenovar={() => w.router.push(`/vendas/nova?clienteId=${encodeURIComponent(aluno.id)}&prefill=1`)}
                   onPausar={!w.suspenso ? () => w.setSuspenderOpen(true) : undefined}
                 />
