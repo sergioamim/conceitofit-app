@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { resolveAlunoTenantService } from "@/lib/tenant/comercial/runtime";
+import { getAlunoApi } from "@/lib/api/alunos";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 import { useQueryClient } from "@tanstack/react-query";
@@ -19,9 +19,13 @@ export type VendaWorkspace = ReturnType<typeof useVendaWorkspace>;
 export function useVendaWorkspace() {
   const tenantContext = useTenantContext();
   const queryClient = useQueryClient();
-  const [tenantId, setTenantId] = useState(() => tenantContext.tenantId);
+  // Fonte única de verdade: o tenant ativo da sessão (via TenantContext).
+  // Antes mantinhamos um `useState` local inicializado no mount, o que
+  // permitia que requests de venda saíssem com um tenantId stale após
+  // troca de unidade/sandbox. Agora sempre espelha o contexto.
+  const tenantId = tenantContext.tenantId ?? "";
   const tenantIdRef = useRef(tenantId);
-  const [tenant, setTenant] = useState<Tenant | null>(tenantContext.tenant ?? null);
+  const tenant = tenantContext.tenant ?? null;
   const [tipoVenda, setTipoVenda] = useState<TipoVenda>("PLANO");
 
   // Declarado antes de `useCommercialFlow` porque o hook agora aceita a
@@ -69,24 +73,16 @@ export function useVendaWorkspace() {
     [alunos]
   );
 
-  // Tenant sync
+  // Sincroniza ref + reseta prefill/cart quando o tenant ativo muda.
+  // Troca de tenant (ex: usuário trocou de unidade) invalida carrinho em
+  // montagem — itens de um tenant não podem migrar pra outro.
   useEffect(() => {
+    if (!tenantId) return;
+    if (tenantId === tenantIdRef.current) return;
     tenantIdRef.current = tenantId;
-  }, [tenantId]);
-
-  useEffect(() => {
-    const nextTenantId = tenantContext.tenantId || tenantIdRef.current;
-    if (!nextTenantId) return;
-    if (nextTenantId === tenantIdRef.current) {
-      setTenant(tenantContext.tenant ?? null);
-      return;
-    }
-    tenantIdRef.current = nextTenantId;
-    setTenantId(nextTenantId);
-    setTenant(tenantContext.tenant ?? null);
     prefillHandledRef.current = false;
     clearCart();
-  }, [tenantContext.tenant, tenantContext.tenantId, clearCart]);
+  }, [tenantId, clearCart]);
 
   // Tipo venda change resets item selection (RN-011 VUN-2.3: NÃO zerar carrinho).
   // Troca de aba PLANO/SERVIÇO/PRODUTO é filtro de catálogo — carrinho preserva
@@ -109,53 +105,32 @@ export function useVendaWorkspace() {
 
     let cancelled = false;
     async function applyPrefillCliente() {
-      if (!alunosLoaded) await loadAlunos();
-
       const currentTenantId = tenantIdRef.current;
-      let alvoCarregado = alunos.find((a) => a.id === prefillClienteId);
+      if (!currentTenantId) return;
 
-      // Cache pode estar stale — aluno recém-criado no wizard "Novo cliente"
-      // chega aqui via query param `clienteId`. Força reload antes de cair no
-      // fallback cross-tenant (que é mais lento + trocaria de unidade sem
-      // necessidade).
-      if (!alvoCarregado) {
-        await loadAlunos({ force: true });
+      try {
+        // Busca direta por ID tenant-scoped — simples e determinística.
+        // Evita depender de `alunos` do closure (stale no cache) e não troca
+        // o tenant ativo da sessão silenciosamente: se o aluno não pertence
+        // ao tenant atual, o prefill é ignorado e o usuário precisa buscá-lo
+        // manualmente (ou corrigir o contexto de unidade).
+        const aluno = await getAlunoApi({ tenantId: currentTenantId, id: prefillClienteId });
         if (cancelled) return;
-        alvoCarregado = alunos.find((a) => a.id === prefillClienteId);
-      }
-
-      if (alvoCarregado) {
-        if (cancelled) return;
-        setClienteId(alvoCarregado.id);
-        setClienteQuery(`${alvoCarregado.nome} · CPF ${alvoCarregado.cpf}`);
+        setClienteId(aluno.id);
+        setClienteQuery(`${aluno.nome} · CPF ${aluno.cpf ?? ""}`);
         prefillHandledRef.current = true;
-        return;
+      } catch {
+        if (cancelled) return;
+        // 404 / erro: aluno não existe neste tenant ativo. Não trocamos de
+        // tenant — a sessão do usuário é a fonte de verdade. Apenas marca
+        // como tratado para não retentar em loop.
+        prefillHandledRef.current = true;
       }
-
-      const resolved = await resolveAlunoTenantService({
-        alunoId: prefillClienteId,
-        tenantId: currentTenantId,
-        tenantIds: tenantContext.tenants.map((item) => item.id),
-      });
-      if (cancelled) return;
-      if (!resolved) { prefillHandledRef.current = true; return; }
-      if (resolved.tenantId !== currentTenantId) {
-        await tenantContext.setTenant(resolved.tenantId);
-        return;
-      }
-      setClienteId(resolved.aluno.id);
-      setClienteQuery(`${resolved.aluno.nome} · CPF ${resolved.aluno.cpf}`);
-      prefillHandledRef.current = true;
     }
 
     void applyPrefillCliente();
     return () => { cancelled = true; };
-    // deps enxutos (valores, não o objeto `tenantContext`): passar o contexto
-    // inteiro como dep fazia o effect re-disparar a cada render do provider
-    // (objeto recriado), contribuindo pra loops de render em cascata e
-    // "Maximum update depth exceeded" observados em 2026-04-22.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alunos, alunosLoaded, loadAlunos, prefillClienteId, setClienteId]);
+  }, [prefillClienteId, setClienteId, tenantId]);
 
   // Sync client query label
   useEffect(() => {
