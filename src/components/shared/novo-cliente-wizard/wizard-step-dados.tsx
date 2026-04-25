@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Controller, useWatch } from "react-hook-form";
 import type { UseFormReturn } from "react-hook-form";
+import { Camera, UserCircle } from "lucide-react";
 import { FieldAsyncFeedback, type FieldAsyncFeedbackStatus } from "@/components/shared/field-async-feedback";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { MaskedInput } from "@/components/shared/masked-input";
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { checkUniqueness, type ClienteWizardForm } from "./wizard-types";
 import { DadosComplementares } from "./wizard-step-dados-complementar";
+import { WizardPhotoModal } from "./wizard-photo-modal";
 
 export function Step1Dados({
   form,
@@ -22,8 +24,11 @@ export function Step1Dados({
   showComplementary: boolean;
   onToggleComplementary: () => void;
 }) {
-  const { register, control, formState: { errors } } = form;
+  const { register, control, setValue, formState: { errors } } = form;
   const { tenantId } = useTenantContext();
+
+  const [photoModalOpen, setPhotoModalOpen] = useState(false);
+  const watchedFoto = useWatch({ control, name: "foto" });
 
   const [cpfStatus, setCpfStatus] = useState<FieldAsyncFeedbackStatus>("idle");
   const [cpfMsg, setCpfMsg] = useState("");
@@ -102,6 +107,40 @@ export function Step1Dados({
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setPhotoModalOpen(true)}
+          aria-label={watchedFoto ? "Trocar foto do cliente" : "Adicionar foto do cliente"}
+          data-testid="novo-cliente-foto-btn"
+          className="group relative size-16 shrink-0 overflow-hidden rounded-full border-2 border-dashed border-border bg-secondary/40 transition-colors hover:border-gym-accent hover:bg-secondary/70"
+        >
+          {watchedFoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={watchedFoto}
+              alt="Foto do cliente"
+              className="size-full object-cover"
+            />
+          ) : (
+            <UserCircle className="size-8 text-muted-foreground mx-auto" aria-hidden />
+          )}
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+            <Camera className="size-5 text-white" aria-hidden />
+          </span>
+        </button>
+        <div className="text-xs text-muted-foreground">
+          {watchedFoto ? "Clique para trocar a foto" : "Adicionar foto (opcional)"}
+        </div>
+      </div>
+
+      <WizardPhotoModal
+        open={photoModalOpen}
+        onClose={() => setPhotoModalOpen(false)}
+        currentPhoto={watchedFoto}
+        onConfirm={(base64) => setValue("foto", base64, { shouldDirty: true })}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="col-span-2 space-y-1.5">
           <label
