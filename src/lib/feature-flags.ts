@@ -45,12 +45,23 @@ export function isReservasAulasEnabled(): boolean {
  * Default: `true` desde Epic 3 (Wave 6, Story 3.24) — BE passou a expor
  * `/api/v1/crm/cadencias/*` completo. Para desabilitar explicitamente em
  * um ambiente específico, setar `NEXT_PUBLIC_CRM_CADENCIAS_ENABLED=false`.
+ *
+ * @deprecated Use `useCrmCadenciasEnabled()` de `@/lib/query/use-feature-flags`
+ * em componentes React. Esta função só consulta env var (kill-switch global)
+ * e não respeita a configuração per-tenant persistida em DB. Mantida apenas
+ * para uso em server components, módulos não-React e adapters de baixo nível.
  */
-export function isCrmCadenciasEnabled(): boolean {
+export function isCrmCadenciasEnabledFallback(): boolean {
   return readBooleanFlag(process.env.NEXT_PUBLIC_CRM_CADENCIAS_ENABLED, true);
 }
 
-/** Drawer "Próximas Ações" no perfil do cliente (Perfil v3 — Wave 2). */
-export function isPerfilDrawerAcoesEnabled(): boolean {
+/**
+ * Drawer "Próximas Ações" no perfil do cliente (Perfil v3 — Wave 2).
+ *
+ * @deprecated Use `usePerfilDrawerAcoesEnabled()` de
+ * `@/lib/query/use-feature-flags` em componentes React. Esta função só
+ * consulta env var (kill-switch global), não respeita config per-tenant.
+ */
+export function isPerfilDrawerAcoesEnabledFallback(): boolean {
   return readBooleanFlag(process.env.NEXT_PUBLIC_PERFIL_DRAWER_ACOES_ENABLED, true);
 }
