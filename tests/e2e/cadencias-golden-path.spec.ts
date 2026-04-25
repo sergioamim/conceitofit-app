@@ -78,9 +78,40 @@ async function installStatefulCrmCadenciasMocks(page: Page) {
     seq: 1,
   };
 
-  // GET /api/v1/crm/cadencias?tenantId=...
-  await page.route(/\/api\/v1\/crm\/cadencias(\?|$)/, async (route) => {
+  // GET /api/v1/crm/cadencias?tenantId=... (e DELETE /api/v1/crm/cadencias/{id})
+  await page.route(/\/api\/v1\/crm\/cadencias(\?|\/[^/]+)?(\?|$)/, async (route) => {
     const method = route.request().method();
+    const url = route.request().url();
+    // DELETE /api/v1/crm/cadencias/{id}?tenantId=...
+    const deleteMatch = url.match(/\/api\/v1\/crm\/cadencias\/([^/?]+)(?:\?|$)/);
+    if (method === "DELETE" && deleteMatch) {
+      const id = deleteMatch[1];
+      const idx = state.cadencias.findIndex((c) => c.id === id);
+      if (idx === -1) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "Cadência não encontrada" }),
+        });
+        return;
+      }
+      const hasRunning = state.execucoes.some(
+        (e) => e.cadenciaId === id && e.status === "EM_ANDAMENTO",
+      );
+      if (hasRunning) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            message: "Cadência possui execução em andamento",
+          }),
+        });
+        return;
+      }
+      state.cadencias.splice(idx, 1);
+      await route.fulfill({ status: 204, body: "" });
+      return;
+    }
     if (method === "GET") {
       await route.fulfill({
         status: 200,
@@ -344,5 +375,65 @@ test.describe("CRM — Cadências golden path (Epic 3 D9)", () => {
     );
     await expect(execucaoCard.getByText(PROSPECT_NOME)).toBeVisible();
     await expect(execucaoCard.getByText(/Em andamento/i)).toBeVisible();
+  });
+
+  // Débito 3.30 — UI delete cadência (FE).
+  // Valida o happy path do botão "Excluir" no card da cadência: cria cadência
+  // sem disparar (sem execução em andamento), abre AlertDialog, confirma e
+  // verifica que o card some da lista.
+  // TODO próxima sessão: cobrir 409 ("execução em andamento bloqueia delete")
+  // — exige cancelar/concluir execução antes do delete; modelar quando o stub
+  // de cancelamento for adicionado.
+  test("exclui cadência via botão Excluir + AlertDialog (cleanup)", async ({
+    page,
+  }) => {
+    await abrirTelaCadencias(page);
+
+    // Cria cadência mínima (1 passo default) sem disparar.
+    await page.getByRole("button", { name: /Nova cadência/i }).click();
+    const drawer = page.locator('[role="dialog"][data-state="open"]');
+    await expect(drawer).toBeVisible();
+    await drawer.locator("#cadencia-nome").fill("Cadência para excluir");
+    await drawer.locator("#cadencia-objetivo").fill("Cleanup E2E");
+    await drawer.locator("#passo-0-titulo").fill("Passo único");
+
+    const createResponse = page.waitForResponse(
+      (r) =>
+        r.request().method() === "POST" &&
+        /\/api\/v1\/crm\/cadencias(\?|$)/.test(r.url()),
+    );
+    await drawer.getByRole("button", { name: /Criar cadência/i }).click();
+    await createResponse;
+    await expect(drawer).toBeHidden();
+
+    // Confirma que o card apareceu.
+    const cardTitle = page
+      .locator('[data-slot="card-title"]', { hasText: "Cadência para excluir" })
+      .first();
+    await expect(cardTitle).toBeVisible();
+
+    // Clica "Excluir" no card.
+    const cardCadencia = cardTitle.locator(
+      'xpath=ancestor::*[@data-slot="card"][1]',
+    );
+    await cardCadencia.getByRole("button", { name: /Excluir/i }).click();
+
+    // AlertDialog de confirmação aparece.
+    const alertDialog = page
+      .getByRole("alertdialog")
+      .filter({ hasText: /Excluir cadência\?/i });
+    await expect(alertDialog).toBeVisible();
+
+    // Confirma exclusão (botão "Excluir" dentro do dialog).
+    const deleteResponse = page.waitForResponse(
+      (r) =>
+        r.request().method() === "DELETE" &&
+        /\/api\/v1\/crm\/cadencias\//.test(r.url()),
+    );
+    await alertDialog.getByRole("button", { name: /^Excluir$/ }).click();
+    await deleteResponse;
+
+    // Card desaparece da lista.
+    await expect(cardTitle).toBeHidden();
   });
 });
