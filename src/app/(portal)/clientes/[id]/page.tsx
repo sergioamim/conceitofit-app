@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { StatusBadge } from "@/components/shared/status-badge";
 import { isPagamentoEmAberto, getClienteHaloStatus } from "@/lib/domain/status-helpers";
 import { computeSugestoesCliente, type SugestaoAcao } from "@/lib/domain/sugestoes-cliente";
-import { isPerfilDrawerAcoesEnabled } from "@/lib/feature-flags";
+import { usePerfilDrawerAcoesEnabled } from "@/lib/query/use-feature-flags";
 import {
   trackPerfilCartoesDrawerOpen,
   trackPerfilDrawerAcoesOpen,
@@ -61,6 +61,7 @@ const motivoOptions = [
 
 export default function ClienteDetalhePage() {
   const w = useClienteWorkspace();
+  const drawerAcoesEnabled = usePerfilDrawerAcoesEnabled();
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
   const [mesclarOpen, setMesclarOpen] = useState(false);
   const [acoesOpen, setAcoesOpen] = useState(false);
@@ -128,8 +129,7 @@ export default function ClienteDetalhePage() {
     planoPermiteConvidados: false,
   });
 
-  // Perfil v3 — Wave 2: drawer de próximas ações
-  const drawerAcoesEnabled = isPerfilDrawerAcoesEnabled();
+  // Perfil v3 — Wave 2: drawer de próximas ações (per-tenant via DB).
   const sugestoes: SugestaoAcao[] = drawerAcoesEnabled
     ? computeSugestoesCliente({
         aluno,
