@@ -241,15 +241,20 @@ export function buildSinaisCliente(input: BuildSinaisInput): Sinal[] {
       hint: `${vencidos.length} boleto${vencidos.length > 1 ? "s" : ""} vencido${vencidos.length > 1 ? "s" : ""}`,
       tom: "critico",
     });
-  } else if (input.saldo !== 0) {
+  } else if (input.saldo < 0) {
+    // Saldo devedor real (cliente deve pra academia)
     sinais.push({
       key: "saldo",
       icon: SinaisIcons.saldo,
-      label: input.saldo > 0 ? "Crédito" : "Saldo devedor",
+      label: "Saldo devedor",
       valor: formatBRL(Math.abs(input.saldo)),
-      tom: input.saldo > 0 ? "ok" : "atencao",
+      tom: "atencao",
     });
   } else {
+    // saldo === 0 OU saldo > 0 → "Sem pendência".
+    // Saldo positivo NÃO é crédito a favor — é o resultado de "pago - aberto"
+    // (sempre positivo quando há histórico de pagamentos quitados sem dívidas).
+    // Crédito real (sobra/refund/nota de crédito) virá em feature dedicada.
     sinais.push({
       key: "pendencia",
       icon: SinaisIcons.pendencia,

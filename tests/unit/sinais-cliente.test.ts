@@ -170,12 +170,15 @@ describe("buildSinaisCliente", () => {
       expect(s.hint).toContain("2 boletos");
     });
 
-    it("saldo positivo sem pendência → mostra 'Crédito' com tom ok", () => {
-      const s = buildSinaisCliente(baseInput({ saldo: 50 })).find(
-        (x) => x.key === "saldo"
-      )!;
-      expect(s.label).toBe("Crédito");
-      expect(s.tom).toBe("ok");
+    it("saldo positivo sem pendência → NÃO mostra 'Crédito' (mostra 'Sem pendência')", () => {
+      // Regra (2026-04-25): saldo positivo é resultado de 'pago - aberto', não crédito real.
+      // Crédito a favor (refund/sobra) virá em feature dedicada.
+      const sinais = buildSinaisCliente(baseInput({ saldo: 50 }));
+      const saldoSinal = sinais.find((x) => x.key === "saldo");
+      expect(saldoSinal).toBeUndefined();
+      const pendencia = sinais.find((x) => x.key === "pendencia")!;
+      expect(pendencia.valor).toBe("Sem pendência");
+      expect(pendencia.tom).toBe("ok");
     });
 
     it("saldo negativo sem pendência → mostra 'Saldo devedor' com tom atencao", () => {
