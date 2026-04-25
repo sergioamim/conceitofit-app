@@ -56,6 +56,12 @@ export function useFeatureFlag(
 // Helpers específicos por flag
 // ---------------------------------------------------------------------------
 
+function readEnvKillSwitch(envKey: string): boolean {
+  return (
+    typeof process !== "undefined" && process.env[envKey] === "false"
+  );
+}
+
 /**
  * Hook React para `crm.cadencias.enabled`.
  *
@@ -69,13 +75,12 @@ export function useFeatureFlag(
  * (Story 3.24 — BE expõe `/api/v1/crm/cadencias/*` por padrão).
  */
 export function useCrmCadenciasEnabled(): boolean {
-  if (
-    typeof process !== "undefined" &&
-    process.env.NEXT_PUBLIC_CRM_CADENCIAS_ENABLED === "false"
-  ) {
-    return false;
-  }
-  return useFeatureFlag("crm.cadencias.enabled", true);
+  // Avalia o env (constante por build) ANTES dos hooks: se desligado
+  // globalmente, ainda invocamos o hook para preservar a ordem dos hooks
+  // entre renders e ignoramos o resultado.
+  const killSwitch = readEnvKillSwitch("NEXT_PUBLIC_CRM_CADENCIAS_ENABLED");
+  const dbValue = useFeatureFlag("crm.cadencias.enabled", true);
+  return killSwitch ? false : dbValue;
 }
 
 /**
@@ -84,11 +89,9 @@ export function useCrmCadenciasEnabled(): boolean {
  * Mesma estratégia de kill-switch via env var. Default `true`.
  */
 export function usePerfilDrawerAcoesEnabled(): boolean {
-  if (
-    typeof process !== "undefined" &&
-    process.env.NEXT_PUBLIC_PERFIL_DRAWER_ACOES_ENABLED === "false"
-  ) {
-    return false;
-  }
-  return useFeatureFlag("perfil.drawer-acoes.enabled", true);
+  const killSwitch = readEnvKillSwitch(
+    "NEXT_PUBLIC_PERFIL_DRAWER_ACOES_ENABLED",
+  );
+  const dbValue = useFeatureFlag("perfil.drawer-acoes.enabled", true);
+  return killSwitch ? false : dbValue;
 }
