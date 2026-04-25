@@ -11,7 +11,7 @@ import {
   type TreinoV2AssignmentJob,
   type TreinoV2AssignmentResultItem,
   type TreinoV2AssignmentResolution,
-  type TreinoV2Block,
+  type TreinoV2Sessao,
   type TreinoV2Template,
   type TreinoV2TemplateSnapshot,
   type TreinoV2TemplateStatus,
@@ -49,7 +49,7 @@ export interface TreinoV2PersistedTemplateMetadata {
   versao: number;
   categoria?: string;
   versaoSimplificadaHabilitada: boolean;
-  blocos: TreinoV2Block[];
+  sessoes: TreinoV2Sessao[];
   assignmentHistory: TreinoV2AssignmentJob[];
 }
 
@@ -70,7 +70,7 @@ export interface TreinoV2EditorSeed {
   assignedStatus: TreinoV2AssignedStatus;
   versao: number;
   versaoSimplificadaHabilitada: boolean;
-  blocos: TreinoV2Block[];
+  sessoes: TreinoV2Sessao[];
   assignmentHistory: TreinoV2AssignmentJob[];
   snapshot?: TreinoV2TemplateSnapshot;
   customizadoLocalmente: boolean;
@@ -206,11 +206,11 @@ function resolveMetricNumber(raw: string | undefined, fallback?: number): number
   return Number.isFinite(numeric) ? numeric : fallback;
 }
 
-function createBlockId(seed: string, index: number): string {
+function createSessaoId(seed: string, index: number): string {
   return `${seed}-${index + 1}`;
 }
 
-function buildDefaultBlocks(treino: Treino): TreinoV2Block[] {
+function buildDefaultBlocks(treino: Treino): TreinoV2Sessao[] {
   const blockName = trimString(treino.divisao) || "A";
   const items = (treino.itens ?? [])
     .slice()
@@ -219,7 +219,7 @@ function buildDefaultBlocks(treino: Treino): TreinoV2Block[] {
 
   return [
     {
-      id: createBlockId("bloco", 0),
+      id: createSessaoId("sessao", 0),
       nome: blockName,
       ordem: 1,
       itens: items,
@@ -255,9 +255,9 @@ function sanitizeBlockName(name: string, index: number): string {
   return normalized || String.fromCharCode(65 + index);
 }
 
-export function createEmptyTreinoV2Block(index: number): TreinoV2Block {
+export function createEmptyTreinoV2Sessao(index: number): TreinoV2Sessao {
   return {
-    id: createBlockId("bloco", index),
+    id: createSessaoId("sessao", index),
     nome: String.fromCharCode(65 + index),
     ordem: index + 1,
     itens: [],
@@ -340,9 +340,9 @@ export function buildTreinoV2EditorSeed(treino: Treino): TreinoV2EditorSeed {
     assignedStatus: assignedMeta?.status ?? inferAssignedStatus(treino),
     versao: templateMeta?.versao ?? assignedMeta?.snapshot?.templateVersion ?? 1,
     versaoSimplificadaHabilitada: templateMeta?.versaoSimplificadaHabilitada ?? false,
-    blocos:
-      templateMeta?.blocos?.length
-        ? templateMeta.blocos.map((block, index) => ({
+    sessoes:
+      templateMeta?.sessoes?.length
+        ? templateMeta.sessoes.map((block, index) => ({
             ...block,
             nome: sanitizeBlockName(block.nome, index),
             ordem: index + 1,
@@ -351,8 +351,8 @@ export function buildTreinoV2EditorSeed(treino: Treino): TreinoV2EditorSeed {
               ordem: itemIndex + 1,
             })),
           }))
-        : assignedMeta?.snapshot?.blocos?.length
-          ? assignedMeta.snapshot.blocos.map((block, index) => ({
+        : assignedMeta?.snapshot?.sessoes?.length
+          ? assignedMeta.snapshot.sessoes.map((block, index) => ({
               ...block,
               nome: sanitizeBlockName(block.nome, index),
               ordem: index + 1,
@@ -373,7 +373,7 @@ export function buildTreinoV2Template(input: {
   treino: Treino;
   editor: Pick<
     TreinoV2EditorSeed,
-    "nome" | "frequenciaSemanal" | "totalSemanas" | "categoria" | "templateStatus" | "versao" | "versaoSimplificadaHabilitada" | "blocos"
+    "nome" | "frequenciaSemanal" | "totalSemanas" | "categoria" | "templateStatus" | "versao" | "versaoSimplificadaHabilitada" | "sessoes"
   >;
 }): TreinoV2Template {
   const template: TreinoV2Template = {
@@ -389,7 +389,7 @@ export function buildTreinoV2Template(input: {
     precisaRevisao: input.editor.templateStatus === "RASCUNHO" || input.editor.templateStatus === "EM_REVISAO",
     versao: input.editor.versao,
     versaoSimplificadaHabilitada: input.editor.versaoSimplificadaHabilitada,
-    blocos: input.editor.blocos,
+    sessoes: input.editor.sessoes,
     validationIssues: [],
   };
   template.validationIssues = validateTreinoV2Template(template);
@@ -400,7 +400,7 @@ export function buildTreinoV2TemplateSnapshot(input: {
   treino: Treino;
   editor: Pick<
     TreinoV2EditorSeed,
-    "nome" | "frequenciaSemanal" | "totalSemanas" | "categoria" | "versao" | "blocos"
+    "nome" | "frequenciaSemanal" | "totalSemanas" | "categoria" | "versao" | "sessoes"
   >;
   publishedAt?: string;
 }): TreinoV2TemplateSnapshot {
@@ -422,7 +422,7 @@ export function buildTreinoV2TemplateSnapshot(input: {
     frequenciaSemanal: input.editor.frequenciaSemanal,
     totalSemanas: input.editor.totalSemanas,
     categoria: trimString(input.editor.categoria) || undefined,
-    blocos: template.blocos,
+    sessoes: template.sessoes,
     validationIssues: template.validationIssues ?? [],
   };
 }
@@ -498,7 +498,7 @@ export function buildTreinoV2PersistedTemplateMetadata(input: {
   treino: Treino;
   editor: Pick<
     TreinoV2EditorSeed,
-    "nome" | "frequenciaSemanal" | "totalSemanas" | "categoria" | "templateStatus" | "versao" | "versaoSimplificadaHabilitada" | "blocos" | "assignmentHistory"
+    "nome" | "frequenciaSemanal" | "totalSemanas" | "categoria" | "templateStatus" | "versao" | "versaoSimplificadaHabilitada" | "sessoes" | "assignmentHistory"
   >;
 }): TreinoV2PersistedTemplateMetadata {
   return {
@@ -506,7 +506,7 @@ export function buildTreinoV2PersistedTemplateMetadata(input: {
     versao: input.editor.versao,
     categoria: trimString(input.editor.categoria) || undefined,
     versaoSimplificadaHabilitada: input.editor.versaoSimplificadaHabilitada,
-    blocos: input.editor.blocos,
+    sessoes: input.editor.sessoes,
     assignmentHistory: input.editor.assignmentHistory,
   };
 }
@@ -557,7 +557,7 @@ export function buildTreinoV2SaveInput(input: {
     observacao?: string;
   }>;
 } {
-  const flattenedItems = input.editor.blocos.flatMap((block, blockIndex) =>
+  const flattenedItems = input.editor.sessoes.flatMap((block, blockIndex) =>
     block.itens.map((item, itemIndex) => {
       const repeticoes = parseRepRange(item.repeticoes.raw);
       const carga = resolveMetricNumber(item.carga?.raw);
@@ -594,7 +594,7 @@ export function buildTreinoV2SaveInput(input: {
             templateStatus: input.editor.templateStatus,
             versao: input.editor.versao,
             versaoSimplificadaHabilitada: input.editor.versaoSimplificadaHabilitada,
-            blocos: input.editor.blocos,
+            sessoes: input.editor.sessoes,
             assignmentHistory: input.editor.assignmentHistory,
           },
         })
@@ -659,7 +659,7 @@ function summarizeTreinoV2TemplateGovernance(treino: Treino): TreinoV2TemplateGo
       templateStatus: editor.templateStatus,
       versao: editor.versao,
       versaoSimplificadaHabilitada: editor.versaoSimplificadaHabilitada,
-      blocos: editor.blocos,
+      sessoes: editor.sessoes,
     },
   });
   const validationIssues = validateTreinoV2Template(template);

@@ -27,7 +27,7 @@ import {
   buildTreinoV2TemplateSnapshot,
   buildTreinoV2AssignmentJob,
   buildTreinoV2EditorSeed,
-  createEmptyTreinoV2Block,
+  createEmptyTreinoV2Sessao,
   toTreinoV2CatalogExercise,
   serializeExercicioV2Descricao,
   appendTreinoV2AssignmentHistory,
@@ -97,7 +97,7 @@ export function TreinoV2Editor({
   );
   const [editor, setEditor] = useState<TreinoV2EditorSeed>(() => buildTreinoV2EditorSeed(treino));
   const [catalog, setCatalog] = useState<TreinoV2CatalogExercise[]>(() => exercicios.map(toTreinoV2CatalogExercise));
-  const [activeBlockId, setActiveBlockId] = useState(() => buildTreinoV2EditorSeed(treino).blocos[0]?.id ?? "");
+  const [activeSessaoId, setActiveSessaoId] = useState(() => buildTreinoV2EditorSeed(treino).sessoes[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [drawer, setDrawer] = useState<ExerciseDrawerState>(() => buildExerciseDrawerState());
   const [assignment, setAssignment] = useState(() => buildAssignmentDialogState(treino));
@@ -111,7 +111,7 @@ export function TreinoV2Editor({
   useEffect(() => {
     const nextEditor = buildTreinoV2EditorSeed(treino);
     setEditor(nextEditor);
-    setActiveBlockId(nextEditor.blocos[0]?.id ?? "");
+    setActiveSessaoId(nextEditor.sessoes[0]?.id ?? "");
     setAssignment(buildAssignmentDialogState(treino));
   }, [treino]);
 
@@ -136,16 +136,16 @@ export function TreinoV2Editor({
           templateStatus: editor.templateStatus,
           versao: editor.versao,
           versaoSimplificadaHabilitada: editor.versaoSimplificadaHabilitada,
-          blocos: editor.blocos,
+          sessoes: editor.sessoes,
         },
       }),
-    [editor.blocos, editor.categoria, editor.frequenciaSemanal, editor.nome, editor.templateStatus, editor.totalSemanas, editor.versao, editor.versaoSimplificadaHabilitada, treino],
+    [editor.sessoes, editor.categoria, editor.frequenciaSemanal, editor.nome, editor.templateStatus, editor.totalSemanas, editor.versao, editor.versaoSimplificadaHabilitada, treino],
   );
 
   const validationIssues = useMemo(() => validateTreinoV2Template(template), [template]);
-  const activeBlock = useMemo(
-    () => editor.blocos.find((block) => block.id === activeBlockId) ?? editor.blocos[0] ?? null,
-    [activeBlockId, editor.blocos],
+  const activeSessao = useMemo(
+    () => editor.sessoes.find((sessao) => sessao.id === activeSessaoId) ?? editor.sessoes[0] ?? null,
+    [activeSessaoId, editor.sessoes],
   );
   const grupoMuscularOptions = useMemo(
     () =>
@@ -201,91 +201,91 @@ export function TreinoV2Editor({
     });
   }
 
-  function upsertBlocks(updater: (blocks: TreinoV2EditorSeed["blocos"]) => TreinoV2EditorSeed["blocos"]) {
+  function upsertSessoes(updater: (sessoes: TreinoV2EditorSeed["sessoes"]) => TreinoV2EditorSeed["sessoes"]) {
     updateEditor((current) => {
-      const nextBlocks = updater(current.blocos).map((block, blockIndex) => ({
-        ...block,
-        nome: block.nome.trim() || String.fromCharCode(65 + blockIndex),
-        ordem: blockIndex + 1,
-        itens: block.itens.map((item, itemIndex) => ({
+      const nextSessoes = updater(current.sessoes).map((sessao, sessaoIndex) => ({
+        ...sessao,
+        nome: sessao.nome.trim() || String.fromCharCode(65 + sessaoIndex),
+        ordem: sessaoIndex + 1,
+        itens: sessao.itens.map((item, itemIndex) => ({
           ...item,
           ordem: itemIndex + 1,
         })),
       }));
-      return { ...current, blocos: nextBlocks };
+      return { ...current, sessoes: nextSessoes };
     });
   }
 
-  function addBlock() {
-    upsertBlocks((blocks) => [...blocks, createEmptyTreinoV2Block(blocks.length)]);
-    setActiveBlockId(createEmptyTreinoV2Block(editor.blocos.length).id);
+  function addSessao() {
+    upsertSessoes((sessoes) => [...sessoes, createEmptyTreinoV2Sessao(sessoes.length)]);
+    setActiveSessaoId(createEmptyTreinoV2Sessao(editor.sessoes.length).id);
   }
 
-  function duplicateBlock(blockId: string) {
-    upsertBlocks((blocks) => {
-      const block = blocks.find((item) => item.id === blockId);
-      if (!block) return blocks;
+  function duplicateSessao(sessaoId: string) {
+    upsertSessoes((sessoes) => {
+      const sessao = sessoes.find((item) => item.id === sessaoId);
+      if (!sessao) return sessoes;
       return [
-        ...blocks,
+        ...sessoes,
         {
-          ...JSON.parse(JSON.stringify(block)),
-          id: `${block.id}-copy-${Date.now()}`,
-          nome: `${block.nome} copia`,
+          ...JSON.parse(JSON.stringify(sessao)),
+          id: `${sessao.id}-copy-${Date.now()}`,
+          nome: `${sessao.nome} copia`,
         },
       ];
     });
   }
 
-  function moveBlock(blockId: string, direction: -1 | 1) {
-    upsertBlocks((blocks) => {
-      const index = blocks.findIndex((item) => item.id === blockId);
-      if (index === -1) return blocks;
-      return moveItem(blocks, index, direction);
+  function moveSessao(sessaoId: string, direction: -1 | 1) {
+    upsertSessoes((sessoes) => {
+      const index = sessoes.findIndex((item) => item.id === sessaoId);
+      if (index === -1) return sessoes;
+      return moveItem(sessoes, index, direction);
     });
   }
 
-  function removeBlock(blockId: string) {
-    upsertBlocks((blocks) => {
-      if (blocks.length === 1) return blocks;
-      return blocks.filter((item) => item.id !== blockId);
+  function removeSessao(sessaoId: string) {
+    upsertSessoes((sessoes) => {
+      if (sessoes.length === 1) return sessoes;
+      return sessoes.filter((item) => item.id !== sessaoId);
     });
-    if (activeBlockId === blockId) {
-      const next = editor.blocos.find((item) => item.id !== blockId);
-      setActiveBlockId(next?.id ?? "");
+    if (activeSessaoId === sessaoId) {
+      const next = editor.sessoes.find((item) => item.id !== sessaoId);
+      setActiveSessaoId(next?.id ?? "");
     }
   }
 
-  function updateBlockName(blockId: string, name: string) {
-    upsertBlocks((blocks) =>
-      blocks.map((item) =>
-        item.id === blockId ? { ...item, nome: name } : item,
+  function updateBlockName(sessaoId: string, name: string) {
+    upsertSessoes((sessoes) =>
+      sessoes.map((item) =>
+        item.id === sessaoId ? { ...item, nome: name } : item,
       ),
     );
   }
 
   function updateBlockItem(
-    blockId: string,
+    sessaoId: string,
     itemId: string,
-    updater: (item: TreinoV2EditorSeed["blocos"][number]["itens"][number]) => TreinoV2EditorSeed["blocos"][number]["itens"][number],
+    updater: (item: TreinoV2EditorSeed["sessoes"][number]["itens"][number]) => TreinoV2EditorSeed["sessoes"][number]["itens"][number],
   ) {
-    upsertBlocks((blocks) =>
-      blocks.map((block) =>
-        block.id !== blockId
-          ? block
+    upsertSessoes((sessoes) =>
+      sessoes.map((sessao) =>
+        sessao.id !== sessaoId
+          ? sessao
           : {
-              ...block,
-              itens: block.itens.map((item) => (item.id === itemId ? updater(item) : item)),
+              ...sessao,
+              itens: sessao.itens.map((item) => (item.id === itemId ? updater(item) : item)),
             },
       ),
     );
   }
 
-  function addExerciseToBlock(blockId: string, exercicio?: TreinoV2CatalogExercise) {
-    const block = editor.blocos.find((b) => b.id === blockId);
-    if (!block) return;
-    upsertBlocks((blocks) =>
-      blocks.map((b) =>
-        b.id !== blockId
+  function addExerciseToSessao(sessaoId: string, exercicio?: TreinoV2CatalogExercise) {
+    const sessao = editor.sessoes.find((b) => b.id === sessaoId);
+    if (!sessao) return;
+    upsertSessoes((sessoes) =>
+      sessoes.map((b) =>
+        b.id !== sessaoId
           ? b
           : {
               ...b,
@@ -296,54 +296,54 @@ export function TreinoV2Editor({
   }
 
   function duplicateItem(itemId: string) {
-    if (!activeBlock) return;
-    upsertBlocks((blocks) =>
-      blocks.map((block) => {
-        if (block.id !== activeBlock.id) return block;
-        const index = block.itens.findIndex((item) => item.id === itemId);
-        if (index === -1) return block;
-        const source = block.itens[index];
+    if (!activeSessao) return;
+    upsertSessoes((sessoes) =>
+      sessoes.map((sessao) => {
+        if (sessao.id !== activeSessao.id) return sessao;
+        const index = sessao.itens.findIndex((item) => item.id === itemId);
+        if (index === -1) return sessao;
+        const source = sessao.itens[index];
         const copy = {
           ...JSON.parse(JSON.stringify(source)),
           id: `${source.id}-copy-${Date.now()}`,
           tecnicas: source.tecnicas?.filter((tech) => tech.type !== "REPLICAR_SERIE") ?? [],
         };
-        const nextItems = [...block.itens];
+        const nextItems = [...sessao.itens];
         nextItems.splice(index + 1, 0, copy);
-        return { ...block, itens: nextItems };
+        return { ...sessao, itens: nextItems };
       }),
     );
   }
 
-  function moveItemInActiveBlock(itemId: string, direction: -1 | 1) {
-    if (!activeBlock) return;
-    upsertBlocks((blocks) =>
-      blocks.map((block) => {
-        if (block.id !== activeBlock.id) return block;
-        const index = block.itens.findIndex((item) => item.id === itemId);
-        if (index === -1) return block;
-        return { ...block, itens: moveItem(block.itens, index, direction) };
+  function moveItemInActiveSessao(itemId: string, direction: -1 | 1) {
+    if (!activeSessao) return;
+    upsertSessoes((sessoes) =>
+      sessoes.map((sessao) => {
+        if (sessao.id !== activeSessao.id) return sessao;
+        const index = sessao.itens.findIndex((item) => item.id === itemId);
+        if (index === -1) return sessao;
+        return { ...sessao, itens: moveItem(sessao.itens, index, direction) };
       }),
     );
   }
 
-  function removeItemFromActiveBlock(itemId: string) {
-    if (!activeBlock) return;
-    upsertBlocks((blocks) =>
-      blocks.map((block) =>
-        block.id !== activeBlock.id
-          ? block
+  function removeItemFromActiveSessao(itemId: string) {
+    if (!activeSessao) return;
+    upsertSessoes((sessoes) =>
+      sessoes.map((sessao) =>
+        sessao.id !== activeSessao.id
+          ? sessao
           : {
-              ...block,
-              itens: block.itens.filter((item) => item.id !== itemId),
+              ...sessao,
+              itens: sessao.itens.filter((item) => item.id !== itemId),
             },
       ),
     );
   }
 
   function toggleTechnique(itemId: string, type: TreinoV2TechniqueType) {
-    if (!activeBlock) return;
-    updateBlockItem(activeBlock.id, itemId, (item) => {
+    if (!activeSessao) return;
+    updateBlockItem(activeSessao.id, itemId, (item) => {
       const current = item.tecnicas ?? [];
       const exists = current.some((tech) => tech.type === type);
       return {
@@ -459,7 +459,7 @@ export function TreinoV2Editor({
           templateStatus: next.templateStatus,
           versao: next.versao,
           versaoSimplificadaHabilitada: next.versaoSimplificadaHabilitada,
-          blocos: next.blocos,
+          sessoes: next.sessoes,
         },
       }),
       permissionSet: permissions,
@@ -619,7 +619,7 @@ export function TreinoV2Editor({
         totalSemanas: editor.totalSemanas,
         categoria: editor.categoria,
         versao: editor.versao,
-        blocos: editor.blocos,
+        sessoes: editor.sessoes,
       },
       publishedAt: new Date().toISOString(),
     });
@@ -817,7 +817,7 @@ export function TreinoV2Editor({
           <h1 className="font-display text-2xl font-bold tracking-tight">{editor.nome}</h1>
           <p className="text-sm text-muted-foreground">
             {editor.mode === "TEMPLATE"
-              ? "Editor unificado de montagem com blocos, biblioteca lateral e governança do template."
+              ? "Editor unificado de montagem com sessoes, biblioteca lateral e governança do template."
               : `Editor do treino atribuído para ${treino.alunoNome ?? "aluno"} com snapshot preservado.`}
           </p>
         </div>
@@ -889,21 +889,21 @@ export function TreinoV2Editor({
 
           <SerieConfig
             editor={editor}
-            activeBlockId={activeBlockId}
+            activeSessaoId={activeSessaoId}
             canEditCargaOnly={canEditAssignedCargaOnly}
             canManageCatalog={permissions.canManageExerciseCatalog}
             catalog={catalog}
-            onActiveBlockChange={setActiveBlockId}
-            onAddBlock={addBlock}
-            onDuplicateBlock={duplicateBlock}
-            onMoveBlock={moveBlock}
-            onRemoveBlock={removeBlock}
-            onUpdateBlockName={updateBlockName}
+            onActiveSessaoChange={setActiveSessaoId}
+            onAddSessao={addSessao}
+            onDuplicateSessao={duplicateSessao}
+            onMoveSessao={moveSessao}
+            onRemoveSessao={removeSessao}
+            onUpdateSessaoName={updateBlockName}
             onUpdateItem={updateBlockItem}
-            onAddEmptyItem={(blockId) => addExerciseToBlock(blockId)}
+            onAddEmptyItem={(sessaoId) => addExerciseToSessao(sessaoId)}
             onDuplicateItem={duplicateItem}
-            onMoveItem={moveItemInActiveBlock}
-            onRemoveItem={removeItemFromActiveBlock}
+            onMoveItem={moveItemInActiveSessao}
+            onRemoveItem={removeItemFromActiveSessao}
             onToggleTechnique={toggleTechnique}
           />
 
@@ -940,13 +940,13 @@ export function TreinoV2Editor({
             catalogObjetivo={catalogObjetivo}
             catalogGrupoMuscularId={catalogGrupoMuscularId}
             canManageCatalog={permissions.canManageExerciseCatalog}
-            hasActiveBlock={Boolean(activeBlock)}
+            hasActiveSessao={Boolean(activeSessao)}
             onCatalogSearchChange={setCatalogSearch}
             onCatalogTipoChange={setCatalogTipo}
             onCatalogObjetivoChange={setCatalogObjetivo}
             onCatalogGrupoMuscularIdChange={setCatalogGrupoMuscularId}
             onAddExercise={(exercicio) => {
-              if (activeBlock) addExerciseToBlock(activeBlock.id, exercicio);
+              if (activeSessao) addExerciseToSessao(activeSessao.id, exercicio);
             }}
             onEditExercise={(exercicio) => setDrawer(buildExerciseDrawerState(exercicio))}
             onNewExercise={() => setDrawer({ ...buildExerciseDrawerState(), open: true })}

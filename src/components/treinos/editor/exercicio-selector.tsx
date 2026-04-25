@@ -35,7 +35,7 @@ type ExercicioSelectorProps = {
   catalogObjetivo: "" | TreinoV2DefaultObjective;
   catalogGrupoMuscularId: string;
   canManageCatalog: boolean;
-  hasActiveBlock: boolean;
+  hasActiveSessao: boolean;
   onCatalogSearchChange: (value: string) => void;
   onCatalogTipoChange: (value: "" | TreinoV2ExerciseType) => void;
   onCatalogObjetivoChange: (value: "" | TreinoV2DefaultObjective) => void;
@@ -54,7 +54,7 @@ export function ExercicioSelector({
   catalogObjetivo,
   catalogGrupoMuscularId,
   canManageCatalog,
-  hasActiveBlock,
+  hasActiveSessao,
   onCatalogSearchChange,
   onCatalogTipoChange,
   onCatalogObjetivoChange,
@@ -137,7 +137,7 @@ export function ExercicioSelector({
                     ) : null}
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => onAddExercise(item)} disabled={!hasActiveBlock}>
+                    <Button variant="outline" size="sm" onClick={() => onAddExercise(item)} disabled={!hasActiveSessao}>
                       <Plus className="mr-1 size-4" />
                       +
                     </Button>

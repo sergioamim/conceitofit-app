@@ -56,9 +56,9 @@ test.describe("treinos v2 runtime", () => {
     expect(seed.mode).toBe("TEMPLATE");
     expect(seed.templateStatus).toBe("PUBLICADO");
     expect(seed.totalSemanas).toBe(4);
-    expect(seed.blocos).toHaveLength(1);
-    expect(seed.blocos[0]?.itens[0]?.exerciseNome).toBe("Agachamento");
-    expect(seed.blocos[0]?.itens[0]?.repeticoes.raw).toBe("8-10");
+    expect(seed.sessoes).toHaveLength(1);
+    expect(seed.sessoes[0]?.itens[0]?.exerciseNome).toBe("Agachamento");
+    expect(seed.sessoes[0]?.itens[0]?.repeticoes.raw).toBe("8-10");
   });
 
   test("gera payload de save com metadata embutida e status de rascunho", () => {
@@ -142,7 +142,7 @@ test.describe("treinos v2 runtime", () => {
         totalSemanas: templateEditor.totalSemanas,
         categoria: templateEditor.categoria,
         versao: 3,
-        blocos: templateEditor.blocos,
+        sessoes: templateEditor.sessoes,
       },
       publishedAt: "2026-03-14T10:00:00.000Z",
     });

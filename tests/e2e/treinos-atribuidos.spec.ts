@@ -97,7 +97,7 @@ async function installTreinosAtribuidosStubs(page: Page) {
     frequenciaSemanal: 3,
     totalSemanas: 4,
     categoria: "Hipertrofia",
-    blocos: [{ id: "bloco-1", nome: "A", ordem: 1, itens: [] }],
+    sessoes: [{ id: "bloco-1", nome: "A", ordem: 1, itens: [] }],
     validationIssues: [],
   };
   const snapshotBeta = {
@@ -109,7 +109,7 @@ async function installTreinosAtribuidosStubs(page: Page) {
     frequenciaSemanal: 4,
     totalSemanas: 5,
     categoria: "Força",
-    blocos: [{ id: "bloco-1", nome: "B", ordem: 1, itens: [] }],
+    sessoes: [{ id: "bloco-1", nome: "B", ordem: 1, itens: [] }],
     validationIssues: [],
   };
 
