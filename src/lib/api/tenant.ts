@@ -123,11 +123,19 @@ export function normalizeTenantQuery(
     .filter(Boolean);
   const fallbackTenant = resolveTenantFallback(allowedTenants);
 
-  if (shouldStripTenantIdFromQuery(path, hasContextHeader)) {
-    delete normalized.tenantId;
-  } else if (requestedTenant) {
+  // Sempre que possível, envia o tenantId explicitamente — mesmo em rotas
+  // que aceitam X-Context-Id. O backend usa o tenantId da query como fonte
+  // autoritativa e cai no contextId só se a query estiver vazia. Isso evita
+  // o cenário em que `tenantContextCache[contextId]` ficou stale por algum
+  // motivo (ex: switch de tenant não propagou) e o backend resolve pra um
+  // tenant diferente do `activeTenantId` da sessão.
+  if (requestedTenant) {
     normalized.tenantId = requestedTenant;
-  } else if (routeRequiresTenantQuery(path, hasContextHeader) && fallbackTenant) {
+  } else if (
+    fallbackTenant
+    && (routeRequiresTenantQuery(path, hasContextHeader)
+        || isContextScopedOperationalRoute(path))
+  ) {
     normalized.tenantId = fallbackTenant;
   }
 
