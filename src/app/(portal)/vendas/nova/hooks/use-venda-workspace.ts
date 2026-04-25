@@ -245,7 +245,18 @@ export function useVendaWorkspace() {
     }
     try {
       const venda = await processSale(pagamento);
-      const selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
+      let selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
+      // Fallback: prefill (?clienteId=X) busca aluno via getAlunoApi e não
+      // popula a lista cached. Ao finalizar a venda, buscamos por ID pra
+      // garantir que o recibo receba o cliente (pra renderizar o botão
+      // "Ver perfil do cliente" ao lado de "Nova venda").
+      if (!selectedCliente && venda.clienteId && tenantId) {
+        try {
+          selectedCliente = await getAlunoApi({ tenantId, id: venda.clienteId });
+        } catch {
+          selectedCliente = null;
+        }
+      }
       const contratoAutoMsg =
         selectedPlano?.contratoTemplateHtml && selectedPlano.contratoEnviarAutomaticoEmail && selectedCliente?.email
           ? `Contrato enviado automaticamente para ${selectedCliente.email}.`
