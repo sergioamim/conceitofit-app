@@ -10,9 +10,15 @@ import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { Button } from "@/components/ui/button";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useTreinoDetail } from "@/lib/query/use-treinos";
+import { isTreinoEditorV3Enabled } from "@/lib/feature-flags";
 
 const TreinoV2Editor = dynamic(
   () => import("@/components/treinos/treino-v2-editor").then((mod) => mod.TreinoV2Editor),
+  { ssr: false },
+);
+
+const TreinoV3Editor = dynamic(
+  () => import("@/components/treinos/treino-v3-editor").then((mod) => mod.TreinoV3Editor),
   { ssr: false },
 );
 import { ListErrorState } from "@/components/shared/list-states";
@@ -50,6 +56,7 @@ export default function TreinoDetalhePage() {
 
   const role = useMemo(() => resolveRole(access), [access]);
   const autoOpenAssignment = searchParams?.get("assign") === "1";
+  const useV3Editor = useMemo(() => isTreinoEditorV3Enabled(), []);
 
   if (loading) {
     return (
@@ -90,16 +97,29 @@ export default function TreinoDetalhePage() {
         <ListErrorState error={error} onRetry={handleInvalidate} />
       ) : null}
 
-      <TreinoV2Editor
-        tenantId={tenantId ?? ""}
-        treino={treino}
-        alunos={alunos}
-        exercicios={exercicios}
-        role={role}
-        autoOpenAssignment={autoOpenAssignment}
-        onTreinoChange={() => handleInvalidate()}
-        onCatalogChange={() => handleInvalidate()}
-      />
+      {useV3Editor ? (
+        <TreinoV3Editor
+          tenantId={tenantId ?? ""}
+          treino={treino}
+          alunos={alunos}
+          exercicios={exercicios}
+          role={role}
+          autoOpenAssignment={autoOpenAssignment}
+          onTreinoChange={() => handleInvalidate()}
+          onCatalogChange={() => handleInvalidate()}
+        />
+      ) : (
+        <TreinoV2Editor
+          tenantId={tenantId ?? ""}
+          treino={treino}
+          alunos={alunos}
+          exercicios={exercicios}
+          role={role}
+          autoOpenAssignment={autoOpenAssignment}
+          onTreinoChange={() => handleInvalidate()}
+          onCatalogChange={() => handleInvalidate()}
+        />
+      )}
     </div>
   );
 }

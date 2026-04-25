@@ -65,3 +65,13 @@ export function isCrmCadenciasEnabledFallback(): boolean {
 export function isPerfilDrawerAcoesEnabledFallback(): boolean {
   return readBooleanFlag(process.env.NEXT_PUBLIC_PERFIL_DRAWER_ACOES_ENABLED, true);
 }
+
+/**
+ * Editor V3 de treino (tabela inline + drag&drop). PRD Montagem de Treino V3,
+ * Wave 3. Default `false` durante coexistência com V2; cutover na Wave 7.
+ *
+ * Set `NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED=true` para ativar.
+ */
+export function isTreinoEditorV3Enabled(): boolean {
+  return readBooleanFlag(process.env.NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED, false);
+}
