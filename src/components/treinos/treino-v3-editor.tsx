@@ -506,7 +506,7 @@ export function TreinoV3Editor({
                   {alunoNome}
                 </span>
                 {customCount > 0 ? (
-                  <Badge className="bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/20">
+                  <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500/20">
                     {customCount} {customCount === 1 ? "custom" : "customs"}
                   </Badge>
                 ) : null}
@@ -521,7 +521,7 @@ export function TreinoV3Editor({
             />
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {isInstance ? (
-                <span className="text-gym-accent">↳ baseado em "{treino.nome ?? "template"}"</span>
+                <span className="text-gym-accent">↳ baseado em &ldquo;{treino.nome ?? "template"}&rdquo;</span>
               ) : (
                 <span>{editor.categoria ?? "Sem objetivo"}</span>
               )}
