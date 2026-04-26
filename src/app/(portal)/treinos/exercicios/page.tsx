@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Library, Plus, Search } from "lucide-react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ExercicioModal, type ExercicioForm } from "@/components/shared/exercicio-modal";
+import { ImportarDoCatalogoDialog } from "@/components/treinos/editor/importar-do-catalogo-dialog";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +25,8 @@ export default function ExerciciosPage() {
   const [apenasAtivos, setApenasAtivos] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Exercicio | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data, isLoading: loading, isError, error: queryError } = useExercicios({
     tenantId,
@@ -86,6 +90,21 @@ export default function ExerciciosPage() {
 
   return (
     <div className="space-y-6">
+      {tenantId ? (
+        <ImportarDoCatalogoDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          tenantId={tenantId}
+          onImportSuccess={(_exercicioId, nome) => {
+            toast({
+              title: "Exercício importado",
+              description: `"${nome}" agora aparece na biblioteca.`,
+            });
+            void queryClient.invalidateQueries({ queryKey: ["exercicios"] });
+          }}
+        />
+      ) : null}
+
       <ExercicioModal
         key={modalOpen ? editing?.id ?? "novo-exercicio" : "exercicio-closed"}
         open={modalOpen}
@@ -144,15 +163,26 @@ export default function ExerciciosPage() {
           </div>
         </div>
 
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
-        >
-          <Plus className="size-4" />
-          Novo exercício
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {tenantId ? (
+            <Button
+              variant="outline"
+              onClick={() => setImportDialogOpen(true)}
+            >
+              <Library className="mr-2 size-4" />
+              Importar do catálogo
+            </Button>
+          ) : null}
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setModalOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Novo exercício
+          </Button>
+        </div>
       </div>
 
       <Card className="border-border bg-card">
