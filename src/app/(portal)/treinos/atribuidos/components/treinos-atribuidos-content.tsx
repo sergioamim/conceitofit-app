@@ -3,13 +3,30 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Search, SquareArrowOutUpRight, UserPlus } from "lucide-react";
+import {
+  Copy,
+  Edit3,
+  Loader2,
+  MoreVertical,
+  Search,
+  SquareArrowOutUpRight,
+  TrendingUp,
+  UserPlus,
+} from "lucide-react";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_ACTIVE_TENANT_LABEL, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
@@ -234,14 +251,25 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Treinos atribuidos</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">
+            Treinos atribuídos
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Operacao pos-atribuicao por cliente, origem, vigencia e versao na unidade {tenantResolved ? tenantName : DEFAULT_ACTIVE_TENANT_LABEL}.
+            {statusCounts.total} alunos com treino ativo na unidade{" "}
+            {tenantResolved ? tenantName : DEFAULT_ACTIVE_TENANT_LABEL}.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/treinos">Voltar para templates</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" size="sm" className="border-border">
+            <Link href="/treinos">Voltar a templates</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/treinos">
+              <UserPlus className="mr-1 size-4" />
+              Atribuir treino
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {error ? (
@@ -359,23 +387,45 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
               renderCells={({ workout, governance }) => (
                 <>
                   <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <Link href={`/treinos/${workout.id}`} className="text-sm font-semibold text-foreground hover:text-gym-accent">
-                        {workout.alunoNome ?? "Aluno nao informado"}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {workout.nome ?? workout.templateNome ?? workout.id}
-                      </p>
+                    <div className="flex items-center gap-2.5">
+                      <AlunoAvatar nome={workout.alunoNome} />
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/treinos/${workout.id}`}
+                          className="block truncate text-sm font-semibold text-foreground hover:text-gym-accent"
+                        >
+                          {workout.alunoNome ?? "Aluno não informado"}
+                        </Link>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {workout.nome ?? workout.templateNome ?? workout.id}
+                        </p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant={resolveAssignedStatusBadgeVariant(governance.status)}>{governance.status}</Badge>
-                        {governance.customizadoLocalmente ? <Badge variant="outline">Customizado</Badge> : null}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant={resolveAssignedStatusBadgeVariant(governance.status)}>
+                          {governance.status}
+                        </Badge>
+                        {governance.customizadoLocalmente ? (
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500/40 bg-amber-500/10 text-amber-300"
+                            title="Treino editado localmente — diverge do template original"
+                          >
+                            <Edit3 className="mr-1 size-3" />
+                            customizado
+                          </Badge>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground/70">
+                            usando template original
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {workout.dataInicio ? formatDate(workout.dataInicio) : "-"} ate {workout.dataFim ? formatDate(workout.dataFim) : "-"}
+                        {workout.dataInicio ? formatDate(workout.dataInicio) : "-"} até{" "}
+                        {workout.dataFim ? formatDate(workout.dataFim) : "-"}
                       </p>
                     </div>
                   </td>
@@ -402,47 +452,89 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-2">
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/treinos/${workout.id}`}>
-                          <SquareArrowOutUpRight className="size-4" />
-                          Abrir
-                        </Link>
-                      </Button>
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {governance.templateOrigemId && workout.alunoId ? (
-                        <Button asChild variant="outline" size="sm" title="Customizar template para este aluno (modo instance)">
+                        <Button
+                          asChild
+                          size="sm"
+                          className="h-8"
+                          title="Customizar template para este aluno (modo instance)"
+                        >
                           <Link
                             href={`/treinos/${governance.templateOrigemId}?customize=1&alunoId=${workout.alunoId}&alunoNome=${encodeURIComponent(workout.alunoNome ?? "")}`}
                           >
+                            <Edit3 className="mr-1 size-3.5" />
                             Customizar
                           </Link>
                         </Button>
-                      ) : null}
-                      {workout.alunoId ? (
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/treinos/progresso/${workout.alunoId}`}>Progresso</Link>
+                      ) : (
+                        <Button asChild size="sm" variant="outline" className="h-8 border-border">
+                          <Link href={`/treinos/${workout.id}`}>
+                            <SquareArrowOutUpRight className="mr-1 size-3.5" />
+                            Abrir
+                          </Link>
                         </Button>
-                      ) : null}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void handleEncerrar(workout)}
-                        disabled={actingId === workout.id || governance.status === "ENCERRADO" || governance.status === "SUBSTITUIDO"}
-                      >
-                        Encerrar
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => void handleDuplicar(workout)} disabled={actingId === workout.id}>
-                        <Copy className="size-4" />
-                        Duplicar
-                      </Button>
-                      {governance.templateOrigemId ? (
-                        <Button asChild size="sm">
-                          <Link href={`/treinos/${governance.templateOrigemId}?assign=1`}>
-                            <UserPlus className="size-4" />
-                            Reatribuir
+                      )}
+                      {workout.alunoId ? (
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="h-8 border-border"
+                        >
+                          <Link href={`/treinos/progresso/${workout.alunoId}`}>
+                            <TrendingUp className="mr-1 size-3.5" />
+                            Progresso
                           </Link>
                         </Button>
                       ) : null}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 text-muted-foreground"
+                            aria-label="Mais ações"
+                          >
+                            <MoreVertical className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/treinos/${workout.id}`}>
+                              <SquareArrowOutUpRight className="mr-2 size-3.5" />
+                              Abrir treino
+                            </Link>
+                          </DropdownMenuItem>
+                          {governance.templateOrigemId ? (
+                            <DropdownMenuItem asChild>
+                              <Link href={`/treinos/${governance.templateOrigemId}?assign=1`}>
+                                <UserPlus className="mr-2 size-3.5" />
+                                Reatribuir template
+                              </Link>
+                            </DropdownMenuItem>
+                          ) : null}
+                          <DropdownMenuItem
+                            onClick={() => void handleDuplicar(workout)}
+                            disabled={actingId === workout.id}
+                          >
+                            <Copy className="mr-2 size-3.5" />
+                            Duplicar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => void handleEncerrar(workout)}
+                            disabled={
+                              actingId === workout.id ||
+                              governance.status === "ENCERRADO" ||
+                              governance.status === "SUBSTITUIDO"
+                            }
+                            className="text-gym-danger focus:text-gym-danger"
+                          >
+                            Encerrar treino
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </td>
                 </>
@@ -451,6 +543,22 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function AlunoAvatar({ nome }: { nome?: string }) {
+  // Inicial + cor estável por hash do nome (sem cache cross-render).
+  const initial = (nome?.trim().charAt(0) ?? "?").toUpperCase();
+  const cor = grupoColorByName(nome ?? "?");
+  return (
+    <div
+      aria-hidden
+      className="flex size-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold text-black"
+      style={{ background: cor }}
+      title={nome}
+    >
+      {initial}
     </div>
   );
 }
