@@ -959,9 +959,16 @@ export function TreinoV2Editor({
         catalog={catalog}
         grupoMuscularOptions={grupoMuscularOptions}
         saving={saving}
+        tenantId={tenantId}
         onDrawerChange={setDrawer}
         onClose={() => setDrawer(buildExerciseDrawerState())}
         onSave={() => void handleSaveExercise()}
+        onCatalogImported={(_exercicioId, nome) => {
+          toast({
+            title: "Exercício importado",
+            description: `"${nome}" agora aparece na biblioteca.`,
+          });
+        }}
       />
 
       <AssignmentDialog
