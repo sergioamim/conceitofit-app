@@ -28,6 +28,7 @@ const SNAPSHOT_HIPERTROFIA = {
   totalSemanas: 8,
   categoria: "Hipertrofia",
   sessoes: [{ id: "bloco-1", nome: "A", ordem: 1, itens: [] }],
+  validationIssues: [],
 };
 
 const SNAPSHOT_FULLBODY = {
@@ -40,6 +41,7 @@ const SNAPSHOT_FULLBODY = {
   totalSemanas: 4,
   categoria: "Condicionamento",
   sessoes: [{ id: "bloco-1", nome: "A", ordem: 1, itens: [] }],
+  validationIssues: [],
 };
 
 const treinoCustomizado = {

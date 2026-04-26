@@ -48,16 +48,19 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import {
   buildTreinoV2EditorSeed,
+  buildTreinoV2SaveInput,
   createEmptyTreinoV2Sessao,
   type TreinoV2EditorSeed,
 } from "@/lib/tenant/treinos/v2-runtime";
 import { createTreinoV2MetricField } from "@/lib/tenant/treinos/v2-domain";
+import { saveTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import {
   aplicarOverrides as aplicarOverridesApi,
   criarInstancia,
   removerInstancia,
 } from "@/lib/api/treino-instancia";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
 import { computeOverrides } from "./editor-v3/instance-overrides";
 import { SortableExerciseRow } from "./editor-v3/sortable-exercise-row";
@@ -77,6 +80,7 @@ export interface TreinoV3EditorProps extends EditorProps {
 }
 
 export function TreinoV3Editor({
+  tenantId,
   treino,
   exercicios,
   onTreinoChange,
@@ -339,10 +343,11 @@ export function TreinoV3Editor({
   }, [activeSessao]);
 
   // ─── Save ───
-  // Modo template: ainda usa toast (Wave 4 foca em instance; persist do
-  // template aproveita endpoints V2 existentes via Wave 5).
-  // Modo instance: gera overrides comparando current vs baseline e
-  // chama PATCH /instancias/{id}/overrides.
+  // - Modo template: persiste mudanças no treino via saveTreinoWorkspace
+  //   (mesmo pipeline do V2 — buildTreinoV2SaveInput → updateTreinoApi).
+  //   Reusa todos os mappings V2 que já estão validados em produção.
+  // - Modo instance: gera overrides comparando current vs baseline e
+  //   chama PATCH /instancias/{id}/overrides.
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
@@ -353,24 +358,73 @@ export function TreinoV3Editor({
           title: `Salvo para ${alunoNome ?? "aluno"}`,
           description: `${overrides.length} customizações persistidas como overlay do template.`,
         });
+        onTreinoChange?.(treino);
       } else {
-        toast({
-          title: "Salvamento em revisão",
-          description:
-            "Persist do template no V3 fica para Wave 5 (reusa endpoint V2). No modo instance funciona normal.",
+        // Modo template — persist real via endpoint V2 (compartilhado).
+        const payload = buildTreinoV2SaveInput({ treino, editor });
+        const updated = await saveTreinoWorkspace({
+          tenantId,
+          id: treino.id,
+          alunoId: treino.alunoId,
+          alunoNome: treino.alunoNome,
+          funcionarioId: treino.funcionarioId,
+          funcionarioNome: treino.funcionarioNome,
+          tipoTreino: treino.tipoTreino,
+          treinoBaseId: treino.treinoBaseId,
+          nome: payload.nome,
+          templateNome: payload.templateNome,
+          objetivo: payload.objetivo,
+          metaSessoesSemana: payload.metaSessoesSemana,
+          frequenciaPlanejada: payload.frequenciaPlanejada,
+          quantidadePrevista: payload.quantidadePrevista,
+          dataInicio: payload.dataInicio,
+          dataFim: payload.dataFim,
+          observacoes: payload.observacoes,
+          ativo: payload.ativo,
+          status: payload.status,
+          itens: payload.itens.map((item) => ({
+            id: "",
+            treinoId: treino.id,
+            exercicioId: item.exercicioId,
+            ordem: item.ordem,
+            series: item.series,
+            repeticoes: item.repeticoes,
+            repeticoesMin: item.repeticoesMin,
+            repeticoesMax: item.repeticoesMax,
+            carga: item.carga,
+            cargaSugerida: item.cargaSugerida,
+            intervaloSegundos: item.intervaloSegundos,
+            observacao: item.observacao,
+          })),
         });
+        // Reidrata o editor com o que voltou do backend
+        setEditor(buildTreinoV2EditorSeed(updated));
+        toast({
+          title: "Template salvo",
+          description: `${payload.itens.length} exercícios persistidos.`,
+        });
+        onTreinoChange?.(updated);
       }
-      onTreinoChange?.(treino);
     } catch (err) {
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
-        description: err instanceof Error ? err.message : "Tente novamente.",
+        description: normalizeErrorMessage(err),
       });
     } finally {
       setSaving(false);
     }
-  }, [isInstance, instanciaId, baseline, editor, alunoNome, toast, onTreinoChange, treino]);
+  }, [
+    isInstance,
+    instanciaId,
+    baseline,
+    editor,
+    alunoNome,
+    toast,
+    onTreinoChange,
+    treino,
+    tenantId,
+  ]);
 
   // ─── DnD setup ───
   const sensors = useSensors(

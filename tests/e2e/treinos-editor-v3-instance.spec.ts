@@ -87,6 +87,7 @@ const treinoFixture = {
     observacoes: "Foco em volume médio.",
     template: {
       versao: 1,
+      status: "PUBLICADO",
       versaoSimplificadaHabilitada: false,
       assignmentHistory: [],
       sessoes: [
@@ -100,10 +101,10 @@ const treinoFixture = {
               exerciseId: "ex-supino",
               exerciseNome: "Supino reto",
               ordem: 1,
-              series: { raw: "3", numericValue: 3 },
-              repeticoes: { raw: "10-12", numericValue: 10 },
-              carga: { raw: "60kg", numericValue: 60 },
-              intervalo: { raw: "60", numericValue: 60 },
+              series: { raw: "3", numericValue: 3, status: "VALIDO" },
+              repeticoes: { raw: "10-12", numericValue: 10, status: "VALIDO" },
+              carga: { raw: "60kg", numericValue: 60, status: "VALIDO" },
+              intervalo: { raw: "60", numericValue: 60, status: "VALIDO" },
               cadencia: "2-0-1",
               rir: 2,
               tecnicas: [],
