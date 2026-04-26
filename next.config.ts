@@ -51,7 +51,7 @@ const securityHeaders = [
       "default-src 'self'",
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: http://localhost:9000 https://*.amazonaws.com https://*.conceito.fit https://w12evostorage.w12app.com.br",
+      "img-src 'self' data: blob: http://localhost:9000 https://*.amazonaws.com https://*.conceito.fit https://w12evostorage.w12app.com.br https://static.exercisedb.dev https://cdn.exercisedb.dev",
       "font-src 'self' data:",
       `connect-src ${connectSrc.join(" ")}`,
       "frame-ancestors 'none'",
