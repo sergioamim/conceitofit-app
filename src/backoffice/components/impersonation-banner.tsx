@@ -69,7 +69,7 @@ export function ImpersonationBanner() {
     } finally {
       clearImpersonationSession();
       setEnding(false);
-      window.location.assign(currentSnapshot.returnPath || `/admin/seguranca/usuarios/${currentSnapshot.targetUserId}`);
+      window.location.assign(currentSnapshot.returnPath || `/admin/gestao-acessos/usuarios/${currentSnapshot.targetUserId}`);
     }
   }
 

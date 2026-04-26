@@ -10,13 +10,16 @@ export const GLOBAL_SECURITY_SECTIONS: GlobalSecuritySection[] = [
     label: "Visão geral",
     description: "Resumo operacional, rollout e riscos da segurança global.",
   },
+  // Wave 5 do plano de migração legacy → RBAC v2: hrefs apontam para UI nova
+  // (`/admin/gestao-acessos/*`). Páginas legadas viram redirects 308.
+  // `funcionalidades` e `revisoes` permanecem no legado (não são RBAC).
   {
-    href: "/admin/seguranca/usuarios",
+    href: "/admin/gestao-acessos/usuarios",
     label: "Usuários e acessos",
     description: "Quem tem acesso, onde atua e quais alertas exigem ação.",
   },
   {
-    href: "/admin/seguranca/perfis",
+    href: "/admin/gestao-acessos/papeis",
     label: "Perfis padronizados",
     description: "Papéis reutilizáveis e o que cada um deveria representar.",
   },
@@ -31,9 +34,9 @@ export const GLOBAL_SECURITY_SECTIONS: GlobalSecuritySection[] = [
     description: "Filas de revisão, exceções vencendo e trilha recente de mudanças.",
   },
   {
-    href: "/admin/seguranca/catalogo",
-    label: "Segurança avançada",
-    description: "Catálogo de funcionalidades, perfis-padrão versionados e gestão de exceções.",
+    href: "/admin/gestao-acessos/permissoes",
+    label: "Catálogo de permissões",
+    description: "Capacidades granulares do RBAC v2 e como compor papéis customizados.",
   },
 ];
 

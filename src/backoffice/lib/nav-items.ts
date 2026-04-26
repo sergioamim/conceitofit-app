@@ -137,7 +137,8 @@ export const governanceGroup: NavGroup = {
       icon: Zap,
       description: "Habilitar/desabilitar features por tenant (DB)",
     },
-    { href: "/admin/seguranca/usuarios", label: "Usuários", icon: Users },
+    // Wave 5: redireciona para a UI nova RBAC v2. Entry mantido como atalho contextual.
+    { href: "/admin/gestao-acessos/usuarios", label: "Usuários", icon: Users },
     { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield },
     { href: "/admin/audit-log", label: "Auditoria Operacional", icon: FileText, description: "Operações em alunos, contratos, pagamentos e impersonação" },
     { href: "/admin/observability/jobs", label: "Jobs & Async", icon: Activity },
