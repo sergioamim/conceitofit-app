@@ -164,6 +164,90 @@ test.describe("Detalhe do exercício — fetch singular", () => {
     expect(listCalls).toEqual([]);
   });
 
+  test("renderiza iframe de vídeo quando videoUrl é YouTube", async ({ page }) => {
+    await seed(page);
+    await installAuthMocks(page);
+    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...EX_FIXTURE,
+          videoUrl: "https://youtu.be/dQw4w9WgXcQ",
+        }),
+      }),
+    );
+
+    await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Supino reto").first()).toBeVisible();
+
+    // Iframe com URL embed do YouTube
+    const iframe = page.locator(
+      'iframe[title="Vídeo demonstração: Supino reto"]',
+    );
+    await expect(iframe).toBeVisible();
+    await expect(iframe).toHaveAttribute(
+      "src",
+      "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    );
+  });
+
+  test("usa midiaUrl como fallback quando não há videoUrl (GIF do catálogo)", async ({
+    page,
+  }) => {
+    await seed(page);
+    await installAuthMocks(page);
+    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...EX_FIXTURE,
+          videoUrl: null,
+          midiaUrl: "https://example.com/gif/supino.gif",
+        }),
+      }),
+    );
+
+    await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Supino reto").first()).toBeVisible();
+
+    // Sem iframe; img com a midiaUrl
+    await expect(page.locator("iframe")).toHaveCount(0);
+    const img = page.locator('img[alt="Demonstração: Supino reto"]');
+    await expect(img).toBeVisible();
+    await expect(img).toHaveAttribute("src", "https://example.com/gif/supino.gif");
+  });
+
+  test("placeholder com chip do grupo quando não há mídia alguma", async ({
+    page,
+  }) => {
+    await seed(page);
+    await installAuthMocks(page);
+    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ...EX_FIXTURE,
+          videoUrl: null,
+          midiaUrl: null,
+          thumbnailUrl: null,
+        }),
+      }),
+    );
+
+    await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Supino reto").first()).toBeVisible();
+
+    // Sem iframe e sem img — só placeholder
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await expect(page.locator('img[alt^="Demonstração"]')).toHaveCount(0);
+    await expect(page.getByText("vídeo demonstrativo")).toBeVisible();
+    // Chip do grupo aparece no canto do placeholder
+    await expect(page.getByText("Peito", { exact: true }).first()).toBeVisible();
+  });
+
   test("CTA 'Usar em um treino' navega pra /treinos", async ({ page }) => {
     await seed(page);
     await installAuthMocks(page);
