@@ -1,6 +1,13 @@
 "use client";
 
-import type { Atividade, AtividadeGrade, DiaSemana, Funcionario, Sala } from "@/lib/types";
+import type {
+  Atividade,
+  AtividadeGrade,
+  AulaSessao,
+  DiaSemana,
+  Funcionario,
+  Sala,
+} from "@/lib/types";
 import { getModalidadeCor } from "@/lib/grade/modalidade-cor";
 
 export type GradeCardItem = AtividadeGrade & {
@@ -18,10 +25,18 @@ export interface GradeWeekCardProps {
   pxHora: number;
   salaMap: Map<string, Sala>;
   funcionarioMap: Map<string, Funcionario>;
+  /** Sessão materializada (data específica) — quando presente exibe ocupação real. */
+  sessao?: AulaSessao;
 }
 
 function fmt(min: number) {
   return `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+}
+
+function ocupacaoColor(pct: number): string {
+  if (pct >= 1) return "var(--gym-danger)";
+  if (pct >= 0.85) return "var(--gym-warning)";
+  return "var(--gym-teal)";
 }
 
 export function GradeWeekCard({
@@ -32,6 +47,7 @@ export function GradeWeekCard({
   pxHora,
   salaMap,
   funcionarioMap,
+  sessao,
 }: GradeWeekCardProps) {
   const top = ((item.inicioMin - hourIni * 60) / 60) * pxHora;
   const heightPx = (item.duracaoMinutos / 60) * pxHora - 3;
@@ -42,6 +58,11 @@ export function GradeWeekCard({
   const horaFimLabel = item.horaFim || fmt(item.fimMin);
   const profNome = prof?.nome ?? item.instrutor ?? "";
   const localNome = sala?.nome.split("·")[0].trim() ?? item.local ?? "";
+
+  const capacidade = sessao?.capacidade ?? item.capacidade;
+  const ocupadas = sessao?.vagasOcupadas;
+  const pctOcup = ocupadas != null && capacidade > 0 ? Math.min(ocupadas / capacidade, 1) : null;
+  const lotada = pctOcup != null && pctOcup >= 1;
 
   return (
     <button
@@ -88,8 +109,25 @@ export function GradeWeekCard({
           </p>
         ) : null}
         {heightPx >= 70 ? (
-          <div className="absolute bottom-1.5 left-2 right-2 text-[10px] font-semibold text-muted-foreground">
-            Cap. {item.capacidade}
+          <div className="absolute bottom-1.5 left-2 right-2 flex items-center gap-1.5 text-[10px]">
+            {pctOcup != null ? (
+              <>
+                <div className="h-[3px] flex-1 overflow-hidden rounded bg-foreground/10">
+                  <div
+                    className="h-full"
+                    style={{ width: `${pctOcup * 100}%`, background: ocupacaoColor(pctOcup) }}
+                  />
+                </div>
+                <span
+                  className="font-mono font-semibold"
+                  style={{ color: lotada ? "var(--gym-danger)" : "var(--muted-foreground)" }}
+                >
+                  {ocupadas}/{capacidade}
+                </span>
+              </>
+            ) : (
+              <span className="font-semibold text-muted-foreground">Cap. {capacidade}</span>
+            )}
           </div>
         ) : null}
       </div>

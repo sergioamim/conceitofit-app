@@ -8,6 +8,7 @@ import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
 import type {
   Atividade,
   AtividadeGrade,
+  AulaSessao,
   DiaSemana,
   Funcionario,
   HorarioFuncionamento,
@@ -15,6 +16,7 @@ import type {
 } from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useGrade } from "@/lib/query/use-grade";
+import { useAulasSessoes } from "@/lib/query/use-aulas";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getModalidadeCor } from "@/lib/grade/modalidade-cor";
@@ -41,6 +43,7 @@ const EMPTY_ATIVIDADES: readonly Atividade[] = [];
 const EMPTY_SALAS: readonly Sala[] = [];
 const EMPTY_FUNCIONARIOS: readonly Funcionario[] = [];
 const EMPTY_HORARIOS: readonly HorarioFuncionamento[] = [];
+const EMPTY_SESSOES: readonly AulaSessao[] = [];
 
 type CardItem = GradeCardItem;
 
@@ -61,10 +64,31 @@ export function GradeContent() {
   const funcionarios = data?.funcionarios ?? EMPTY_FUNCIONARIOS;
   const horarios = data?.horarios ?? EMPTY_HORARIOS;
 
+  const weekRangeIso = useMemo(
+    () =>
+      weekStart
+        ? { from: toIsoDate(weekStart), to: toIsoDate(addDays(weekStart, 6)) }
+        : { from: "", to: "" },
+    [weekStart],
+  );
+
+  const { data: sessoesData } = useAulasSessoes({
+    tenantId,
+    dateFrom: weekRangeIso.from,
+    dateTo: weekRangeIso.to,
+  });
+  const sessoes = sessoesData ?? EMPTY_SESSOES;
+
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
   const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
   const horarioMap = useMemo(() => new Map(horarios.map((h) => [h.dia, h])), [horarios]);
+
+  const sessaoLookup = useMemo(() => {
+    const m = new Map<string, AulaSessao>();
+    sessoes.forEach((s) => m.set(`${s.atividadeGradeId}|${s.data}`, s));
+    return m;
+  }, [sessoes]);
 
   const modalidades = useMemo(() => {
     const map = new Map<string, Atividade>();
@@ -137,8 +161,17 @@ export function GradeContent() {
         totalMin += c.duracaoMinutos;
       });
     });
-    return { total, totalH: Math.round(totalMin / 60), modCount: modalidades.length };
-  }, [cardsByDay, modalidades]);
+    let lotadas = 0;
+    sessoes.forEach((s) => {
+      if (s.capacidade > 0 && s.vagasOcupadas >= s.capacidade) lotadas++;
+    });
+    return {
+      total,
+      totalH: Math.round(totalMin / 60),
+      modCount: modalidades.length,
+      lotadas,
+    };
+  }, [cardsByDay, modalidades, sessoes]);
 
   const toggleMod = (id: string) => {
     setActiveMods((prev) => {
@@ -384,6 +417,7 @@ export function GradeContent() {
                         pxHora={PX_HORA}
                         salaMap={salaMap}
                         funcionarioMap={funcionarioMap}
+                        sessao={sessaoLookup.get(`${item.id}|${d.isoDate}`)}
                       />
                     ))}
                   </div>
@@ -408,6 +442,12 @@ export function GradeContent() {
             <span className="font-mono text-sm font-bold text-foreground">{kpis.modCount}</span>{" "}
             modalidades
           </span>
+          {kpis.lotadas > 0 ? (
+            <span>
+              <span className="font-mono text-sm font-bold text-destructive">{kpis.lotadas}</span>{" "}
+              lotadas
+            </span>
+          ) : null}
           {sobDemandaCount > 0 ? (
             <span>
               ·{" "}
