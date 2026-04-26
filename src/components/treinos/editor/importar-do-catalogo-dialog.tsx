@@ -214,6 +214,7 @@ interface CatalogoExercicioCardProps {
 
 function CatalogoExercicioCard({ exercicio, importing, onImport }: CatalogoExercicioCardProps) {
   const previewUrl = exercicio.gifUrl ?? exercicio.imageUrl ?? null;
+  const nomeExibicao = exercicio.nomePt ?? exercicio.nome;
 
   return (
     <Card className="overflow-hidden transition hover:shadow-md">
@@ -222,7 +223,7 @@ function CatalogoExercicioCard({ exercicio, importing, onImport }: CatalogoExerc
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={previewUrl}
-            alt={exercicio.nome}
+            alt={nomeExibicao}
             className="h-full w-full object-cover"
             loading="lazy"
           />
@@ -233,7 +234,7 @@ function CatalogoExercicioCard({ exercicio, importing, onImport }: CatalogoExerc
         )}
       </div>
       <div className="p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold">{exercicio.nome}</h3>
+        <h3 className="line-clamp-2 text-sm font-semibold">{nomeExibicao}</h3>
         {exercicio.bodyParts.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1">
             {exercicio.bodyParts.slice(0, 2).map((bp) => (
