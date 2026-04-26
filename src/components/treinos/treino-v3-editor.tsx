@@ -52,7 +52,7 @@ import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
 import { EditorHeader } from "./editor-v3/editor-header";
 import { computeOverrides } from "./editor-v3/instance-overrides";
 import { PreviewModal } from "./editor-v3/preview-modal";
-import { SessaoSidebar } from "./editor-v3/sessao-sidebar";
+import { SESSAO_DROP_PREFIX, SessaoSidebar } from "./editor-v3/sessao-sidebar";
 import { SortableExerciseRow } from "./editor-v3/sortable-exercise-row";
 import { useEditorMutations } from "./editor-v3/use-editor-mutations";
 import type { EditorProps } from "./editor/types";
@@ -195,6 +195,7 @@ export function TreinoV3Editor({
     removeItem,
     duplicateItem,
     reorderItens,
+    moveItemBetweenSessoes,
     addItensFromBiblioteca,
   } = useEditorMutations({
     editor,
@@ -308,11 +309,26 @@ export function TreinoV3Editor({
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id || !activeSessao) return;
+
+      // Drop em outra sessão (sidebar) — move o item entre sessões
+      if (typeof over.id === "string" && over.id.startsWith(SESSAO_DROP_PREFIX)) {
+        const targetSessaoId = over.id.replace(SESSAO_DROP_PREFIX, "");
+        if (targetSessaoId !== activeSessao.id) {
+          moveItemBetweenSessoes(
+            String(active.id),
+            activeSessao.id,
+            targetSessaoId,
+          );
+        }
+        return;
+      }
+
+      // Drop em outro item da mesma sessão — reorder atual
       const fromIdx = activeSessao.itens.findIndex((i) => i.id === active.id);
       const toIdx = activeSessao.itens.findIndex((i) => i.id === over.id);
       if (fromIdx >= 0 && toIdx >= 0) reorderItens(activeSessao.id, fromIdx, toIdx);
     },
-    [activeSessao, reorderItens],
+    [activeSessao, reorderItens, moveItemBetweenSessoes],
   );
 
   // Ids já presentes na sessão ativa (mostra badge no modal)
@@ -356,7 +372,12 @@ export function TreinoV3Editor({
         onSave={handleSave}
       />
 
-      {/* ─── Grid: sessões sidebar + main table ─── */}
+      {/* ─── Grid: sessões sidebar + main table ───
+        DndContext envolve ambos para suportar drag de itens entre as
+        sessões A/B/C (Wave J.4). Os ids dos droppables da sidebar
+        usam prefix SESSAO_DROP_PREFIX para não conflitar com items.
+      */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-[280px_1fr] gap-4">
         {/* Sidebar de sessões (extraído em editor-v3/sessao-sidebar.tsx) */}
         <SessaoSidebar
@@ -415,49 +436,46 @@ export function TreinoV3Editor({
                   </p>
                 </div>
               ) : (
-                // DndContext precisa ficar FORA da <table> porque renderiza
-                // wrappers <div> internos (Accessibility hidden) — HTML
-                // inválido como filho direto de <table>. SortableContext
-                // é só Provider, sem wrapper DOM, então pode envolver
-                // <tbody> sem problema.
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          <th className="w-8 px-2 py-2"></th>
-                          <th className="w-10 px-2 py-2 text-left">#</th>
-                          <th className="px-2 py-2 text-left">Exercício</th>
-                          <th className="w-32 px-2 py-2 text-left">Séries × Reps</th>
-                          <th className="w-24 px-2 py-2 text-left">Carga</th>
-                          <th className="w-24 px-2 py-2 text-left">Descanso</th>
-                          <th className="w-24 px-2 py-2 text-left">Cadência</th>
-                          <th className="w-20 px-2 py-2 text-left">RIR</th>
-                          <th className="w-16 px-2 py-2"></th>
-                        </tr>
-                      </thead>
-                      <SortableContext
-                        items={activeSessao.itens.map((i) => i.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <tbody>
-                          {activeSessao.itens.map((item, idx) => (
-                            <SortableExerciseRow
-                              key={item.id}
-                              item={item}
-                              index={idx}
-                              catalog={catalogById}
-                              isCustom={(field) => isCustom(activeSessao.id, item.id, field)}
-                              onUpdate={(patch) => updateItem(activeSessao.id, item.id, patch)}
-                              onDuplicate={() => duplicateItem(activeSessao.id, item.id)}
-                              onRemove={() => removeItem(activeSessao.id, item.id)}
-                            />
-                          ))}
-                        </tbody>
-                      </SortableContext>
-                    </table>
-                  </div>
-                </DndContext>
+                // SortableContext é só Provider (sem wrapper DOM) — pode
+                // ficar dentro da <table>. O DndContext está no nível do
+                // grid (envolvendo sidebar + main) pra suportar drag entre
+                // sessões A/B/C.
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="w-8 px-2 py-2"></th>
+                        <th className="w-10 px-2 py-2 text-left">#</th>
+                        <th className="px-2 py-2 text-left">Exercício</th>
+                        <th className="w-32 px-2 py-2 text-left">Séries × Reps</th>
+                        <th className="w-24 px-2 py-2 text-left">Carga</th>
+                        <th className="w-24 px-2 py-2 text-left">Descanso</th>
+                        <th className="w-24 px-2 py-2 text-left">Cadência</th>
+                        <th className="w-20 px-2 py-2 text-left">RIR</th>
+                        <th className="w-16 px-2 py-2"></th>
+                      </tr>
+                    </thead>
+                    <SortableContext
+                      items={activeSessao.itens.map((i) => i.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      <tbody>
+                        {activeSessao.itens.map((item, idx) => (
+                          <SortableExerciseRow
+                            key={item.id}
+                            item={item}
+                            index={idx}
+                            catalog={catalogById}
+                            isCustom={(field) => isCustom(activeSessao.id, item.id, field)}
+                            onUpdate={(patch) => updateItem(activeSessao.id, item.id, patch)}
+                            onDuplicate={() => duplicateItem(activeSessao.id, item.id)}
+                            onRemove={() => removeItem(activeSessao.id, item.id)}
+                          />
+                        ))}
+                      </tbody>
+                    </SortableContext>
+                  </table>
+                </div>
               )}
             </>
           ) : (
@@ -489,6 +507,7 @@ export function TreinoV3Editor({
           ) : null}
         </section>
       </div>
+      </DndContext>
     </div>
   );
 }

@@ -139,6 +139,40 @@ export function useEditorMutations({
     [updateSessoes],
   );
 
+  /**
+   * Move um item de uma sessão pra outra (drag&drop entre A/B/C).
+   * Reordena os itens da sessão de origem após remover, e da destino
+   * após inserir, mantendo `ordem` incremental.
+   */
+  const moveItemBetweenSessoes = useCallback(
+    (itemId: string, fromSessaoId: string, toSessaoId: string) => {
+      if (fromSessaoId === toSessaoId) return;
+      updateSessoes((sessoes) => {
+        const fromS = sessoes.find((s) => s.id === fromSessaoId);
+        const item = fromS?.itens.find((i) => i.id === itemId);
+        if (!fromS || !item) return sessoes;
+        return sessoes.map((s) => {
+          if (s.id === fromSessaoId) {
+            const remaining = s.itens.filter((i) => i.id !== itemId);
+            return {
+              ...s,
+              itens: remaining.map((i, idx) => ({ ...i, ordem: idx + 1 })),
+            };
+          }
+          if (s.id === toSessaoId) {
+            const merged = [...s.itens, item];
+            return {
+              ...s,
+              itens: merged.map((i, idx) => ({ ...i, ordem: idx + 1 })),
+            };
+          }
+          return s;
+        });
+      });
+    },
+    [updateSessoes],
+  );
+
   // Adiciona N exercícios na sessão ativa com defaults sensatos.
   const addItensFromBiblioteca = useCallback(
     (exIds: string[]) => {
@@ -185,6 +219,7 @@ export function useEditorMutations({
     removeItem,
     duplicateItem,
     reorderItens,
+    moveItemBetweenSessoes,
     addItensFromBiblioteca,
   };
 }
