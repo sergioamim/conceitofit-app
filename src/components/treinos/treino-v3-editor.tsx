@@ -602,22 +602,27 @@ export function TreinoV3Editor({
                   </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        <th className="w-8 px-2 py-2"></th>
-                        <th className="w-10 px-2 py-2 text-left">#</th>
-                        <th className="px-2 py-2 text-left">Exercício</th>
-                        <th className="w-32 px-2 py-2 text-left">Séries × Reps</th>
-                        <th className="w-24 px-2 py-2 text-left">Carga</th>
-                        <th className="w-24 px-2 py-2 text-left">Descanso</th>
-                        <th className="w-24 px-2 py-2 text-left">Cadência</th>
-                        <th className="w-20 px-2 py-2 text-left">RIR</th>
-                        <th className="w-16 px-2 py-2"></th>
-                      </tr>
-                    </thead>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                // DndContext precisa ficar FORA da <table> porque renderiza
+                // wrappers <div> internos (Accessibility hidden) — HTML
+                // inválido como filho direto de <table>. SortableContext
+                // é só Provider, sem wrapper DOM, então pode envolver
+                // <tbody> sem problema.
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          <th className="w-8 px-2 py-2"></th>
+                          <th className="w-10 px-2 py-2 text-left">#</th>
+                          <th className="px-2 py-2 text-left">Exercício</th>
+                          <th className="w-32 px-2 py-2 text-left">Séries × Reps</th>
+                          <th className="w-24 px-2 py-2 text-left">Carga</th>
+                          <th className="w-24 px-2 py-2 text-left">Descanso</th>
+                          <th className="w-24 px-2 py-2 text-left">Cadência</th>
+                          <th className="w-20 px-2 py-2 text-left">RIR</th>
+                          <th className="w-16 px-2 py-2"></th>
+                        </tr>
+                      </thead>
                       <SortableContext
                         items={activeSessao.itens.map((i) => i.id)}
                         strategy={verticalListSortingStrategy}
@@ -637,9 +642,9 @@ export function TreinoV3Editor({
                           ))}
                         </tbody>
                       </SortableContext>
-                    </DndContext>
-                  </table>
-                </div>
+                    </table>
+                  </div>
+                </DndContext>
               )}
             </>
           ) : (
