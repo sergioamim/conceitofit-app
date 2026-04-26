@@ -495,6 +495,16 @@ export async function listExerciciosApi(input?: {
   return extractExercicios(response);
 }
 
+export async function getExercicioApi(input: {
+  tenantId?: string;
+  id: string;
+}): Promise<ExercicioApiResponse> {
+  return apiRequest<ExercicioApiResponse>({
+    path: `/api/v1/exercicios/${input.id}`,
+    query: { tenantId: input.tenantId },
+  });
+}
+
 export async function createExercicioApi(input: {
   tenantId?: string;
   data: CreateExercicioApiInput;

@@ -10,63 +10,58 @@
  */
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, Loader2, PlayCircle, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { listExerciciosApi } from "@/lib/api/treinos";
+import { getExercicioApi } from "@/lib/api/treinos";
 import type { Exercicio } from "@/lib/types";
 import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 
 export default function ExercicioDetalhePage() {
   const params = useParams<{ id: string }>();
   const exId = params?.id ?? "";
-  const { tenantId } = useTenantContext();
-  const [exercicio, setExercicio] = useState<Exercicio | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { tenantId, tenantResolved } = useTenantContext();
 
-  useEffect(() => {
-    if (!tenantId || !exId) return;
-    let cancelled = false;
-    setLoading(true);
-    void listExerciciosApi({ tenantId })
-      .then((items) => {
-        if (cancelled) return;
-        const found = items.find((e) => e.id === exId);
-        if (!found) {
-          setError("Exercício não encontrado");
-          setExercicio(null);
-        } else {
-          // Normaliza nullables do response API para o tipo doméstico.
-          // ExercicioApiResponse usa "aparelho" no backend; mapeamos
-          // pra "equipamento" do tipo doméstico.
-          setExercicio({
-            ...found,
-            grupoMuscularId: found.grupoMuscularId ?? undefined,
-            grupoMuscular: found.grupoMuscular ?? undefined,
-            grupoMuscularNome: found.grupoMuscularNome ?? undefined,
-            equipamento: found.aparelho ?? undefined,
-            descricao: found.descricao ?? undefined,
-            videoUrl: found.videoUrl ?? undefined,
-            unidade: found.unidade ?? undefined,
-          } as Exercicio);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Erro ao carregar");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tenantId, exId]);
+  // Fetch singular: GET /api/v1/exercicios/{id} via React Query.
+  // Substitui o list+find anterior, que carregava todo o catálogo
+  // pra pegar 1 item — caro em tenants com muitos exercícios.
+  const {
+    data: exercicio,
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: ["exercicio-detalhe", tenantId, exId],
+    enabled: Boolean(tenantId && exId && tenantResolved),
+    staleTime: 60_000,
+    queryFn: async (): Promise<Exercicio> => {
+      const res = await getExercicioApi({ tenantId, id: exId });
+      // Normaliza nullables do response API para o tipo doméstico.
+      // ExercicioApiResponse usa "aparelho" no backend → "equipamento".
+      return {
+        ...res,
+        grupoMuscularId: res.grupoMuscularId ?? undefined,
+        grupoMuscular: res.grupoMuscular ?? undefined,
+        grupoMuscularNome: res.grupoMuscularNome ?? undefined,
+        equipamento: res.aparelho ?? undefined,
+        descricao: res.descricao ?? undefined,
+        videoUrl: res.videoUrl ?? undefined,
+        unidade: res.unidade ?? undefined,
+      } as Exercicio;
+    },
+  });
+
+  const error =
+    queryError instanceof Error
+      ? queryError.message
+      : queryError
+        ? "Exercício não encontrado"
+        : null;
 
   const videoEmbedUrl = useMemo(() => {
     if (!exercicio?.videoUrl) return null;
@@ -287,10 +282,14 @@ export default function ExercicioDetalhePage() {
               </div>
 
               <div className="mt-5 flex gap-2">
-                <Button className="flex-1" asChild>
+                <Button
+                  className="flex-1"
+                  asChild
+                  title="Abre a lista de templates — use 'Adicionar exercício' dentro de um template para incluir este exercício"
+                >
                   <Link href="/treinos">
                     <Plus className="mr-1 size-4" />
-                    Adicionar a treino
+                    Usar em um treino
                   </Link>
                 </Button>
                 {exercicio.videoUrl ? (
@@ -311,6 +310,10 @@ export default function ExercicioDetalhePage() {
                   </Button>
                 ) : null}
               </div>
+              <p className="mt-2 text-[11px] italic text-muted-foreground/70">
+                O exercício é incluído pelo botão &ldquo;Adicionar exercício&rdquo;
+                dentro de cada template.
+              </p>
             </CardContent>
           </Card>
 

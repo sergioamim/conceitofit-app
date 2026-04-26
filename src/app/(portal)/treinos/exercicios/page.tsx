@@ -224,10 +224,11 @@ export default function ExerciciosPage() {
               ))}
             </SelectContent>
           </Select>
-          <div className="flex gap-1.5">
+          <div role="group" aria-label="Filtro de status do exercício" className="flex gap-1.5">
             <button
               type="button"
               onClick={() => setApenasAtivos(false)}
+              aria-pressed={!apenasAtivos}
               className={cn(
                 "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
                 !apenasAtivos
@@ -240,6 +241,7 @@ export default function ExerciciosPage() {
             <button
               type="button"
               onClick={() => setApenasAtivos(true)}
+              aria-pressed={apenasAtivos}
               className={cn(
                 "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
                 apenasAtivos
