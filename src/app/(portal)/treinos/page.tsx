@@ -9,12 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/lib/formatters";
 import { useTreinosWorkspace, resolveTemplateStatusBadgeVariant, getTemplateDisplayName } from "./use-treinos-workspace";
 import { AssignmentDialog, ArchiveDialog } from "./treinos-dialogs";
+import { isTreinoEditorV3Enabled } from "@/lib/feature-flags";
+import { TemplatesGridV3 } from "./templates-grid-v3";
 
 export default function TreinosPage() {
   const workspace = useTreinosWorkspace();
+  const useV3UI = isTreinoEditorV3Enabled();
 
   return (
     <div className="space-y-6">
@@ -188,7 +192,9 @@ export default function TreinosPage() {
         </div>
       ) : null}
 
-      <Card className="border-border bg-card">
+      {useV3UI ? <TemplatesGridV3 workspace={workspace} /> : null}
+
+      <Card className={cn("border-border bg-card", useV3UI && "hidden")}>
         <CardHeader className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
