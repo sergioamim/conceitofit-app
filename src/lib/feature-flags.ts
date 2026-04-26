@@ -67,11 +67,17 @@ export function isPerfilDrawerAcoesEnabledFallback(): boolean {
 }
 
 /**
- * Editor V3 de treino (tabela inline + drag&drop). PRD Montagem de Treino V3,
- * Wave 3. Default `false` durante coexistência com V2; cutover na Wave 7.
+ * Editor V3 de treino (tabela inline + drag&drop + modo instance + grid de
+ * templates + tela de detalhe de exercício + tela de progresso).
+ * PRD Montagem de Treino V3.
  *
- * Set `NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED=true` para ativar.
+ * **Wave 7 (cutover, 2026-04-25)**: default flipado de `false` para `true`.
+ * V3 passa a ser a UX padrão do módulo de treino. V2 ainda existe e pode
+ * ser reativado em emergência via `NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED=false`.
+ *
+ * V2 será deletado em iteração futura quando a estabilidade do V3 estiver
+ * validada em produção (~30 dias após cutover, ou após KPIs OK).
  */
 export function isTreinoEditorV3Enabled(): boolean {
-  return readBooleanFlag(process.env.NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED, false);
+  return readBooleanFlag(process.env.NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED, true);
 }

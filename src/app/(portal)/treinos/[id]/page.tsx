@@ -57,6 +57,9 @@ export default function TreinoDetalhePage() {
   const role = useMemo(() => resolveRole(access), [access]);
   const autoOpenAssignment = searchParams?.get("assign") === "1";
   const useV3Editor = useMemo(() => isTreinoEditorV3Enabled(), []);
+  const customizeMode = searchParams?.get("customize") === "1";
+  const customAlunoId = searchParams?.get("alunoId") ?? undefined;
+  const customAlunoNome = searchParams?.get("alunoNome") ?? undefined;
 
   if (loading) {
     return (
@@ -105,6 +108,9 @@ export default function TreinoDetalhePage() {
           exercicios={exercicios}
           role={role}
           autoOpenAssignment={autoOpenAssignment}
+          mode={customizeMode && customAlunoId ? "instance" : "template"}
+          alunoId={customAlunoId}
+          alunoNome={customAlunoNome}
           onTreinoChange={() => handleInvalidate()}
           onCatalogChange={() => handleInvalidate()}
         />
