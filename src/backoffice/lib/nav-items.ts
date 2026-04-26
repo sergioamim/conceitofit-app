@@ -106,7 +106,7 @@ export const gestaoAcessosGroup: NavGroup = {
     { href: "/admin/gestao-acessos/usuarios", label: "Usuários", icon: Users, description: "Lista de operadores da rede" },
     { href: "/admin/gestao-acessos/papeis", label: "Papéis", icon: KeyRound, description: "Conjuntos de permissões" },
     { href: "/admin/gestao-acessos/permissoes", label: "Permissões", icon: FileText, description: "Catálogo granular" },
-    { href: "/admin/gestao-acessos/auditoria", label: "Auditoria", icon: History, description: "Mudanças sensíveis" },
+    { href: "/admin/gestao-acessos/auditoria", label: "Auditoria de Acesso", icon: History, description: "Mudanças de RBAC, política de segurança e convites" },
     { href: "/admin/gestao-acessos/seguranca", label: "Política de Segurança", icon: Shield, description: "Senha e sessões" },
     { href: "/admin/gestao-acessos/usuarios/convidar", label: "Convidar usuário", icon: Users, paletteOnly: true },
     { href: "/admin/gestao-acessos/perfis", label: "Perfis (legado)", icon: Shield, paletteOnly: true },
@@ -139,7 +139,7 @@ export const governanceGroup: NavGroup = {
     },
     { href: "/admin/seguranca/usuarios", label: "Usuários", icon: Users },
     { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield },
-    { href: "/admin/audit-log", label: "Audit Log", icon: FileText },
+    { href: "/admin/audit-log", label: "Auditoria Operacional", icon: FileText, description: "Operações em alunos, contratos, pagamentos e impersonação" },
     { href: "/admin/observability/jobs", label: "Jobs & Async", icon: Activity },
   ],
 };

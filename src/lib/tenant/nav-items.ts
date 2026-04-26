@@ -175,7 +175,7 @@ export const accessManagementGroup: NavGroup = {
     { href: "/gestao-acessos/usuarios", label: "Usuários", icon: Users, description: "Funcionários da rede" },
     { href: "/gestao-acessos/papeis", label: "Papéis", icon: KeyRound, description: "Conjuntos de permissões" },
     { href: "/gestao-acessos/permissoes", label: "Permissões", icon: FileText, description: "Catálogo granular" },
-    { href: "/gestao-acessos/auditoria", label: "Auditoria", icon: History, description: "Mudanças sensíveis" },
+    { href: "/gestao-acessos/auditoria", label: "Auditoria de Acesso", icon: History, description: "Mudanças de RBAC, política de segurança e convites" },
     { href: "/gestao-acessos/seguranca", label: "Política de Segurança", icon: Lock, description: "Senha e sessões da rede" },
   ],
 };
