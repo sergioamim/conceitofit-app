@@ -51,6 +51,8 @@ export default function ExercicioDetalhePage() {
         equipamento: res.aparelho ?? undefined,
         descricao: res.descricao ?? undefined,
         videoUrl: res.videoUrl ?? undefined,
+        midiaUrl: res.midiaUrl ?? undefined,
+        thumbnailUrl: res.thumbnailUrl ?? undefined,
         unidade: res.unidade ?? undefined,
       } as Exercicio;
     },
@@ -134,7 +136,7 @@ export default function ExercicioDetalhePage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
         {/* Coluna esquerda: vídeo + execução + erros comuns */}
         <div className="space-y-4">
-          {/* Vídeo placeholder/embed */}
+          {/* Vídeo / GIF / Imagem demonstrativa — fallback em ordem */}
           <Card className="relative overflow-hidden border-border bg-card">
             {videoEmbedUrl ? (
               <div className="aspect-video w-full bg-black">
@@ -144,6 +146,18 @@ export default function ExercicioDetalhePage() {
                   className="size-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
+                />
+              </div>
+            ) : exercicio.midiaUrl || exercicio.thumbnailUrl ? (
+              // Sem vídeo, mas tem mídia rica (gif do catálogo importado, imagem estática etc.)
+              // GIF anima sozinho — comportamento esperado pra demonstração de execução.
+              <div className="aspect-video w-full bg-black">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={exercicio.midiaUrl ?? exercicio.thumbnailUrl ?? ""}
+                  alt={`Demonstração: ${exercicio.nome}`}
+                  className="size-full object-contain"
+                  loading="lazy"
                 />
               </div>
             ) : (

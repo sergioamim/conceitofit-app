@@ -265,6 +265,8 @@ export interface ExercicioApiResponse {
   grupoMuscularNome?: string | null;
   aparelho?: string | null;
   videoUrl?: string | null;
+  midiaUrl?: string | null;
+  thumbnailUrl?: string | null;
   unidade?: string | null;
   ativo: boolean;
   createdAt?: string | null;

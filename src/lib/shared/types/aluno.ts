@@ -198,6 +198,10 @@ export interface Exercicio {
   equipamento?: string;
   descricao?: string;
   videoUrl?: string;
+  /** URL de mídia rica — gif/imagem demonstrativa (preenchido por import do catálogo). */
+  midiaUrl?: string;
+  /** URL de thumbnail/imagem estática. */
+  thumbnailUrl?: string;
   unidade?: string;
   ativo: boolean;
   criadoEm?: LocalDateTime;
