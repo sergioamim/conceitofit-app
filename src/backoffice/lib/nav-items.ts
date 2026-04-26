@@ -130,15 +130,15 @@ export const governanceGroup: NavGroup = {
   label: "Governança",
   icon: ShieldCheck,
   items: [
-    { href: "/admin/seguranca", label: "Central de Segurança", icon: ShieldCheck },
+    // Wave 5: "Central de Segurança" e "Usuários" removidos — duplicavam o
+    // grupo Gestão de Acessos (RBAC v2). /admin/seguranca redireciona
+    // pra /admin/gestao-acessos.
     {
       href: "/admin/feature-flags",
       label: "Feature Flags",
       icon: Zap,
       description: "Habilitar/desabilitar features por tenant (DB)",
     },
-    // Wave 5: redireciona para a UI nova RBAC v2. Entry mantido como atalho contextual.
-    { href: "/admin/gestao-acessos/usuarios", label: "Usuários", icon: Users },
     { href: "/admin/compliance", label: "Compliance LGPD", icon: Shield },
     { href: "/admin/audit-log", label: "Auditoria Operacional", icon: FileText, description: "Operações em alunos, contratos, pagamentos e impersonação" },
     { href: "/admin/observability/jobs", label: "Jobs & Async", icon: Activity },
