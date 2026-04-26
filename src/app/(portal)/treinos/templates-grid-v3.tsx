@@ -9,10 +9,8 @@
  */
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Edit3,
   FileStack,
   MoreVertical,
   Search,
@@ -195,7 +193,6 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
               template.status ?? (template.precisaRevisao ? "EM_REVISAO" : "PUBLICADO");
             const canOperate =
               template.status !== "ARQUIVADO" && template.status !== "CANCELADO";
-            const canEdit = workspace.permissions.canEditOwnTemplate && canOperate;
             const canAssign = workspace.permissions.canAssignIndividual && canOperate;
             const canArchive = workspace.permissions.canArchiveTemplate && canOperate;
             const actionLoading = workspace.actionTemplateId === template.id;
@@ -219,74 +216,56 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
                   }
                 }}
                 className={cn(
-                  "group relative flex cursor-pointer flex-col overflow-hidden border-border transition-shadow hover:shadow-lg hover:shadow-gym-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent",
+                  "group relative flex min-h-[220px] cursor-pointer flex-col overflow-hidden border-border transition-all duration-150 hover:-translate-y-px hover:border-gym-accent/40 hover:shadow-lg hover:shadow-gym-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent",
                   template.precisaRevisao && "border-amber-500/40",
                 )}
               >
-                <CardContent className="flex flex-1 flex-col gap-3 p-4">
-                  {/* Linha 1: título + favorito + status */}
+                <CardContent className="flex flex-1 flex-col gap-3 p-[18px]">
+                  {/* Linha 1: título + favorito */}
                   <div className="flex items-start gap-2">
-                    <h3 className="min-w-0 flex-1 text-base font-bold leading-tight text-foreground transition-colors group-hover:text-gym-accent">
-                      <span className="line-clamp-2 break-words">{displayName}</span>
-                    </h3>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-[15px] font-bold leading-tight text-foreground transition-colors group-hover:text-gym-accent">
+                        <span className="line-clamp-2 break-words">{displayName}</span>
+                      </h3>
+                      {/* Meta line — objetivo · perfil · 3x/sem · Nsem */}
+                      <p className="mt-1 text-[12px] text-muted-foreground">
+                        {[
+                          template.perfilIndicacao,
+                          template.frequenciaSemanal
+                            ? `${template.frequenciaSemanal}x/sem`
+                            : null,
+                          template.totalSemanas ? `${template.totalSemanas}sem` : null,
+                          template.categoria,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Sem detalhes"}
+                      </p>
+                    </div>
                     <button
                       type="button"
                       aria-label={favorito ? "Remover dos favoritos" : "Favoritar template"}
                       aria-pressed={favorito}
-                      className="-m-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-amber-300"
+                      className={cn(
+                        "-m-1 rounded-md p-1 transition-colors hover:bg-muted",
+                        favorito ? "text-gym-accent" : "text-muted-foreground hover:text-gym-accent",
+                      )}
                       onClick={(event) => {
                         event.stopPropagation();
                         toggleFavorito(template.id);
                       }}
                     >
                       <Star
-                        className={cn(
-                          "size-4",
-                          favorito && "fill-amber-300 text-amber-300",
-                        )}
+                        className={cn("size-[18px]", favorito && "fill-gym-accent")}
                       />
                     </button>
                   </div>
 
-                  {/* Linha 2: meta tags discretas */}
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <Badge
-                      variant={resolveTemplateStatusBadgeVariant(templateStatus)}
-                      className="shrink-0 text-[10px]"
-                    >
-                      {templateStatus}
-                    </Badge>
-                    {template.categoria ? (
-                      <Badge variant="outline" className="border-border text-[10px]">
-                        {template.categoria}
-                      </Badge>
-                    ) : null}
-                    {template.perfilIndicacao ? (
-                      <Badge variant="outline" className="border-border text-[10px]">
-                        {template.perfilIndicacao}
-                      </Badge>
-                    ) : null}
-                    {template.versaoTemplate ? (
-                      <span className="text-[10px] text-muted-foreground">
-                        v{template.versaoTemplate}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* Descrição (observações) — 2 linhas no preview */}
+                  {/* Descrição em preview de 2 linhas */}
                   {template.observacoes ? (
-                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                    <p className="line-clamp-2 text-[12.5px] leading-[1.5] text-muted-foreground">
                       {template.observacoes}
                     </p>
                   ) : null}
-
-                  {/* Frequência / semanas */}
-                  <div className="text-xs text-muted-foreground">
-                    {template.frequenciaSemanal
-                      ? `${template.frequenciaSemanal}x/sem`
-                      : "Frequência não informada"}
-                    {template.totalSemanas ? ` · ${template.totalSemanas}sem` : ""}
-                  </div>
 
                   {/* Chips de grupos musculares */}
                   {gruposVisiveis.length > 0 ? (
@@ -295,7 +274,7 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
                         <span
                           key={grupo}
                           className={cn(
-                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                            "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                             colorForGrupo(grupo),
                           )}
                         >
@@ -310,79 +289,80 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
                     </div>
                   ) : null}
 
-                  {/* Pendências — destaque amber só quando >0 */}
-                  {template.pendenciasAbertas > 0 ? (
-                    <div className="rounded-md bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-300">
-                      {template.pendenciasAbertas} pendência(s) aberta(s)
+                  {/* Governance discreto: status só quando ≠ PUBLICADO; pendências em amber */}
+                  {(templateStatus !== "PUBLICADO" || template.pendenciasAbertas > 0) ? (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {templateStatus !== "PUBLICADO" ? (
+                        <Badge
+                          variant={resolveTemplateStatusBadgeVariant(templateStatus)}
+                          className="text-[10px]"
+                        >
+                          {templateStatus}
+                        </Badge>
+                      ) : null}
+                      {template.pendenciasAbertas > 0 ? (
+                        <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-300">
+                          {template.pendenciasAbertas} pendência(s)
+                        </Badge>
+                      ) : null}
+                      {template.versaoTemplate ? (
+                        <span className="text-[10px] text-muted-foreground">v{template.versaoTemplate}</span>
+                      ) : null}
                     </div>
                   ) : null}
 
-                  {/* Spacer flex pra empurrar footer pra baixo */}
+                  {/* Spacer pra empurrar footer pra baixo */}
                   <div className="flex-1" />
 
-                  {/* Footer: alunos + atualizado em */}
-                  <div className="flex items-center justify-between border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+                  {/* Footer: alunos · Atualizado DD/MM */}
+                  <div className="flex items-center justify-between gap-2 border-t border-border pt-[14px] text-[12px] text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
-                      <Users className="size-3.5" />
-                      {totalAlunos} {totalAlunos === 1 ? "aluno" : "alunos"}
-                    </span>
-                    <span className="truncate">
-                      {template.professorNome
-                        ? `Prof. ${template.professorNome}`
-                        : "Sem professor"}
+                      <Users className="size-3.5 text-muted-foreground/70" />
+                      <span>
+                        <b className="font-semibold text-foreground">{totalAlunos}</b>{" "}
+                        {totalAlunos === 1 ? "aluno" : "alunos"}
+                      </span>
                     </span>
                     {atualizadoEm ? (
-                      <span className="shrink-0">Atualizado {atualizadoEm}</span>
+                      <span className="text-[11px] text-muted-foreground/80">
+                        Atualizado {atualizadoEm}
+                      </span>
                     ) : null}
                   </div>
 
-                  {/* Ações — abaixo, separadas para não competir com o card click */}
-                  <div
-                    className="flex flex-wrap items-center gap-1.5 pt-1"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <Button asChild variant="default" size="sm" className="h-7 text-xs">
-                      <Link href={`/treinos/${template.id}`}>
-                        <Edit3 className="mr-1 size-3" />
-                        Abrir
-                      </Link>
-                    </Button>
-                    {canEdit ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 border-border text-xs"
-                        onClick={() => void workspace.openEditTemplate(template)}
-                        disabled={actionLoading}
-                      >
-                        Editar
-                      </Button>
-                    ) : null}
-                    {canAssign ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 border-border text-xs"
-                        onClick={() => void workspace.openAssignmentDialog(template)}
-                        disabled={actionLoading}
-                      >
-                        <UserPlus className="mr-1 size-3" />
-                        Atribuir
-                      </Button>
-                    ) : null}
-                    {canArchive ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-xs text-muted-foreground hover:text-gym-danger"
-                        onClick={() => void workspace.openArchiveDialog(template)}
-                        disabled={actionLoading}
-                        title="Arquivar"
-                      >
-                        <MoreVertical className="size-3" />
-                      </Button>
-                    ) : null}
-                  </div>
+                  {/* Ações secundárias — Atribuir + overflow (Editar acessado via clique no card) */}
+                  {(canAssign || canArchive) ? (
+                    <div
+                      className="-mb-1 flex items-center justify-end gap-0.5"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {canAssign ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-gym-accent"
+                          onClick={() => void workspace.openAssignmentDialog(template)}
+                          disabled={actionLoading}
+                          title="Atribuir a aluno"
+                        >
+                          <UserPlus className="mr-1 size-3" />
+                          Atribuir
+                        </Button>
+                      ) : null}
+                      {canArchive ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] text-muted-foreground hover:text-gym-danger"
+                          onClick={() => void workspace.openArchiveDialog(template)}
+                          disabled={actionLoading}
+                          title="Arquivar"
+                        >
+                          <MoreVertical className="size-3" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </CardContent>
               </Card>
             );
