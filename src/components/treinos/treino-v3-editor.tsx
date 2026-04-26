@@ -1,19 +1,20 @@
 "use client";
 
 /**
- * TreinoV3Editor — editor inline tipo planilha (Wave 3 do PRD V3).
+ * TreinoV3Editor — editor inline tipo planilha (Waves 3 + 4 do PRD V3).
  *
- * Coração do redesign: substitui o form-based V2 por uma tabela inline com
- * 7 colunas editáveis cell-by-cell + drag&drop pra reordenar exercícios
- * dentro da sessão + sidebar de sessões A/B/C + stats por sessão.
+ * Coração do redesign: substitui o form-based V2 por tabela inline com
+ * 7 colunas + drag&drop + sidebar de sessões A/B/C + stats.
  *
- * Feature flag: NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED. Coexiste com V2 até
- * a Wave 7 (cutover).
+ * **Wave 4** acrescenta modo `instance`: customização do template para
+ * um aluno específico. Overrides ficam no backend (treino_instancia_customizada);
+ * FE compara baseline vs current para diff visual amarelo nas células
+ * divergentes do template.
  *
- * Atualmente NÃO suporta modo instance (overlay por aluno) — Wave 4.
+ * Feature flag: NEXT_PUBLIC_TREINO_EDITOR_V3_ENABLED.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -55,15 +56,204 @@ import {
 } from "@/lib/tenant/treinos/v2-runtime";
 import { createTreinoV2MetricField } from "@/lib/tenant/treinos/v2-domain";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
+import {
+  aplicarOverrides as aplicarOverridesApi,
+  criarInstancia,
+  removerInstancia,
+  type InstanciaOverride,
+} from "@/lib/api/treino-instancia";
 import type { EditorProps } from "./editor/types";
 
 type SessaoItem = TreinoV2EditorSeed["sessoes"][number]["itens"][number];
 
-export function TreinoV3Editor({ treino, exercicios, onTreinoChange }: EditorProps) {
+// ─── Helpers de override ───
+const COMPARABLE_FIELDS = [
+  "series",
+  "repeticoes",
+  "carga",
+  "intervalo",
+  "cadencia",
+  "rir",
+  "observacoes",
+] as const;
+
+/**
+ * Gera o array de overrides comparando current vs baseline.
+ * Cada campo divergente vira um override MODIFY; itens só no current
+ * viram ADD; itens só no baseline viram REMOVE.
+ */
+function computeOverrides(
+  base: TreinoV2EditorSeed,
+  cur: TreinoV2EditorSeed,
+): InstanciaOverride[] {
+  const out: InstanciaOverride[] = [];
+  for (const sCur of cur.sessoes) {
+    const sBase = base.sessoes.find((b) => b.id === sCur.id);
+    if (!sBase) continue;
+    const baseItensById = new Map(sBase.itens.map((i) => [i.id, i]));
+    const curItensById = new Map(sCur.itens.map((i) => [i.id, i]));
+    for (const itCur of sCur.itens) {
+      const itBase = baseItensById.get(itCur.id);
+      if (!itBase) {
+        out.push({
+          tipo: "ADD",
+          sessaoId: sCur.id,
+          afterItemId: null,
+          exercicio: itCur.exerciseId
+            ? {
+                exercicioCatalogoId: itCur.exerciseId,
+                series: itCur.series?.numericValue,
+                reps: itCur.repeticoes?.raw,
+                carga: itCur.carga?.raw,
+                intervalo: itCur.intervalo?.raw,
+                cadencia: itCur.cadencia,
+                rir: itCur.rir,
+              }
+            : undefined,
+        });
+        continue;
+      }
+      for (const f of COMPARABLE_FIELDS) {
+        if (JSON.stringify(itCur[f] ?? null) !== JSON.stringify(itBase[f] ?? null)) {
+          out.push({
+            tipo: "MODIFY",
+            sessaoId: sCur.id,
+            exercicioItemId: itCur.id,
+            campo: f,
+            valor: serializeValor(itCur[f]),
+          });
+        }
+      }
+    }
+    for (const itBase of sBase.itens) {
+      if (!curItensById.has(itBase.id)) {
+        out.push({ tipo: "REMOVE", sessaoId: sCur.id, exercicioItemId: itBase.id });
+      }
+    }
+  }
+  return out;
+}
+
+function serializeValor(value: unknown): string | number | null {
+  if (value == null) return null;
+  if (typeof value === "string" || typeof value === "number") return value;
+  if (typeof value === "object" && value && "raw" in value) {
+    return (value as { raw: string }).raw;
+  }
+  return JSON.stringify(value);
+}
+
+export interface TreinoV3EditorProps extends EditorProps {
+  /** "template" edita o template-mestre; "instance" edita overlay por aluno. */
+  mode?: "template" | "instance";
+  /** Quando mode=instance, identifica o aluno alvo. */
+  alunoId?: string;
+  /** Nome do aluno pra exibir no header (modo instance). */
+  alunoNome?: string;
+  /** Atribuição vinculada (opcional). */
+  atribuicaoId?: string;
+}
+
+export function TreinoV3Editor({
+  treino,
+  exercicios,
+  onTreinoChange,
+  mode = "template",
+  alunoId,
+  alunoNome,
+  atribuicaoId,
+}: TreinoV3EditorProps) {
   const { toast } = useToast();
+  const isInstance = mode === "instance" && Boolean(alunoId);
   const [editor, setEditor] = useState<TreinoV2EditorSeed>(() => buildTreinoV2EditorSeed(treino));
+  const [baseline] = useState<TreinoV2EditorSeed>(() => buildTreinoV2EditorSeed(treino));
   const [activeSessaoId, setActiveSessaoId] = useState(() => editor.sessoes[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
+  const [instanciaId, setInstanciaId] = useState<string | undefined>();
+
+  // Em modo instance, garante que existe uma instância no backend (idempotente).
+  useEffect(() => {
+    if (!isInstance || !alunoId || instanciaId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const inst = await criarInstancia({ templateId: treino.id, alunoId, atribuicaoId });
+        if (!cancelled) {
+          setInstanciaId(inst.id);
+          // TODO: aplicar overrides existentes ao editor para hidratar a UI.
+          // Por enquanto baseline = template = current. Wave 4.5 hidrata.
+        }
+      } catch (err) {
+        if (!cancelled) {
+          toast({
+            variant: "destructive",
+            title: "Erro ao iniciar instância",
+            description: err instanceof Error ? err.message : "Tente novamente.",
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isInstance, alunoId, instanciaId, treino.id, atribuicaoId, toast]);
+
+  // Diff helper: compara campo do item current vs baseline.
+  const isCustom = useCallback(
+    (sId: string, itemId: string, field: keyof SessaoItem): boolean => {
+      if (!isInstance) return false;
+      const baseS = baseline.sessoes.find((s) => s.id === sId);
+      const baseItem = baseS?.itens.find((i) => i.id === itemId);
+      const curS = editor.sessoes.find((s) => s.id === sId);
+      const curItem = curS?.itens.find((i) => i.id === itemId);
+      if (!baseItem) return true; // exercício adicionado nesta instância
+      if (!curItem) return false;
+      const baseVal = JSON.stringify(baseItem[field] ?? null);
+      const curVal = JSON.stringify(curItem[field] ?? null);
+      return baseVal !== curVal;
+    },
+    [isInstance, baseline, editor],
+  );
+
+  // Conta total de customizações (campos divergentes + exercícios add/remove).
+  const customCount = useMemo(() => {
+    if (!isInstance) return 0;
+    let n = 0;
+    for (const sCur of editor.sessoes) {
+      const sBase = baseline.sessoes.find((b) => b.id === sCur.id);
+      for (const itCur of sCur.itens) {
+        const itBase = sBase?.itens.find((b) => b.id === itCur.id);
+        if (!itBase) {
+          n++;
+          continue;
+        }
+        for (const f of ["series", "repeticoes", "carga", "intervalo", "cadencia", "rir", "observacoes"] as const) {
+          if (JSON.stringify(itCur[f] ?? null) !== JSON.stringify(itBase[f] ?? null)) n++;
+        }
+      }
+      const removed = (sBase?.itens.length ?? 0) - sCur.itens.length;
+      if (removed > 0) n += removed;
+    }
+    return n;
+  }, [isInstance, editor, baseline]);
+
+  // Reset = remove a instância (aluno volta a ver template puro).
+  const handleReset = useCallback(async () => {
+    if (!instanciaId) return;
+    if (!confirm("Reverter todas as customizações e voltar ao template original?")) return;
+    try {
+      await removerInstancia(instanciaId);
+      toast({ title: "Customizações revertidas", description: "Aluno volta a ver o template padrão." });
+      setEditor(buildTreinoV2EditorSeed(treino));
+      setInstanciaId(undefined);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao resetar",
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
+    }
+  }, [instanciaId, treino, toast]);
 
   const activeSessao = useMemo(
     () => editor.sessoes.find((s) => s.id === activeSessaoId) ?? editor.sessoes[0] ?? null,
@@ -184,21 +374,39 @@ export function TreinoV3Editor({ treino, exercicios, onTreinoChange }: EditorPro
     return { totalItens: activeSessao.itens.length, totalSeries };
   }, [activeSessao]);
 
-  // ─── Save (placeholder — Wave 3 entrega só UI; persist depois) ───
-  const handleSave = useCallback(() => {
+  // ─── Save ───
+  // Modo template: ainda usa toast (Wave 4 foca em instance; persist do
+  // template aproveita endpoints V2 existentes via Wave 5).
+  // Modo instance: gera overrides comparando current vs baseline e
+  // chama PATCH /instancias/{id}/overrides.
+  const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      // TODO Wave 4: integrar com saveTreinoWorkspace passando o editor mutado.
-      toast({
-        title: "Salvamento em revisão",
-        description:
-          "Editor V3 ainda não persiste no backend. Wave 4 conecta o save ao endpoint de sessões.",
-      });
+      if (isInstance && instanciaId) {
+        const overrides = computeOverrides(baseline, editor);
+        await aplicarOverridesApi(instanciaId, overrides);
+        toast({
+          title: `Salvo para ${alunoNome ?? "aluno"}`,
+          description: `${overrides.length} customizações persistidas como overlay do template.`,
+        });
+      } else {
+        toast({
+          title: "Salvamento em revisão",
+          description:
+            "Persist do template no V3 fica para Wave 5 (reusa endpoint V2). No modo instance funciona normal.",
+        });
+      }
       onTreinoChange?.(treino);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: err instanceof Error ? err.message : "Tente novamente.",
+      });
     } finally {
       setSaving(false);
     }
-  }, [toast, onTreinoChange, treino]);
+  }, [isInstance, instanciaId, baseline, editor, alunoNome, toast, onTreinoChange, treino]);
 
   // ─── DnD setup ───
   const sensors = useSensors(
@@ -223,38 +431,65 @@ export function TreinoV3Editor({ treino, exercicios, onTreinoChange }: EditorPro
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
         <div className="flex flex-1 items-center gap-3">
           <Button asChild variant="outline" size="sm" className="border-border">
-            <Link href="/treinos">
+            <Link href={isInstance ? "/treinos/atribuidos" : "/treinos"}>
               <ArrowLeft className="mr-1 size-4" />
-              Templates
+              {isInstance ? "Atribuições" : "Templates"}
             </Link>
           </Button>
           <div className="min-w-0 flex-1">
+            {isInstance && alunoNome ? (
+              <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs">
+                <span className="rounded-full bg-secondary px-2 py-0.5 font-medium">
+                  {alunoNome}
+                </span>
+                {customCount > 0 ? (
+                  <Badge className="bg-yellow-500/15 text-yellow-300 hover:bg-yellow-500/20">
+                    {customCount} {customCount === 1 ? "custom" : "customs"}
+                  </Badge>
+                ) : null}
+              </div>
+            ) : null}
             <Input
               value={editor.nome ?? ""}
               onChange={(e) => setEditor((p) => ({ ...p, nome: e.target.value }))}
               className="border-0 bg-transparent px-0 font-display text-xl font-bold focus-visible:ring-0"
               placeholder="Nome do template"
+              disabled={isInstance}
             />
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>{editor.categoria ?? "Sem objetivo"}</span>
+              {isInstance ? (
+                <span className="text-gym-accent">↳ baseado em "{treino.nome ?? "template"}"</span>
+              ) : (
+                <span>{editor.categoria ?? "Sem objetivo"}</span>
+              )}
               <span>·</span>
               <span>{editor.frequenciaSemanal ?? 0}x/sem</span>
               <span>·</span>
               <span>{editor.sessoes.length} sessões</span>
               <Badge variant="outline" className="ml-2 border-gym-accent/30 text-gym-accent">
-                Editor V3 (preview)
+                Editor V3 {isInstance ? "(instância)" : "(preview)"}
               </Badge>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {isInstance && customCount > 0 ? (
+            <Button variant="outline" size="sm" className="border-border" onClick={handleReset}>
+              <Trash2 className="mr-2 size-4" />
+              Resetar
+            </Button>
+          ) : null}
           <Button variant="outline" size="sm" className="border-border">
             <Send className="mr-2 size-4" />
             Pré-visualizar
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving}>
             <Save className="mr-2 size-4" />
-            {saving ? "Salvando..." : "Salvar template"}
+            {saving
+              ? "Salvando..."
+              : isInstance
+                ? `Salvar para ${alunoNome?.split(" ")[0] ?? "aluno"}`
+                : "Salvar template"}
           </Button>
         </div>
       </div>
@@ -394,6 +629,7 @@ export function TreinoV3Editor({ treino, exercicios, onTreinoChange }: EditorPro
                               item={item}
                               index={idx}
                               catalog={catalogById}
+                              isCustom={(field) => isCustom(activeSessao.id, item.id, field)}
                               onUpdate={(patch) => updateItem(activeSessao.id, item.id, patch)}
                               onDuplicate={() => duplicateItem(activeSessao.id, item.id)}
                               onRemove={() => removeItem(activeSessao.id, item.id)}
@@ -444,6 +680,7 @@ function SortableExerciseRow({
   item,
   index,
   catalog,
+  isCustom,
   onUpdate,
   onDuplicate,
   onRemove,
@@ -451,6 +688,7 @@ function SortableExerciseRow({
   item: SessaoItem;
   index: number;
   catalog: Map<string, TreinoV2CatalogExercise>;
+  isCustom: (field: keyof SessaoItem) => boolean;
   onUpdate: (patch: Partial<SessaoItem>) => void;
   onDuplicate: () => void;
   onRemove: () => void;
@@ -498,14 +736,20 @@ function SortableExerciseRow({
             min={1}
             value={item.series?.raw ?? ""}
             onChange={(e) => onUpdate({ series: createTreinoV2MetricField(e.target.value) })}
-            className="h-8 w-12 border-border bg-secondary px-2 text-center"
+            className={cn(
+              "h-8 w-12 border-border bg-secondary px-2 text-center",
+              isCustom("series") && "ring-2 ring-yellow-500/60",
+            )}
           />
           <span className="text-muted-foreground">×</span>
           <Input
             value={item.repeticoes?.raw ?? ""}
             onChange={(e) => onUpdate({ repeticoes: createTreinoV2MetricField(e.target.value) })}
             placeholder="10-12"
-            className="h-8 w-16 border-border bg-secondary px-2"
+            className={cn(
+              "h-8 w-16 border-border bg-secondary px-2",
+              isCustom("repeticoes") && "ring-2 ring-yellow-500/60",
+            )}
           />
         </div>
       </td>
@@ -518,7 +762,10 @@ function SortableExerciseRow({
             })
           }
           placeholder="—"
-          className="h-8 w-20 border-border bg-secondary px-2"
+          className={cn(
+            "h-8 w-20 border-border bg-secondary px-2",
+            isCustom("carga") && "ring-2 ring-yellow-500/60",
+          )}
         />
       </td>
       <td className="px-2 py-2">
@@ -530,7 +777,10 @@ function SortableExerciseRow({
             })
           }
           placeholder="60"
-          className="h-8 w-20 border-border bg-secondary px-2"
+          className={cn(
+            "h-8 w-20 border-border bg-secondary px-2",
+            isCustom("intervalo") && "ring-2 ring-yellow-500/60",
+          )}
         />
       </td>
       <td className="px-2 py-2">
@@ -538,7 +788,10 @@ function SortableExerciseRow({
           value={item.cadencia ?? ""}
           onChange={(e) => onUpdate({ cadencia: e.target.value || undefined })}
           placeholder="2-0-1"
-          className="h-8 w-20 border-border bg-secondary px-2"
+          className={cn(
+            "h-8 w-20 border-border bg-secondary px-2",
+            isCustom("cadencia") && "ring-2 ring-yellow-500/60",
+          )}
           title="Cadência: excêntrica-pausa-concêntrica"
         />
       </td>
@@ -546,7 +799,10 @@ function SortableExerciseRow({
         <select
           value={item.rir ?? ""}
           onChange={(e) => onUpdate({ rir: e.target.value === "" ? undefined : Number(e.target.value) })}
-          className="h-8 w-16 rounded-md border border-border bg-secondary px-2 text-sm"
+          className={cn(
+            "h-8 w-16 rounded-md border border-border bg-secondary px-2 text-sm",
+            isCustom("rir") && "ring-2 ring-yellow-500/60",
+          )}
         >
           <option value="">—</option>
           {[0, 1, 2, 3, 4].map((v) => (
