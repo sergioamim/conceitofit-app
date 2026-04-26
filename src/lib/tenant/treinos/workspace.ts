@@ -75,6 +75,12 @@ export type TreinoTemplateResumo = {
   precisaRevisao: boolean;
   pendenciasAbertas: number;
   atualizadoEm?: string;
+  /** Wave 8: descrição/observações para preview no card. */
+  observacoes?: string;
+  /** Wave 8: grupos musculares distintos cobertos pelo template. */
+  gruposMusculares?: string[];
+  /** Wave 8: count de treinos ativos derivados deste template. */
+  totalAtribuicoes?: number;
 };
 
 export type TreinoTemplateTotais = {
@@ -383,6 +389,14 @@ function mapTemplateResumoApiToDomain(item: TemplateResumoApiResponse): TreinoTe
     precisaRevisao: item.precisaRevisao === true,
     pendenciasAbertas: item.pendenciasAbertas == null ? 0 : Number(item.pendenciasAbertas),
     atualizadoEm: trimString(item.atualizadoEm),
+    observacoes: trimString(item.observacoes),
+    gruposMusculares: Array.isArray(item.gruposMusculares)
+      ? item.gruposMusculares
+          .map((g) => trimString(g))
+          .filter((g): g is string => Boolean(g))
+      : undefined,
+    totalAtribuicoes:
+      item.totalAtribuicoes == null ? undefined : Number(item.totalAtribuicoes),
   };
 }
 

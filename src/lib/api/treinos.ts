@@ -119,6 +119,9 @@ export interface TemplateResumoApiResponse {
   precisaRevisao?: boolean | null;
   pendenciasAbertas?: number | null;
   atualizadoEm?: string | null;
+  observacoes?: string | null;
+  gruposMusculares?: string[] | null;
+  totalAtribuicoes?: number | null;
 }
 
 export interface TemplateListTotalsApiResponse {
