@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, Search } from "lucide-react";
+import { useState } from "react";
+import { Library, Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import type { TreinoV2DefaultObjective, TreinoV2ExerciseType } from "@/lib/tenant/treinos/v2-domain";
 import { SelectField } from "./shared";
+import { ImportarDoCatalogoDialog } from "./importar-do-catalogo-dialog";
 import {
   type ExerciseDrawerState,
   type GrupoMuscularOption,
@@ -162,9 +164,11 @@ type ExerciseDrawerDialogProps = {
   catalog: TreinoV2CatalogExercise[];
   grupoMuscularOptions: GrupoMuscularOption[];
   saving: boolean;
+  tenantId?: string;
   onDrawerChange: (updater: (current: ExerciseDrawerState) => ExerciseDrawerState) => void;
   onClose: () => void;
   onSave: () => void;
+  onCatalogImported?: (exercicioId: string, nome: string) => void;
 };
 
 export function ExerciseDrawerDialog({
@@ -172,20 +176,40 @@ export function ExerciseDrawerDialog({
   catalog,
   grupoMuscularOptions,
   saving,
+  tenantId,
   onDrawerChange,
   onClose,
   onSave,
+  onCatalogImported,
 }: ExerciseDrawerDialogProps) {
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const canImportFromCatalog = Boolean(tenantId) && !drawer.editingId;
+
   return (
     <Dialog open={drawer.open} onOpenChange={(open) => onDrawerChange((current) => ({ ...current, open }))}>
       <DialogContent className="border-border bg-card sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
-            {drawer.editingId ? "Editar exercício" : "Novo exercício"}
-          </DialogTitle>
-          <DialogDescription>
-            Cadastro rico de catálogo com mídia, descrição e disponibilidade no app.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle className="font-display text-lg font-bold">
+                {drawer.editingId ? "Editar exercício" : "Novo exercício"}
+              </DialogTitle>
+              <DialogDescription>
+                Cadastro rico de catálogo com mídia, descrição e disponibilidade no app.
+              </DialogDescription>
+            </div>
+            {canImportFromCatalog ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <Library className="mr-1.5 size-4" />
+                Importar do catálogo
+              </Button>
+            ) : null}
+          </div>
         </DialogHeader>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -313,6 +337,18 @@ export function ExerciseDrawerDialog({
             {saving ? "Salvando..." : drawer.editingId ? "Salvar exercício" : "Criar exercício"}
           </Button>
         </DialogFooter>
+
+        {canImportFromCatalog && tenantId ? (
+          <ImportarDoCatalogoDialog
+            open={importDialogOpen}
+            onOpenChange={setImportDialogOpen}
+            tenantId={tenantId}
+            onImportSuccess={(exercicioId, nome) => {
+              onCatalogImported?.(exercicioId, nome);
+              onClose();
+            }}
+          />
+        ) : null}
       </DialogContent>
     </Dialog>
   );
