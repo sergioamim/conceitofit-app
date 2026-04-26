@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, Flame, LayoutGrid, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { formatDateBR } from "@/lib/formatters";
 import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
 import type {
@@ -23,6 +23,10 @@ import { getModalidadeCor } from "@/lib/grade/modalidade-cor";
 import { GradeWeekCard, type GradeCardItem } from "./grade-week-card";
 import { addDays, assignTracks, startOfWeek, toIsoDate, toMinutes } from "./grade-utils";
 import { GradeHeatmap } from "@/components/grade/grade-heatmap";
+import { GradeDayFocus } from "@/components/grade/grade-day-focus";
+import { GradeRoomKanban } from "@/components/grade/grade-room-kanban";
+import { GradeViewToggle, type GradeViewMode } from "@/components/grade/grade-view-toggle";
+import { GradeWeekFooter } from "./grade-week-footer";
 
 const DIA_ORDER: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
 const DIA_FULL: Record<DiaSemana, string> = {
@@ -53,7 +57,8 @@ export function GradeContent() {
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [nowDate, setNowDate] = useState<Date | null>(null);
   const [activeMods, setActiveMods] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<"timeline" | "heatmap">("timeline");
+  const [viewMode, setViewMode] = useState<GradeViewMode>("timeline");
+  const [selectedDia, setSelectedDia] = useState<DiaSemana | null>(null);
 
   const { data, isLoading, isError, error } = useGrade({
     tenantId,
@@ -207,32 +212,7 @@ export function GradeContent() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Header />
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-md border border-border bg-card p-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode("timeline")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition",
-                viewMode === "timeline"
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <LayoutGrid className="size-3.5" /> Timeline
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("heatmap")}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition",
-                viewMode === "heatmap"
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <Flame className="size-3.5" /> Heatmap
-            </button>
-          </div>
+          <GradeViewToggle value={viewMode} onChange={setViewMode} />
           <Button
             variant="outline"
             size="icon"
@@ -315,6 +295,35 @@ export function GradeContent() {
           atividades={[...atividades]}
           sessoes={[...sessoes]}
           weekDates={weekDays.map((w) => ({ dia: w.dia, isoDate: w.isoDate }))}
+          todayIso={todayIso}
+        />
+      ) : null}
+
+      {viewMode === "day" && !isLoading ? (
+        <GradeDayFocus
+          grades={[...grades]}
+          atividades={[...atividades]}
+          salas={[...salas]}
+          funcionarios={[...funcionarios]}
+          sessoes={[...sessoes]}
+          weekDates={weekDays}
+          selectedDia={
+            selectedDia ?? (weekDays.find((w) => w.isoDate === todayIso)?.dia ?? "SEG")
+          }
+          onSelectDia={setSelectedDia}
+          todayIso={todayIso}
+          nowDate={nowDate}
+        />
+      ) : null}
+
+      {viewMode === "kanban" && !isLoading ? (
+        <GradeRoomKanban
+          grades={[...grades]}
+          atividades={[...atividades]}
+          salas={[...salas]}
+          funcionarios={[...funcionarios]}
+          sessoes={[...sessoes]}
+          weekDates={weekDays}
           todayIso={todayIso}
         />
       ) : null}
@@ -466,47 +475,13 @@ export function GradeContent() {
         </div>
       ) : null}
 
-      {kpis.total > 0 ? (
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-border bg-card px-4 py-3 text-xs text-muted-foreground">
-          <span>
-            <span className="font-mono text-sm font-bold text-foreground">{kpis.total}</span>{" "}
-            aulas/semana
-          </span>
-          <span>
-            <span className="font-mono text-sm font-bold text-foreground">{kpis.totalH}h</span>{" "}
-            programadas
-          </span>
-          <span>
-            <span className="font-mono text-sm font-bold text-foreground">{kpis.modCount}</span>{" "}
-            modalidades
-          </span>
-          {kpis.lotadas > 0 ? (
-            <span>
-              <span className="font-mono text-sm font-bold text-destructive">{kpis.lotadas}</span>{" "}
-              lotadas
-            </span>
-          ) : null}
-          {sobDemandaCount > 0 ? (
-            <span>
-              ·{" "}
-              <span className="font-mono font-bold text-foreground">{sobDemandaCount}</span> sob
-              demanda (não exibidas)
-            </span>
-          ) : null}
-          <div className="ml-auto flex items-center gap-1.5">
-            <CalendarDays className="size-3.5" />
-            <span>
-              Editar grade em{" "}
-              <Link
-                href="/administrativo/atividades-grade"
-                className="font-semibold text-foreground underline-offset-2 hover:underline"
-              >
-                Administrativo
-              </Link>
-            </span>
-          </div>
-        </div>
-      ) : null}
+      <GradeWeekFooter
+        total={kpis.total}
+        totalH={kpis.totalH}
+        modCount={kpis.modCount}
+        lotadas={kpis.lotadas}
+        sobDemandaCount={sobDemandaCount}
+      />
     </div>
   );
 }
