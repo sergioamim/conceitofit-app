@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { LayoutGrid, Plus, Table2 } from "lucide-react";
 import {
   createAtividadeGradeApi,
   criarOcorrenciaAtividadeGradeApi,
@@ -29,6 +29,13 @@ import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { PageError } from "@/components/shared/page-error";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
 import { useAdminCrud } from "@/lib/query/use-admin-crud";
+import {
+  GradeCompositor,
+  type GradeCompositorDropPayload,
+  type GradeCompositorMovePayload,
+} from "@/components/grade/grade-compositor";
+import { buildPrefillGrade, minToTime, timeToMin } from "@/components/grade/grade-prefill";
+import { cn } from "@/lib/utils";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -48,13 +55,21 @@ type AtividadesGradeData = {
   funcionarios: Funcionario[];
 };
 
+const EMPTY_GRADES: readonly AtividadeGrade[] = [];
+const EMPTY_ATIVIDADES: readonly Atividade[] = [];
+const EMPTY_SALAS: readonly Sala[] = [];
+const EMPTY_FUNCIONARIOS: readonly Funcionario[] = [];
+
+
 export function AtividadesGradeContent() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
   const [modalOpen, setModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
+  const [prefilledNew, setPrefilledNew] = useState<AtividadeGrade | null>(null);
   const [occurrenceGrade, setOccurrenceGrade] = useState<AtividadeGrade | null>(null);
+  const [viewMode, setViewMode] = useState<"tabela" | "compositor">("tabela");
   const [filtroAtividade, setFiltroAtividade] = useState<string>("TODAS");
   const [filtroDia, setFiltroDia] = useState<DiaSemana | typeof FILTER_ALL>(FILTER_ALL);
   const [apenasAtivas, setApenasAtivas] = useState(true);
@@ -101,10 +116,10 @@ export function AtividadesGradeContent() {
   const loadError = queryError ? (normalizeErrorMessage(queryError) || "Falha ao carregar grade de atividades.") : "";
 
   const data = dataItems[0];
-  const grades = data?.grades ?? [];
-  const atividades = data?.atividades ?? [];
-  const salas = data?.salas ?? [];
-  const funcionarios = data?.funcionarios ?? [];
+  const grades = data?.grades ?? EMPTY_GRADES;
+  const atividades = data?.atividades ?? EMPTY_ATIVIDADES;
+  const salas = data?.salas ?? EMPTY_SALAS;
+  const funcionarios = data?.funcionarios ?? EMPTY_FUNCIONARIOS;
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
@@ -152,12 +167,41 @@ export function AtividadesGradeContent() {
 
     setModalOpen(false);
     setEditing(null);
+    setPrefilledNew(null);
     void load();
   }
 
   async function handleToggle(id: string) {
     await toggleAtividadeGradeApi(id);
     void load();
+  }
+
+  function handleDropNewAtividade({ atividadeId, dia, horaInicio }: GradeCompositorDropPayload) {
+    setEditing(null);
+    setPrefilledNew(buildPrefillGrade(atividadeId, dia, horaInicio));
+    setModalOpen(true);
+  }
+
+  function handlePickAtividade(atividadeId: string) {
+    setEditing(null);
+    setPrefilledNew(buildPrefillGrade(atividadeId, "SEG", "08:00"));
+    setModalOpen(true);
+  }
+
+  async function handleMoveExisting({ gradeId, dia, horaInicio }: GradeCompositorMovePayload) {
+    const g = grades.find((x) => x.id === gradeId);
+    if (!g) return;
+    const fim = timeToMin(horaInicio) + g.duracaoMinutos;
+    try {
+      await updateAtividadeGradeApi(gradeId, {
+        diasSemana: [dia],
+        horaInicio,
+        horaFim: minToTime(fim),
+      });
+      void load();
+    } catch (moveError) {
+      setError(normalizeErrorMessage(moveError) || "Falha ao mover item da grade.");
+    }
   }
 
   function handleDelete(id: string) {
@@ -217,12 +261,13 @@ export function AtividadesGradeContent() {
         onClose={() => {
           setModalOpen(false);
           setEditing(null);
+          setPrefilledNew(null);
         }}
         onSave={handleSave}
         atividades={atividades}
         salas={salas}
         funcionarios={funcionarios}
-        initial={editing}
+        initial={editing ?? prefilledNew}
       />
       <AtividadeOcorrenciaModal
         open={occurrenceModalOpen}
@@ -236,17 +281,45 @@ export function AtividadesGradeContent() {
         initial={occurrenceDefaults}
       />
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">Atividades - Grade</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Cadastro de disponibilidade por atividade. Esses registros serão usados no calendário de atividades.
           </p>
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <Plus className="size-4" />
-          Nova Grade
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("tabela")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition",
+                viewMode === "tabela"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Table2 className="size-3.5" /> Tabela
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("compositor")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition",
+                viewMode === "compositor"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="size-3.5" /> Compositor
+            </button>
+          </div>
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="size-4" />
+            Nova Grade
+          </Button>
+        </div>
       </div>
 
       <PageError error={loadError} onRetry={load} />
@@ -261,7 +334,24 @@ export function AtividadesGradeContent() {
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3">
+      {viewMode === "compositor" ? (
+        <GradeCompositor
+          grades={grades}
+          atividades={atividades}
+          salas={salas}
+          funcionarios={funcionarios}
+          onDropNewAtividade={handleDropNewAtividade}
+          onMoveExisting={handleMoveExisting}
+          onEditExisting={(g) => {
+            setEditing(g);
+            setPrefilledNew(null);
+            setModalOpen(true);
+          }}
+          onPickAtividade={handlePickAtividade}
+        />
+      ) : null}
+
+      <div className={cn("flex items-center gap-3", viewMode !== "tabela" && "hidden")}>
         <div className="flex gap-1.5">
           <button
             onClick={() => setApenasAtivas(false)}
@@ -315,7 +405,7 @@ export function AtividadesGradeContent() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className={cn("overflow-hidden rounded-xl border border-border", viewMode !== "tabela" && "hidden")}>
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-secondary">
