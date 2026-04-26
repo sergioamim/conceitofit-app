@@ -19,7 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { getExercicioApi } from "@/lib/api/treinos";
+import {
+  getExercicioApi,
+  listTemplatesUsandoExercicioApi,
+} from "@/lib/api/treinos";
 import type { Exercicio } from "@/lib/types";
 import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 
@@ -64,6 +67,15 @@ export default function ExercicioDetalhePage() {
       : queryError
         ? "Exercício não encontrado"
         : null;
+
+  // Wave J.1 — lista de templates que usam este exercício
+  const { data: templatesUsando = [] } = useQuery({
+    queryKey: ["exercicio-templates-usando", tenantId, exId],
+    enabled: Boolean(tenantId && exId && tenantResolved && exercicio),
+    staleTime: 60_000,
+    queryFn: () =>
+      listTemplatesUsandoExercicioApi({ tenantId, id: exId }),
+  });
 
   const videoEmbedUrl = useMemo(() => {
     if (!exercicio?.videoUrl) return null;
@@ -337,11 +349,29 @@ export default function ExercicioDetalhePage() {
                 Usado em
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-xs italic text-muted-foreground">
-                Backend ainda não expõe o cross-reference template ↔ exercício.
-                Será preenchido em wave futura.
-              </p>
+            <CardContent className="space-y-1.5">
+              {templatesUsando.length === 0 ? (
+                <p className="text-xs italic text-muted-foreground">
+                  Não está em nenhum template ainda.
+                </p>
+              ) : (
+                templatesUsando.map((t) => (
+                  <Link
+                    key={t.treinoId}
+                    href={`/treinos/${t.treinoId}`}
+                    className="flex items-center justify-between gap-2 rounded-md border border-border bg-secondary/40 px-2.5 py-2 text-left text-[13px] transition-colors hover:border-gym-accent/40 hover:bg-secondary"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium">{t.treinoNome}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {t.totalItens}{" "}
+                        {t.totalItens === 1 ? "uso" : "usos"}
+                        {t.versaoTemplate ? ` · v${t.versaoTemplate}` : ""}
+                      </div>
+                    </div>
+                  </Link>
+                ))
+              )}
             </CardContent>
           </Card>
         </aside>

@@ -507,6 +507,27 @@ export async function getExercicioApi(input: {
   });
 }
 
+export interface TemplateUsandoExercicioApiResponse {
+  treinoId: string;
+  treinoNome: string;
+  versaoTemplate?: number | null;
+  totalItens: number;
+}
+
+/**
+ * Wave J.1 — "Usado em": templates padrão (PRE_MONTADO) ativos do
+ * tenant que usam um dado exercício. Endpoint backend novo.
+ */
+export async function listTemplatesUsandoExercicioApi(input: {
+  tenantId?: string;
+  id: string;
+}): Promise<TemplateUsandoExercicioApiResponse[]> {
+  return apiRequest<TemplateUsandoExercicioApiResponse[]>({
+    path: `/api/v1/exercicios/${input.id}/templates-usando`,
+    query: { tenantId: input.tenantId },
+  });
+}
+
 export async function createExercicioApi(input: {
   tenantId?: string;
   data: CreateExercicioApiInput;

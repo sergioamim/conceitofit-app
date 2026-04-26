@@ -73,6 +73,38 @@ async function seed(page: Page) {
   });
 }
 
+/**
+ * Stub combinado pra GET /api/v1/exercicios/{id} + /templates-usando.
+ * Roteia ambos no mesmo handler porque o pattern Playwright cobre os
+ * dois (a última rota registrada vence; manter handler único evita
+ * conflito).
+ */
+async function installExercicioRoute(
+  page: Page,
+  fixture: Record<string, unknown>,
+  templatesUsando: Array<Record<string, unknown>> = [],
+) {
+  await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.continue();
+      return;
+    }
+    if (route.request().url().includes("/templates-usando")) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(templatesUsando),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(fixture),
+    });
+  });
+}
+
 async function installAuthMocks(page: Page) {
   await page.route("**/backend/api/v1/auth/me", async (route) =>
     route.fulfill({
@@ -113,11 +145,37 @@ test.describe("Detalhe do exercício — fetch singular", () => {
     const singularCalls: string[] = [];
     const listCalls: string[] = [];
 
-    // GET singular — endpoint que a refator agora usa
+    // GET singular — endpoint que a refator agora usa.
+    // Tratamos templates-usando dentro do mesmo handler (Playwright
+    // usa última rota registrada → ordem importa; mantemos handler único).
     await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) => {
-      if (route.request().method() === "GET") {
-        singularCalls.push(route.request().url());
+      const url = route.request().url();
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
       }
+      if (url.includes("/templates-usando")) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            {
+              treinoId: "tpl-hipertrofia",
+              treinoNome: "Hipertrofia ABC",
+              versaoTemplate: 3,
+              totalItens: 2,
+            },
+            {
+              treinoId: "tpl-push",
+              treinoNome: "Push/Pull/Legs",
+              versaoTemplate: 1,
+              totalItens: 1,
+            },
+          ]),
+        });
+        return;
+      }
+      singularCalls.push(url);
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -162,21 +220,20 @@ test.describe("Detalhe do exercício — fetch singular", () => {
     // a lista 0 vezes (regressão check)
     expect(singularCalls.length).toBeGreaterThanOrEqual(1);
     expect(listCalls).toEqual([]);
+
+    // Wave J.1 — "Usado em" agora exibe templates reais
+    await expect(page.getByText("Hipertrofia ABC")).toBeVisible();
+    await expect(page.getByText("Push/Pull/Legs")).toBeVisible();
+    await expect(page.getByText(/2\s+usos/)).toBeVisible();
   });
 
   test("renderiza iframe de vídeo quando videoUrl é YouTube", async ({ page }) => {
     await seed(page);
     await installAuthMocks(page);
-    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ...EX_FIXTURE,
-          videoUrl: "https://youtu.be/dQw4w9WgXcQ",
-        }),
-      }),
-    );
+    await installExercicioRoute(page, {
+      ...EX_FIXTURE,
+      videoUrl: "https://youtu.be/dQw4w9WgXcQ",
+    });
 
     await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Supino reto").first()).toBeVisible();
@@ -197,17 +254,11 @@ test.describe("Detalhe do exercício — fetch singular", () => {
   }) => {
     await seed(page);
     await installAuthMocks(page);
-    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ...EX_FIXTURE,
-          videoUrl: null,
-          midiaUrl: "https://example.com/gif/supino.gif",
-        }),
-      }),
-    );
+    await installExercicioRoute(page, {
+      ...EX_FIXTURE,
+      videoUrl: null,
+      midiaUrl: "https://example.com/gif/supino.gif",
+    });
 
     await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Supino reto").first()).toBeVisible();
@@ -224,17 +275,12 @@ test.describe("Detalhe do exercício — fetch singular", () => {
   }) => {
     await seed(page);
     await installAuthMocks(page);
-    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ...EX_FIXTURE,
-          videoUrl: null,
-          midiaUrl: null,
-          thumbnailUrl: null,
-        }),
-      }),
+    await installExercicioRoute(page, {
+      ...EX_FIXTURE,
+      videoUrl: null,
+      midiaUrl: null,
+      thumbnailUrl: null,
+    },
     );
 
     await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
@@ -251,19 +297,12 @@ test.describe("Detalhe do exercício — fetch singular", () => {
   test("CTA 'Usar em um treino' navega pra /treinos", async ({ page }) => {
     await seed(page);
     await installAuthMocks(page);
-    await page.route(`**/backend/api/v1/exercicios/${EX_ID}**`, async (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(EX_FIXTURE),
-      }),
-    );
+    await installExercicioRoute(page, EX_FIXTURE);
 
-    await page.goto(`/treinos/exercicios/${EX_ID}`, { waitUntil: "domcontentloaded" });
+    await page.goto(`/treinos/exercicios/${EX_ID}`, {
+      waitUntil: "domcontentloaded",
+    });
     await expect(page.getByText("Supino reto").first()).toBeVisible();
-
-    // CTA tem novo texto após Wave F (era "Adicionar a treino", virou
-    // "Usar em um treino" pra ser honesto sobre o fluxo)
     const cta = page.getByRole("link", { name: /Usar em um treino/ });
     await expect(cta).toBeVisible();
     await cta.click();
@@ -271,3 +310,4 @@ test.describe("Detalhe do exercício — fetch singular", () => {
     expect(page.url()).toMatch(/\/treinos\/?$/);
   });
 });
+
