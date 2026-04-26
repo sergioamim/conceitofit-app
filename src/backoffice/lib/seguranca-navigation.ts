@@ -37,16 +37,7 @@ export const GLOBAL_SECURITY_SECTIONS: GlobalSecuritySection[] = [
   },
 ];
 
-export const GLOBAL_SECURITY_LEGACY_LINKS = [
-  {
-    href: "/seguranca/rbac",
-    label: "Base técnica de perfis",
-  },
-  {
-    href: "/seguranca/acesso-unidade",
-    label: "Concessão operacional legada",
-  },
-];
+export const GLOBAL_SECURITY_LEGACY_LINKS: Array<{ href: string; label: string }> = [];
 
 export function isGlobalSecurityIaEnabled() {
   return process.env.NEXT_PUBLIC_FEATURE_SECURITY_IA !== "false";

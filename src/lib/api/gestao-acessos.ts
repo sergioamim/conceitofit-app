@@ -63,6 +63,7 @@ export async function criarPerfil(data: {
   tenantId: string;
   nome: string;
   descricao?: string;
+  cor?: string;
 }): Promise<PerfilAcesso> {
   return apiRequest<PerfilAcesso>({
     ...GA_API_OPTIONS,
@@ -75,7 +76,7 @@ export async function criarPerfil(data: {
 /** `PUT /api/v1/auth/gestao-acessos/perfis/{id}` */
 export async function atualizarPerfil(
   id: string,
-  data: { nome?: string; descricao?: string },
+  data: { nome?: string; descricao?: string; cor?: string },
 ): Promise<PerfilAcesso> {
   return apiRequest<PerfilAcesso>({
     ...GA_API_OPTIONS,

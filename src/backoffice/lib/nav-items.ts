@@ -97,13 +97,20 @@ export const billingGroup: NavGroup = {
   ],
 };
 
-/** 4. Gestão de Acessos — perfis e operadores da academia */
+/** 4. Gestão de Acessos — RBAC v2 (redesign 2026-04-25) */
 export const gestaoAcessosGroup: NavGroup = {
   label: "Gestão de Acessos",
   icon: KeyRound,
   items: [
-    { href: "/admin/gestao-acessos/perfis", label: "Perfis", icon: Shield, description: "Perfis de acesso e capacidades" },
-    { href: "/admin/gestao-acessos/operadores", label: "Operadores", icon: Users, description: "Atribuição de perfis a operadores" },
+    { href: "/admin/gestao-acessos", label: "Visão geral", icon: ShieldCheck, description: "KPIs e atividade recente" },
+    { href: "/admin/gestao-acessos/usuarios", label: "Usuários", icon: Users, description: "Lista de operadores da rede" },
+    { href: "/admin/gestao-acessos/papeis", label: "Papéis", icon: KeyRound, description: "Conjuntos de permissões" },
+    { href: "/admin/gestao-acessos/permissoes", label: "Permissões", icon: FileText, description: "Catálogo granular" },
+    { href: "/admin/gestao-acessos/auditoria", label: "Auditoria", icon: History, description: "Mudanças sensíveis" },
+    { href: "/admin/gestao-acessos/seguranca", label: "Política de Segurança", icon: Shield, description: "Senha e sessões" },
+    { href: "/admin/gestao-acessos/usuarios/convidar", label: "Convidar usuário", icon: Users, paletteOnly: true },
+    { href: "/admin/gestao-acessos/perfis", label: "Perfis (legado)", icon: Shield, paletteOnly: true },
+    { href: "/admin/gestao-acessos/operadores", label: "Operadores (legado)", icon: Users, paletteOnly: true },
   ],
 };
 

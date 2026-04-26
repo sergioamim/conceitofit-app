@@ -337,8 +337,8 @@ function SidebarComponent({ mobileOpen = false, onMobileClose, shellReady = fals
                     <ChevronRight size={14} className="text-muted-foreground/40 group-hover:translate-x-1 transition-transform" />
                   </Link>
 
-                  <Link 
-                    href="/seguranca/acesso-unidade"
+                  <Link
+                    href="/conta/seguranca"
                     className="flex items-center gap-4 p-4 rounded-2xl bg-muted/30 border border-border/20 hover:bg-primary/10 hover:border-primary/30 transition-colors group"
                   >
                     <div className="size-10 rounded-xl bg-background flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">

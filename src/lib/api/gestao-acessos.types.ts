@@ -32,6 +32,8 @@ export interface Capacidade {
   descricao: string | null;
   grupo: string;
   ordem: number;
+  /** RBAC v2: ações irreversíveis ou de alto impacto. Backfilled em V202604251900. */
+  critica?: boolean;
 }
 
 /** Mapa retornado pelo endpoint `/api/v1/auth/capacidades?dominio=X` */
@@ -50,6 +52,8 @@ export interface PerfilAcesso {
   tipo: string;
   copiadoDe: string | null;
   ativo: boolean;
+  /** RBAC v2: cor do papel para RoleChip. Backfilled em V202604251900. */
+  cor?: string | null;
 }
 
 export interface PerfilAcessoDetalhe extends PerfilAcesso {

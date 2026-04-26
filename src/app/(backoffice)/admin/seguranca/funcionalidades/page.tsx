@@ -299,9 +299,6 @@ export default function AdminSegurancaFuncionalidadesPage() {
           <Button asChild variant="outline" className="border-border">
             <Link href="/admin/seguranca/perfis">Abrir perfis</Link>
           </Button>
-          <Button asChild variant="outline" className="border-border">
-            <Link href="/seguranca/rbac">Abrir base técnica</Link>
-          </Button>
         </>
       }
     >

@@ -1,37 +1,17 @@
 /**
- * Tela de edição de um perfil de acesso (GA-003).
- *
- * Mostra capacidades organizadas por grupo com checkboxes para toggle.
- * Capacidades de módulos ADDON desabilitados ficam esmaecidas.
+ * Rota legada: redireciona para `/admin/gestao-acessos/papeis/{id}` (RBAC v2).
+ * Story #18.
  */
 
-import { Suspense } from "react";
-import { SuspenseFallback } from "@/components/shared/suspense-fallback";
-import { PerfilEditContent } from "./components/perfil-edit-content";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Editar Perfil — Backoffice",
-};
-
-export default function AdminPerfilEditPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  return (
-    <Suspense fallback={<SuspenseFallback variant="section" />}>
-      <PerfilEditLoader params={params} />
-    </Suspense>
-  );
-}
-
-async function PerfilEditLoader({
+export default async function AdminPerfilEditLegacyPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <PerfilEditContent perfilId={id} />;
+  redirect(`/admin/gestao-acessos/papeis/${id}`);
 }

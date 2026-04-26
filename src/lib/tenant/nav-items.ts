@@ -8,13 +8,17 @@ import {
   CreditCard,
   DollarSign,
   Dumbbell,
+  FileText,
   Gift,
   HandCoins,
+  History,
   Kanban,
+  KeyRound,
   Layers,
   LayoutDashboard,
   LineChart,
   ListTree,
+  Lock,
   MapPin,
   Megaphone,
   MessageSquare,
@@ -22,6 +26,7 @@ import {
   Palette,
   QrCode,
   Settings,
+  Shield,
   ShieldAlert,
   ShieldCheck,
   ShoppingCart,
@@ -152,11 +157,26 @@ export const strategyGroup: NavGroup = {
     { href: "/administrativo/academia/storefront", label: "Tema da Storefront", icon: Palette },
     { href: "/administrativo/unidades", label: "Unidades", icon: MapPin },
     { href: "/administrativo/funcionarios", label: "Colaboradores", icon: Users },
-    { href: "/seguranca/rbac", label: "Perfis e Permissões", icon: ShieldCheck },
-    { href: "/seguranca/acesso-unidade", label: "Acesso por Unidade", icon: ShieldCheck },
     { href: "/administrativo/integracoes", label: "Integrações", icon: Settings },
     { href: "/administrativo/whatsapp", label: "WhatsApp (admin)", icon: MessageSquare },
     { href: "/administrativo/ia", label: "Inteligência Artificial", icon: Settings },
+  ],
+};
+
+/**
+ * 5. Gestão de Acesso — RBAC v2 (redesign 2026-04-25)
+ * Funcionários da rede, papéis, permissões e auditoria.
+ */
+export const accessManagementGroup: NavGroup = {
+  label: "Gestão de Acesso",
+  icon: ShieldCheck,
+  items: [
+    { href: "/gestao-acessos", label: "Visão geral", icon: ShieldCheck, exact: true, description: "KPIs e atividade recente" },
+    { href: "/gestao-acessos/usuarios", label: "Usuários", icon: Users, description: "Funcionários da rede" },
+    { href: "/gestao-acessos/papeis", label: "Papéis", icon: KeyRound, description: "Conjuntos de permissões" },
+    { href: "/gestao-acessos/permissoes", label: "Permissões", icon: FileText, description: "Catálogo granular" },
+    { href: "/gestao-acessos/auditoria", label: "Auditoria", icon: History, description: "Mudanças sensíveis" },
+    { href: "/gestao-acessos/seguranca", label: "Política de Segurança", icon: Lock, description: "Senha e sessões da rede" },
   ],
 };
 
@@ -164,11 +184,12 @@ export const strategyGroup: NavGroup = {
 // Agregadores (consumidos pelo sidebar e command-palette)
 // ---------------------------------------------------------------------------
 
-/** Lista ordenada dos 4 grupos de navegação. */
+/** Lista ordenada dos 5 grupos de navegação. */
 export const allGroups: NavGroup[] = [
   growthGroup,
   operationGroup,
   financeGroup,
+  accessManagementGroup,
   strategyGroup,
 ];
 

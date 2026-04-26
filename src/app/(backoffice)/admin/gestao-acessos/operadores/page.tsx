@@ -1,24 +1,12 @@
 /**
- * Tela de operadores da academia com perfil atribuído (GA-003).
- *
- * Lista operadores do tenant com select inline para trocar perfil
- * e modal de detalhes com capacidades efetivas + overrides.
+ * Rota legada: redireciona para `/admin/gestao-acessos/usuarios` (RBAC v2).
+ * Story #18.
  */
 
-import { Suspense } from "react";
-import { SuspenseFallback } from "@/components/shared/suspense-fallback";
-import { OperadoresContent } from "./components/operadores-content";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Operadores — Backoffice",
-};
-
-export default function AdminOperadoresPage() {
-  return (
-    <Suspense fallback={<SuspenseFallback variant="section" />}>
-      <OperadoresContent />
-    </Suspense>
-  );
+export default function AdminOperadoresLegacyPage() {
+  redirect("/admin/gestao-acessos/usuarios");
 }
