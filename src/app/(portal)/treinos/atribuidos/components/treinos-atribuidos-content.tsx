@@ -35,7 +35,12 @@ import {
   summarizeTreinoV2AssignedGovernance,
 } from "@/lib/tenant/treinos/v2-runtime";
 import { saveTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
-import { useTreinosAtribuidos, useEncerrarTreino } from "@/lib/query/use-treinos";
+import {
+  useTreinosAtribuidos,
+  useEncerrarTreino,
+  useTreinoTemplatesPublicados,
+} from "@/lib/query/use-treinos";
+import { AtribuirTreinoModal } from "@/components/treinos/atribuir-treino-modal";
 import type { Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
@@ -67,6 +72,7 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
   const { tenantId, tenantName, tenantResolved } = useTenantContext();
   const { toast } = useToast();
   const [actingId, setActingId] = useState<string | null>(null);
+  const [atribuirModalOpen, setAtribuirModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(FILTER_ALL);
   const [origemFilter, setOrigemFilter] = useState<string>(FILTER_ALL);
@@ -80,6 +86,12 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
   });
 
   const workouts = workoutsFromQuery ?? initialData;
+
+  // Templates publicados pro modal "Atribuir treino" (Wave J.3)
+  const { data: templatesPublicados = [] } = useTreinoTemplatesPublicados({
+    tenantId,
+    tenantResolved,
+  });
 
   const error = isError ? normalizeErrorMessage(queryError) : null;
   const encerrarMutation = useEncerrarTreino();
@@ -242,6 +254,11 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
 
   return (
     <div className="space-y-6">
+      <AtribuirTreinoModal
+        open={atribuirModalOpen}
+        onClose={() => setAtribuirModalOpen(false)}
+        templates={templatesPublicados}
+      />
       <Breadcrumb
         items={[
           { label: "Treinos", href: "/treinos" },
@@ -263,11 +280,9 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
           <Button asChild variant="outline" size="sm" className="border-border">
             <Link href="/treinos">Voltar a templates</Link>
           </Button>
-          <Button asChild size="sm">
-            <Link href="/treinos">
-              <UserPlus className="mr-1 size-4" />
-              Atribuir treino
-            </Link>
+          <Button size="sm" onClick={() => setAtribuirModalOpen(true)}>
+            <UserPlus className="mr-1 size-4" />
+            Atribuir treino
           </Button>
         </div>
       </div>

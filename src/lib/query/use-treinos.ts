@@ -4,12 +4,14 @@ import {
   listTreinoExercicios,
   listTreinoGruposMusculares,
   listTreinosWorkspace,
+  listTreinoTemplatesWorkspace,
   getTreinoWorkspace,
   saveTreinoExercicio,
   toggleTreinoExercicio,
   saveTreinoGrupoMuscular,
   toggleTreinoGrupoMuscular,
   encerrarTreinoWorkspace,
+  type TreinoTemplateResumo,
 } from "@/lib/tenant/treinos/workspace";
 import type { Aluno, Exercicio, GrupoMuscular, Treino } from "@/lib/types";
 import { queryKeys } from "./keys";
@@ -54,6 +56,28 @@ export function useTreinoDetail(input: {
 // ---------------------------------------------------------------------------
 // Treinos Atribuídos
 // ---------------------------------------------------------------------------
+
+// Wave J.3: lista de templates publicados para o modal "Atribuir treino"
+// (3 passos). Cache de 60s evita re-fetch no abrir/fechar.
+export function useTreinoTemplatesPublicados(input: {
+  tenantId: string | undefined;
+  tenantResolved: boolean;
+}) {
+  return useQuery<TreinoTemplateResumo[]>({
+    queryKey: ["treinos", "templates-publicados", input.tenantId ?? ""],
+    queryFn: async () => {
+      const response = await listTreinoTemplatesWorkspace({
+        tenantId: input.tenantId!,
+        status: "PUBLICADO",
+        page: 0,
+        size: 100,
+      });
+      return response.items;
+    },
+    enabled: Boolean(input.tenantId) && input.tenantResolved,
+    staleTime: 60_000,
+  });
+}
 
 export function useTreinosAtribuidos(input: {
   tenantId: string | undefined;
