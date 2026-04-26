@@ -28,14 +28,11 @@ import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import {
   ArrowLeft,
   Copy,
-  GripVertical,
   Plus,
   Save,
   Send,
@@ -60,90 +57,13 @@ import {
   aplicarOverrides as aplicarOverridesApi,
   criarInstancia,
   removerInstancia,
-  type InstanciaOverride,
 } from "@/lib/api/treino-instancia";
 import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
-import { grupoColorByName } from "@/lib/treinos/grupo-colors";
+import { computeOverrides } from "./editor-v3/instance-overrides";
+import { SortableExerciseRow } from "./editor-v3/sortable-exercise-row";
 import type { EditorProps } from "./editor/types";
 
 type SessaoItem = TreinoV2EditorSeed["sessoes"][number]["itens"][number];
-
-// ─── Helpers de override ───
-const COMPARABLE_FIELDS = [
-  "series",
-  "repeticoes",
-  "carga",
-  "intervalo",
-  "cadencia",
-  "rir",
-  "observacoes",
-] as const;
-
-/**
- * Gera o array de overrides comparando current vs baseline.
- * Cada campo divergente vira um override MODIFY; itens só no current
- * viram ADD; itens só no baseline viram REMOVE.
- */
-function computeOverrides(
-  base: TreinoV2EditorSeed,
-  cur: TreinoV2EditorSeed,
-): InstanciaOverride[] {
-  const out: InstanciaOverride[] = [];
-  for (const sCur of cur.sessoes) {
-    const sBase = base.sessoes.find((b) => b.id === sCur.id);
-    if (!sBase) continue;
-    const baseItensById = new Map(sBase.itens.map((i) => [i.id, i]));
-    const curItensById = new Map(sCur.itens.map((i) => [i.id, i]));
-    for (const itCur of sCur.itens) {
-      const itBase = baseItensById.get(itCur.id);
-      if (!itBase) {
-        out.push({
-          tipo: "ADD",
-          sessaoId: sCur.id,
-          afterItemId: null,
-          exercicio: itCur.exerciseId
-            ? {
-                exercicioCatalogoId: itCur.exerciseId,
-                series: itCur.series?.numericValue,
-                reps: itCur.repeticoes?.raw,
-                carga: itCur.carga?.raw,
-                intervalo: itCur.intervalo?.raw,
-                cadencia: itCur.cadencia,
-                rir: itCur.rir,
-              }
-            : undefined,
-        });
-        continue;
-      }
-      for (const f of COMPARABLE_FIELDS) {
-        if (JSON.stringify(itCur[f] ?? null) !== JSON.stringify(itBase[f] ?? null)) {
-          out.push({
-            tipo: "MODIFY",
-            sessaoId: sCur.id,
-            exercicioItemId: itCur.id,
-            campo: f,
-            valor: serializeValor(itCur[f]),
-          });
-        }
-      }
-    }
-    for (const itBase of sBase.itens) {
-      if (!curItensById.has(itBase.id)) {
-        out.push({ tipo: "REMOVE", sessaoId: sCur.id, exercicioItemId: itBase.id });
-      }
-    }
-  }
-  return out;
-}
-
-function serializeValor(value: unknown): string | number | null {
-  if (value == null) return null;
-  if (typeof value === "string" || typeof value === "number") return value;
-  if (typeof value === "object" && value && "raw" in value) {
-    return (value as { raw: string }).raw;
-  }
-  return JSON.stringify(value);
-}
 
 export interface TreinoV3EditorProps extends EditorProps {
   /** "template" edita o template-mestre; "instance" edita overlay por aluno. */
@@ -761,181 +681,3 @@ export function TreinoV3Editor({
   );
 }
 
-// ─── Linha sortable da tabela ───
-function SortableExerciseRow({
-  item,
-  index,
-  catalog,
-  isCustom,
-  onUpdate,
-  onDuplicate,
-  onRemove,
-}: {
-  item: SessaoItem;
-  index: number;
-  catalog: Map<string, TreinoV2CatalogExercise>;
-  isCustom: (field: keyof SessaoItem) => boolean;
-  onUpdate: (patch: Partial<SessaoItem>) => void;
-  onDuplicate: () => void;
-  onRemove: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-  });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const exercicio = item.exerciseId ? catalog.get(item.exerciseId) : undefined;
-  const exNome = item.exerciseNome ?? exercicio?.nome ?? "—";
-  const grupoNome = exercicio?.grupoMuscularNome ?? item.objetivo ?? "";
-  const grupoCor = grupoColorByName(grupoNome);
-
-  return (
-    <tr
-      ref={setNodeRef}
-      style={style}
-      className="border-b border-border/40 hover:bg-secondary/40"
-    >
-      <td className="px-2 py-2">
-        <button
-          type="button"
-          {...attributes}
-          {...listeners}
-          className="cursor-grab text-muted-foreground hover:text-foreground"
-          aria-label="Arrastar para reordenar"
-        >
-          <GripVertical className="size-4" />
-        </button>
-      </td>
-      <td className="px-2 py-2 font-display text-xs font-bold text-muted-foreground">
-        {String(index + 1).padStart(2, "0")}
-      </td>
-      <td className="px-2 py-2">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="block h-6 w-1 shrink-0 rounded-sm"
-            style={{ background: grupoCor }}
-            title={grupoNome || undefined}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="truncate font-medium">{exNome}</div>
-            {grupoNome ? (
-              <div className="truncate text-[11px] text-muted-foreground">
-                {grupoNome}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </td>
-      <td className="px-2 py-2">
-        <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            min={1}
-            value={item.series?.raw ?? ""}
-            onChange={(e) => onUpdate({ series: createTreinoV2MetricField(e.target.value) })}
-            className={cn(
-              "h-8 w-12 border-border bg-secondary px-2 text-center",
-              isCustom("series") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
-            )}
-          />
-          <span className="text-muted-foreground">×</span>
-          <Input
-            value={item.repeticoes?.raw ?? ""}
-            onChange={(e) => onUpdate({ repeticoes: createTreinoV2MetricField(e.target.value) })}
-            placeholder="10-12"
-            className={cn(
-              "h-8 w-16 border-border bg-secondary px-2",
-              isCustom("repeticoes") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
-            )}
-          />
-        </div>
-      </td>
-      <td className="px-2 py-2">
-        <Input
-          value={item.carga?.raw ?? ""}
-          onChange={(e) =>
-            onUpdate({
-              carga: e.target.value ? createTreinoV2MetricField(e.target.value) : undefined,
-            })
-          }
-          placeholder="—"
-          className={cn(
-            "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("carga") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
-          )}
-        />
-      </td>
-      <td className="px-2 py-2">
-        <Input
-          value={item.intervalo?.raw ?? ""}
-          onChange={(e) =>
-            onUpdate({
-              intervalo: e.target.value ? createTreinoV2MetricField(e.target.value.replace(/\D/g, "")) : undefined,
-            })
-          }
-          placeholder="60"
-          className={cn(
-            "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("intervalo") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
-          )}
-        />
-      </td>
-      <td className="px-2 py-2">
-        <Input
-          value={item.cadencia ?? ""}
-          onChange={(e) => onUpdate({ cadencia: e.target.value || undefined })}
-          placeholder="2-0-1"
-          className={cn(
-            "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("cadencia") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
-          )}
-          title="Cadência: excêntrica-pausa-concêntrica"
-        />
-      </td>
-      <td className="px-2 py-2">
-        <select
-          value={item.rir ?? ""}
-          onChange={(e) => onUpdate({ rir: e.target.value === "" ? undefined : Number(e.target.value) })}
-          className={cn(
-            "h-8 w-16 rounded-md border border-border bg-secondary px-2 text-sm",
-            isCustom("rir") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
-          )}
-        >
-          <option value="">—</option>
-          {[0, 1, 2, 3, 4].map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-2 py-2">
-        <div className="flex gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground hover:text-foreground"
-            onClick={onDuplicate}
-            title="Duplicar exercício"
-          >
-            <Copy className="size-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 text-muted-foreground hover:text-gym-danger"
-            onClick={onRemove}
-            title="Remover exercício"
-          >
-            <Trash2 className="size-3.5" />
-          </Button>
-        </div>
-      </td>
-    </tr>
-  );
-}
