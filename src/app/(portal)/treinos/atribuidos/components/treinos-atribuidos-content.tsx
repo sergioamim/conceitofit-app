@@ -409,6 +409,20 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
                           Abrir
                         </Link>
                       </Button>
+                      {governance.templateOrigemId && workout.alunoId ? (
+                        <Button asChild variant="outline" size="sm" title="Customizar template para este aluno (modo instance)">
+                          <Link
+                            href={`/treinos/${governance.templateOrigemId}?customize=1&alunoId=${workout.alunoId}&alunoNome=${encodeURIComponent(workout.alunoNome ?? "")}`}
+                          >
+                            Customizar
+                          </Link>
+                        </Button>
+                      ) : null}
+                      {workout.alunoId ? (
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/treinos/progresso/${workout.alunoId}`}>Progresso</Link>
+                        </Button>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"
