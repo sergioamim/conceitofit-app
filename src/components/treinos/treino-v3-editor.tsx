@@ -30,22 +30,12 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import {
-  ArrowLeft,
-  Copy,
-  Plus,
-  Save,
-  Send,
-  Trash2,
-} from "lucide-react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { cn } from "@/lib/utils";
 import {
   buildTreinoV2EditorSeed,
   buildTreinoV2SaveInput,
@@ -62,8 +52,10 @@ import {
 } from "@/lib/api/treino-instancia";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
+import { EditorHeader } from "./editor-v3/editor-header";
 import { computeOverrides } from "./editor-v3/instance-overrides";
 import { PreviewModal } from "./editor-v3/preview-modal";
+import { SessaoSidebar } from "./editor-v3/sessao-sidebar";
 import { SortableExerciseRow } from "./editor-v3/sortable-exercise-row";
 import type { EditorProps } from "./editor/types";
 
@@ -472,157 +464,32 @@ export function TreinoV3Editor({
         catalog={catalogById}
       />
 
-      {/* ─── Header ─── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
-        <div className="flex flex-1 items-center gap-3">
-          <Button asChild variant="outline" size="sm" className="border-border">
-            <Link href={isInstance ? "/treinos/atribuidos" : "/treinos"}>
-              <ArrowLeft className="mr-1 size-4" />
-              {isInstance ? "Atribuições" : "Templates"}
-            </Link>
-          </Button>
-          <div className="min-w-0 flex-1">
-            {isInstance && alunoNome ? (
-              <div className="mb-1 flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="rounded-full bg-secondary px-2 py-0.5 font-medium">
-                  {alunoNome}
-                </span>
-                {customCount > 0 ? (
-                  <Badge className="border-amber-500/40 bg-amber-500/15 text-amber-300 hover:bg-amber-500/20">
-                    {customCount} {customCount === 1 ? "custom" : "customs"}
-                  </Badge>
-                ) : null}
-              </div>
-            ) : null}
-            <Input
-              value={editor.nome ?? ""}
-              onChange={(e) => setEditor((p) => ({ ...p, nome: e.target.value }))}
-              className="border-0 bg-transparent px-0 font-display text-xl font-bold focus-visible:ring-0"
-              placeholder="Nome do template"
-              disabled={isInstance}
-            />
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              {isInstance ? (
-                <span className="text-gym-accent">↳ baseado em &ldquo;{treino.nome ?? "template"}&rdquo;</span>
-              ) : (
-                <span>{editor.categoria ?? "Sem objetivo"}</span>
-              )}
-              <span>·</span>
-              <span>{editor.frequenciaSemanal ?? 0}x/sem</span>
-              <span>·</span>
-              <span>{editor.sessoes.length} sessões</span>
-              <Badge variant="outline" className="ml-2 border-gym-accent/30 text-gym-accent">
-                Editor V3 {isInstance ? "(instância)" : "(preview)"}
-              </Badge>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isInstance && customCount > 0 ? (
-            <Button variant="outline" size="sm" className="border-border" onClick={handleReset}>
-              <Trash2 className="mr-2 size-4" />
-              Resetar
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            size="sm"
-            className="border-border"
-            onClick={() => setPreviewOpen(true)}
-          >
-            <Send className="mr-2 size-4" />
-            Pré-visualizar
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={saving}>
-            <Save className="mr-2 size-4" />
-            {saving
-              ? "Salvando..."
-              : isInstance
-                ? `Salvar para ${alunoNome?.split(" ")[0] ?? "aluno"}`
-                : "Salvar template"}
-          </Button>
-        </div>
-      </div>
+      {/* ─── Header (extraído em editor-v3/editor-header.tsx) ─── */}
+      <EditorHeader
+        editor={editor}
+        treino={treino}
+        onNomeChange={(nome) => setEditor((p) => ({ ...p, nome }))}
+        isInstance={isInstance}
+        alunoNome={alunoNome}
+        customCount={customCount}
+        saving={saving}
+        onReset={handleReset}
+        onPreview={() => setPreviewOpen(true)}
+        onSave={handleSave}
+      />
 
       {/* ─── Grid: sessões sidebar + main table ─── */}
       <div className="grid grid-cols-[280px_1fr] gap-4">
-        {/* Sidebar de sessões */}
-        <aside className="space-y-1 rounded-xl border border-border bg-card p-3">
-          <div className="mb-2 flex items-center justify-between border-b border-border px-1 pb-2.5">
-            <span className="font-display text-[13px] font-bold">Sessões</span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={addSessao}
-              title="Nova sessão"
-            >
-              <Plus className="size-4" />
-            </Button>
-          </div>
-          {editor.sessoes.map((s, idx) => {
-            const ativa = s.id === activeSessaoId;
-            const letter = (s.nome || String.fromCharCode(65 + idx))
-              .charAt(0)
-              .toUpperCase();
-            return (
-              <button
-                key={s.id}
-                onClick={() => setActiveSessaoId(s.id)}
-                className={cn(
-                  "group flex w-full items-center gap-3 rounded-md border px-2.5 py-2 text-left transition-colors",
-                  ativa
-                    ? "border-gym-accent/40 bg-gym-accent/[0.08]"
-                    : "border-transparent hover:bg-secondary/60",
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex size-8 shrink-0 items-center justify-center rounded-lg border font-display text-sm font-bold",
-                    ativa
-                      ? "border-gym-accent bg-gym-accent text-black"
-                      : "border-border bg-secondary text-foreground",
-                  )}
-                >
-                  {letter}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-medium">
-                    {s.nome || `Sessão ${idx + 1}`}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {s.itens.length} ex
-                  </div>
-                </div>
-                {ativa && editor.sessoes.length > 1 ? (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    className="opacity-0 group-hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      duplicateSessao(s.id);
-                    }}
-                    title="Duplicar sessão"
-                  >
-                    <Copy className="size-3.5 text-muted-foreground" />
-                  </span>
-                ) : null}
-              </button>
-            );
-          })}
-          {editor.sessoes.length > 1 && activeSessao ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 w-full text-xs text-gym-danger hover:text-gym-danger"
-              onClick={() => removeSessao(activeSessao.id)}
-            >
-              <Trash2 className="mr-1 size-3.5" />
-              Remover sessão
-            </Button>
-          ) : null}
-        </aside>
+        {/* Sidebar de sessões (extraído em editor-v3/sessao-sidebar.tsx) */}
+        <SessaoSidebar
+          sessoes={editor.sessoes}
+          activeSessaoId={activeSessaoId}
+          activeSessao={activeSessao ?? null}
+          onSelectSessao={setActiveSessaoId}
+          onAddSessao={addSessao}
+          onDuplicateSessao={duplicateSessao}
+          onRemoveSessao={removeSessao}
+        />
 
         {/* Main: tabela inline */}
         <section className="rounded-xl border border-border bg-card p-4">
