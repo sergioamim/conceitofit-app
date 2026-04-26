@@ -63,31 +63,10 @@ import {
   type InstanciaOverride,
 } from "@/lib/api/treino-instancia";
 import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
+import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 import type { EditorProps } from "./editor/types";
 
 type SessaoItem = TreinoV2EditorSeed["sessoes"][number]["itens"][number];
-
-// ─── Cores por grupo muscular (combina com BibliotecaModal e templates grid) ───
-const GRUPO_COLORS: Record<string, string> = {
-  Peito: "#c8f135",
-  Costas: "#3de8a0",
-  Pernas: "#38bdf8",
-  Ombro: "#f472b6",
-  Bíceps: "#ffb347",
-  Biceps: "#ffb347",
-  Tríceps: "#a78bfa",
-  Triceps: "#a78bfa",
-  Core: "#fb923c",
-  Glúteo: "#fda4af",
-  Gluteo: "#fda4af",
-  Panturrilha: "#94a3b8",
-  Cardio: "#ff5c5c",
-};
-
-function grupoColorByName(nome?: string): string {
-  if (!nome) return "#5a5f6e";
-  return GRUPO_COLORS[nome] ?? "#5a5f6e";
-}
 
 // ─── Helpers de override ───
 const COMPARABLE_FIELDS = [

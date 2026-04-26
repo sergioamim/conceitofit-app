@@ -21,28 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 import type { Exercicio } from "@/lib/shared/types/aluno";
-
-const GRUPO_PALETTE: Record<string, string> = {
-  Peito: "#c8f135",
-  Costas: "#3de8a0",
-  Pernas: "#38bdf8",
-  Ombro: "#f472b6",
-  Bíceps: "#ffb347",
-  Biceps: "#ffb347",
-  Tríceps: "#a78bfa",
-  Triceps: "#a78bfa",
-  Core: "#fb923c",
-  Glúteo: "#fda4af",
-  Gluteo: "#fda4af",
-  Panturrilha: "#94a3b8",
-  Cardio: "#ff5c5c",
-};
-
-function getGrupoColor(nome?: string): string {
-  if (!nome) return "#94a3b8";
-  return GRUPO_PALETTE[nome] ?? "#94a3b8";
-}
 
 export interface BibliotecaExerciciosModalProps {
   open: boolean;
@@ -160,7 +140,7 @@ export function BibliotecaExerciciosModal({
               </button>
               {grupos.map((g) => {
                 const active = grupoFiltro === g;
-                const cor = getGrupoColor(g);
+                const cor = grupoColorByName(g);
                 return (
                   <button
                     key={g}
@@ -201,7 +181,7 @@ export function BibliotecaExerciciosModal({
                 const sel = selecionados.has(ex.id);
                 const ja = excludeIds?.has(ex.id) ?? false;
                 const grupoNome = ex.grupoMuscularNome ?? ex.grupoMuscular ?? "";
-                const cor = getGrupoColor(grupoNome);
+                const cor = grupoColorByName(grupoNome);
                 return (
                   <button
                     key={ex.id}

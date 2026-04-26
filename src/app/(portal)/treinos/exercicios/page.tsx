@@ -1,32 +1,70 @@
 "use client";
 
+/**
+ * Biblioteca de Exercícios — grid de cards (Wave C, design Montagem
+ * de Treino).
+ *
+ * Cards com thumb colorido por grupo muscular + chip de grupo no canto
+ * + nome + equipamento + status. Filtros: search, grupo (select),
+ * equipamento (select), apenas ativos. Mantém ações Editar/Toggle via
+ * overflow no card.
+ */
+
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
-import { Library, Plus, Search } from "lucide-react";
+import {
+  Library,
+  MoreVertical,
+  PlayCircle,
+  Plus,
+  Search,
+} from "lucide-react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ExercicioModal, type ExercicioForm } from "@/components/shared/exercicio-modal";
 import { ImportarDoCatalogoDialog } from "@/components/treinos/editor/importar-do-catalogo-dialog";
-import { PaginatedTable } from "@/components/shared/paginated-table";
-import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { useExercicios, useSaveExercicio, useToggleExercicio } from "@/lib/query/use-treinos";
+import {
+  useExercicios,
+  useSaveExercicio,
+  useToggleExercicio,
+} from "@/lib/query/use-treinos";
 import type { Exercicio } from "@/lib/types";
+import { grupoColorByName } from "@/lib/treinos/grupo-colors";
+import { cn } from "@/lib/utils";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { ListErrorState } from "@/components/shared/list-states";
 
+const TODOS = "todos";
+
 export default function ExerciciosPage() {
+  const router = useRouter();
   const { tenantId, tenantResolved } = useTenantContext();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [busca, setBusca] = useState("");
+  const [grupoFiltro, setGrupoFiltro] = useState<string>(TODOS);
+  const [equipFiltro, setEquipFiltro] = useState<string>(TODOS);
   const [apenasAtivos, setApenasAtivos] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Exercicio | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data, isLoading: loading, isError, error: queryError } = useExercicios({
     tenantId,
@@ -41,15 +79,32 @@ export default function ExerciciosPage() {
   const saveExercicioMutation = useSaveExercicio();
   const toggleExercicioMutation = useToggleExercicio();
 
+  // Equipamentos únicos pro filtro (extraídos da própria lista)
+  const equipamentos = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const ex of exercicios) {
+      const e = ex.equipamento?.trim();
+      if (e && !seen.has(e)) {
+        seen.add(e);
+        out.push(e);
+      }
+    }
+    return out.sort((a, b) => a.localeCompare(b));
+  }, [exercicios]);
+
   const filtrados = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    if (!termo) return exercicios;
-    return exercicios.filter((item) => {
-      return `${item.nome} ${item.grupoMuscularNome ?? item.grupoMuscular ?? ""} ${item.equipamento ?? ""}`
+    const q = busca.trim().toLowerCase();
+    return exercicios.filter((ex) => {
+      const grupoNome = ex.grupoMuscularNome ?? ex.grupoMuscular ?? "";
+      if (grupoFiltro !== TODOS && grupoNome !== grupoFiltro) return false;
+      if (equipFiltro !== TODOS && (ex.equipamento ?? "") !== equipFiltro) return false;
+      if (!q) return true;
+      return `${ex.nome} ${grupoNome} ${ex.equipamento ?? ""}`
         .toLowerCase()
-        .includes(termo);
+        .includes(q);
     });
-  }, [busca, exercicios]);
+  }, [exercicios, busca, grupoFiltro, equipFiltro]);
 
   async function handleSaveExercicio(payload: ExercicioForm) {
     if (!tenantId) return;
@@ -118,56 +173,90 @@ export default function ExerciciosPage() {
       />
 
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Exercícios</h1>
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Biblioteca de Exercícios
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Catálogo operacional de exercícios com grupo muscular canônico, equipamento e mídia de apoio.
+          {exercicios.length} exercícios · {gruposMusculares.length} grupos
+          musculares · {equipamentos.length} equipamentos
         </p>
       </div>
 
-      {error ? (
-        <ListErrorState error={error} />
-      ) : null}
+      {error ? <ListErrorState error={error} /> : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex gap-1.5">
-            <button
-              onClick={() => setApenasAtivos(false)}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                !apenasAtivos
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setApenasAtivos(true)}
-              className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors ${
-                apenasAtivos
-                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
-                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
-              }`}
-            >
-              Apenas ativos
-            </button>
-          </div>
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
           <div className="relative w-full max-w-sm">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={busca}
               onChange={(event) => setBusca(event.target.value)}
-              className="pl-8"
-              placeholder="Buscar exercício, grupo muscular ou equipamento"
+              className="h-9 pl-8"
+              placeholder="Buscar exercício, grupo ou equipamento..."
             />
           </div>
+          <Select value={grupoFiltro} onValueChange={setGrupoFiltro}>
+            <SelectTrigger className="h-9 w-auto min-w-[180px] border-border">
+              <SelectValue placeholder="Grupo muscular" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todos os grupos</SelectItem>
+              {gruposMusculares
+                .filter((g) => g.ativo !== false)
+                .map((g) => (
+                  <SelectItem key={g.id} value={g.nome}>
+                    {g.nome}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <Select value={equipFiltro} onValueChange={setEquipFiltro}>
+            <SelectTrigger className="h-9 w-auto min-w-[170px] border-border">
+              <SelectValue placeholder="Equipamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TODOS}>Todos equipamentos</SelectItem>
+              {equipamentos.map((eq) => (
+                <SelectItem key={eq} value={eq}>
+                  {eq}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={() => setApenasAtivos(false)}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
+                !apenasAtivos
+                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+              )}
+            >
+              Todos
+            </button>
+            <button
+              type="button"
+              onClick={() => setApenasAtivos(true)}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
+                apenasAtivos
+                  ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                  : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+              )}
+            >
+              Apenas ativos
+            </button>
+          </div>
         </div>
-
         <div className="flex flex-wrap gap-2">
           {tenantId ? (
             <Button
               variant="outline"
               onClick={() => setImportDialogOpen(true)}
+              className="border-border"
             >
               <Library className="mr-2 size-4" />
               Importar do catálogo
@@ -179,71 +268,130 @@ export default function ExerciciosPage() {
               setModalOpen(true);
             }}
           >
-            <Plus className="size-4" />
+            <Plus className="mr-1 size-4" />
             Novo exercício
           </Button>
         </div>
       </div>
 
-      <Card className="border-border bg-card">
-        <CardHeader className="space-y-2">
-          <CardTitle className="font-display text-lg">Lista de exercícios</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <PaginatedTable<Exercicio>
-            columns={[
-              { label: "Nome" },
-              { label: "Grupo muscular" },
-              { label: "Equipamento" },
-              { label: "Status" },
-              { label: "Ações" },
-            ]}
-            items={filtrados}
-            emptyText={loading ? "Carregando..." : "Nenhum exercício encontrado"}
-            total={filtrados.length}
-            page={0}
-            pageSize={filtrados.length || 1}
-            showPagination={false}
-            getRowKey={(item) => item.id}
-            renderCells={(item) => (
-              <>
-                <td className="px-4 py-3">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{item.nome}</span>
-                    <span className="text-xs text-muted-foreground">{item.descricao ?? "Sem descrição"}</span>
+      {/* Contador */}
+      <div className="text-xs text-muted-foreground">
+        {loading
+          ? "Carregando..."
+          : `${filtrados.length} de ${exercicios.length} exercícios`}
+      </div>
+
+      {/* Grid de cards */}
+      {!loading && filtrados.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card/50 p-12 text-center text-sm text-muted-foreground">
+          Nenhum exercício encontrado para os filtros aplicados.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtrados.map((ex) => {
+            const grupoNome = ex.grupoMuscularNome ?? ex.grupoMuscular ?? "";
+            const cor = grupoColorByName(grupoNome);
+            const equip = ex.equipamento ?? "—";
+            return (
+              <article
+                key={ex.id}
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(`/treinos/exercicios/${ex.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(`/treinos/exercicios/${ex.id}`);
+                  }
+                }}
+                className="group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-gym-accent/40 hover:shadow-lg hover:shadow-gym-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent"
+              >
+                {/* Thumb com cor do grupo */}
+                <div
+                  className="relative flex h-[120px] items-center justify-center border-b border-border"
+                  style={{
+                    background: `linear-gradient(135deg, ${cor}1f, transparent), repeating-linear-gradient(45deg, transparent 0 8px, rgba(255,255,255,0.03) 8px 9px)`,
+                  }}
+                >
+                  <div className="flex flex-col items-center text-muted-foreground/70">
+                    <PlayCircle className="size-8 opacity-50" />
+                    <span className="mt-1 font-mono text-[10px] uppercase tracking-wider">
+                      vídeo demo
+                    </span>
                   </div>
-                </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">
-                  {item.grupoMuscularNome ?? item.grupoMuscular ?? "Sem grupo"}
-                </td>
-                <td className="px-4 py-3 text-sm text-muted-foreground">{item.equipamento ?? "-"}</td>
-                <td className="px-4 py-3">
-                  <Badge variant={item.ativo ? "secondary" : "outline"}>{item.ativo ? "Ativo" : "Inativo"}</Badge>
-                </td>
-                <td className="px-4 py-3">
-                  <DataTableRowActions
-                    actions={[
-                      {
-                        label: "Editar",
-                        kind: "edit",
-                        onClick: () => {
-                          setEditing(item);
-                          setModalOpen(true);
-                        },
-                      },
-                      {
-                        label: item.ativo ? "Inativar" : "Reativar",
-                        kind: "toggle",
-                        onClick: () => void handleToggle(item),
-                      },
-                    ]}
-                  />
-                </td>
-              </>
-            )}
-          />
-        </CardContent>
-      </Card>
+                  {/* Chip do grupo no canto sup esq */}
+                  {grupoNome ? (
+                    <span
+                      className="absolute left-2 top-2 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-black"
+                      style={{ background: cor }}
+                    >
+                      {grupoNome}
+                    </span>
+                  ) : null}
+                  {/* Status no canto sup dir */}
+                  {ex.ativo === false ? (
+                    <Badge
+                      variant="outline"
+                      className="absolute right-2 top-2 border-border/80 bg-background/80 text-[10px]"
+                    >
+                      Inativo
+                    </Badge>
+                  ) : null}
+                  {/* Overflow menu */}
+                  <div
+                    className="absolute right-2 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {ex.ativo === false ? null : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 bg-background/70 backdrop-blur"
+                            aria-label="Ações do exercício"
+                          >
+                            <MoreVertical className="size-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditing(ex);
+                              setModalOpen(true);
+                            }}
+                          >
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => void handleToggle(ex)}
+                          >
+                            Inativar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="flex flex-1 flex-col gap-1.5 p-3.5">
+                  <h3 className="text-[14px] font-medium leading-snug text-foreground transition-colors group-hover:text-gym-accent">
+                    <span className="line-clamp-2">{ex.nome}</span>
+                  </h3>
+                  <p className="text-[12px] text-muted-foreground">{equip}</p>
+                  {ex.descricao ? (
+                    <p className="line-clamp-2 text-[11.5px] text-muted-foreground/80">
+                      {ex.descricao}
+                    </p>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
     </div>
   );
 }
