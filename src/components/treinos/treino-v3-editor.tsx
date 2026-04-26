@@ -62,9 +62,32 @@ import {
   removerInstancia,
   type InstanciaOverride,
 } from "@/lib/api/treino-instancia";
+import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
 import type { EditorProps } from "./editor/types";
 
 type SessaoItem = TreinoV2EditorSeed["sessoes"][number]["itens"][number];
+
+// ─── Cores por grupo muscular (combina com BibliotecaModal e templates grid) ───
+const GRUPO_COLORS: Record<string, string> = {
+  Peito: "#c8f135",
+  Costas: "#3de8a0",
+  Pernas: "#38bdf8",
+  Ombro: "#f472b6",
+  Bíceps: "#ffb347",
+  Biceps: "#ffb347",
+  Tríceps: "#a78bfa",
+  Triceps: "#a78bfa",
+  Core: "#fb923c",
+  Glúteo: "#fda4af",
+  Gluteo: "#fda4af",
+  Panturrilha: "#94a3b8",
+  Cardio: "#ff5c5c",
+};
+
+function grupoColorByName(nome?: string): string {
+  if (!nome) return "#5a5f6e";
+  return GRUPO_COLORS[nome] ?? "#5a5f6e";
+}
 
 // ─── Helpers de override ───
 const COMPARABLE_FIELDS = [
@@ -170,6 +193,7 @@ export function TreinoV3Editor({
   const [activeSessaoId, setActiveSessaoId] = useState(() => editor.sessoes[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
   const [instanciaId, setInstanciaId] = useState<string | undefined>();
+  const [bibliotecaOpen, setBibliotecaOpen] = useState(false);
 
   // Em modo instance, garante que existe uma instância no backend (idempotente).
   useEffect(() => {
@@ -364,6 +388,47 @@ export function TreinoV3Editor({
     [updateSessoes],
   );
 
+  // Adiciona N exercícios na sessão ativa, com defaults sensatos
+  // (3 séries × 10-12, 60s descanso). O personal ajusta carga/cadência
+  // depois — fluxo design: marca tudo na biblioteca, ajusta inline.
+  const addItensFromBiblioteca = useCallback(
+    (exIds: string[]) => {
+      if (exIds.length === 0 || !activeSessao) return;
+      const baseTs = Date.now();
+      const novosItens = exIds.map((exId, idx) => {
+        const ex = exercicios.find((e) => e.id === exId);
+        const item: SessaoItem = {
+          id: `item-${baseTs}-${idx}`,
+          exerciseId: exId,
+          exerciseNome: ex?.nome,
+          ordem: 0, // recalculado abaixo
+          objetivo: ex?.grupoMuscularNome ?? ex?.grupoMuscular,
+          series: createTreinoV2MetricField("3"),
+          repeticoes: createTreinoV2MetricField("10-12"),
+          intervalo: createTreinoV2MetricField("60"),
+          cadencia: undefined,
+          rir: 2,
+          carga: undefined,
+          observacoes: undefined,
+          tecnicas: [],
+        };
+        return item;
+      });
+      updateSessoes((sessoes) =>
+        sessoes.map((s) => {
+          if (s.id !== activeSessao.id) return s;
+          const merged = [...s.itens, ...novosItens];
+          // Reordena ordem incremental
+          return {
+            ...s,
+            itens: merged.map((it, i) => ({ ...it, ordem: i + 1 })),
+          };
+        }),
+      );
+    },
+    [activeSessao, exercicios, updateSessoes],
+  );
+
   // ─── Stats da sessão ativa ───
   const stats = useMemo(() => {
     if (!activeSessao) return { totalItens: 0, totalSeries: 0 };
@@ -425,8 +490,27 @@ export function TreinoV3Editor({
     [activeSessao, reorderItens],
   );
 
+  // Ids já presentes na sessão ativa (mostra badge no modal)
+  const idsJaPresentes = useMemo(() => {
+    const set = new Set<string>();
+    if (activeSessao) {
+      for (const it of activeSessao.itens) {
+        if (it.exerciseId) set.add(it.exerciseId);
+      }
+    }
+    return set;
+  }, [activeSessao]);
+
   return (
     <div className="space-y-4">
+      <BibliotecaExerciciosModal
+        open={bibliotecaOpen}
+        onClose={() => setBibliotecaOpen(false)}
+        exercicios={exercicios}
+        excludeIds={idsJaPresentes}
+        onAdd={addItensFromBiblioteca}
+      />
+
       {/* ─── Header ─── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
         <div className="flex flex-1 items-center gap-3">
@@ -495,41 +579,52 @@ export function TreinoV3Editor({
       </div>
 
       {/* ─── Grid: sessões sidebar + main table ─── */}
-      <div className="grid grid-cols-[220px_1fr] gap-4">
+      <div className="grid grid-cols-[280px_1fr] gap-4">
         {/* Sidebar de sessões */}
-        <aside className="space-y-2 rounded-xl border border-border bg-card p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Sessões
-            </span>
-            <Button variant="ghost" size="icon" className="size-7" onClick={addSessao}>
+        <aside className="space-y-1 rounded-xl border border-border bg-card p-3">
+          <div className="mb-2 flex items-center justify-between border-b border-border px-1 pb-2.5">
+            <span className="font-display text-[13px] font-bold">Sessões</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={addSessao}
+              title="Nova sessão"
+            >
               <Plus className="size-4" />
             </Button>
           </div>
           {editor.sessoes.map((s, idx) => {
             const ativa = s.id === activeSessaoId;
+            const letter = (s.nome || String.fromCharCode(65 + idx))
+              .charAt(0)
+              .toUpperCase();
             return (
               <button
                 key={s.id}
                 onClick={() => setActiveSessaoId(s.id)}
                 className={cn(
-                  "group flex w-full items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors",
+                  "group flex w-full items-center gap-3 rounded-md border px-2.5 py-2 text-left transition-colors",
                   ativa
-                    ? "border-gym-accent bg-gym-accent/10"
-                    : "border-border bg-secondary/40 hover:bg-secondary",
+                    ? "border-gym-accent/40 bg-gym-accent/[0.08]"
+                    : "border-transparent hover:bg-secondary/60",
                 )}
               >
                 <div
                   className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-md font-bold",
-                    ativa ? "bg-gym-accent text-black" : "bg-secondary text-muted-foreground",
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg border font-display text-sm font-bold",
+                    ativa
+                      ? "border-gym-accent bg-gym-accent text-black"
+                      : "border-border bg-secondary text-foreground",
                   )}
                 >
-                  {s.nome || String.fromCharCode(65 + idx)}
+                  {letter}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-medium">{s.nome || `Sessão ${idx + 1}`}</div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="truncate text-[13px] font-medium">
+                    {s.nome || `Sessão ${idx + 1}`}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
                     {s.itens.length} ex
                   </div>
                 </div>
@@ -589,7 +684,7 @@ export function TreinoV3Editor({
                     </span>
                   </div>
                 </div>
-                <Button size="sm" disabled title="Modal de biblioteca em Wave 3.5">
+                <Button size="sm" onClick={() => setBibliotecaOpen(true)}>
                   <Plus className="mr-2 size-4" />
                   Adicionar exercício
                 </Button>
@@ -598,7 +693,14 @@ export function TreinoV3Editor({
               {activeSessao.itens.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-border bg-secondary/30 p-8 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Nenhum exercício nesta sessão. Use o botão "Adicionar exercício" acima.
+                    Nenhum exercício nesta sessão.{" "}
+                    <button
+                      type="button"
+                      className="font-medium text-gym-accent hover:underline"
+                      onClick={() => setBibliotecaOpen(true)}
+                    >
+                      Adicionar da biblioteca →
+                    </button>
                   </p>
                 </div>
               ) : (
@@ -710,6 +812,8 @@ function SortableExerciseRow({
 
   const exercicio = item.exerciseId ? catalog.get(item.exerciseId) : undefined;
   const exNome = item.exerciseNome ?? exercicio?.nome ?? "—";
+  const grupoNome = exercicio?.grupoMuscularNome ?? item.objetivo ?? "";
+  const grupoCor = grupoColorByName(grupoNome);
 
   return (
     <tr
@@ -728,11 +832,25 @@ function SortableExerciseRow({
           <GripVertical className="size-4" />
         </button>
       </td>
-      <td className="px-2 py-2 text-xs font-mono text-muted-foreground">
+      <td className="px-2 py-2 font-display text-xs font-bold text-muted-foreground">
         {String(index + 1).padStart(2, "0")}
       </td>
       <td className="px-2 py-2">
-        <div className="font-medium">{exNome}</div>
+        <div className="flex items-center gap-2.5">
+          <span
+            className="block h-6 w-1 shrink-0 rounded-sm"
+            style={{ background: grupoCor }}
+            title={grupoNome || undefined}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{exNome}</div>
+            {grupoNome ? (
+              <div className="truncate text-[11px] text-muted-foreground">
+                {grupoNome}
+              </div>
+            ) : null}
+          </div>
+        </div>
       </td>
       <td className="px-2 py-2">
         <div className="flex items-center gap-1">
@@ -743,7 +861,7 @@ function SortableExerciseRow({
             onChange={(e) => onUpdate({ series: createTreinoV2MetricField(e.target.value) })}
             className={cn(
               "h-8 w-12 border-border bg-secondary px-2 text-center",
-              isCustom("series") && "ring-2 ring-yellow-500/60",
+              isCustom("series") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
             )}
           />
           <span className="text-muted-foreground">×</span>
@@ -753,7 +871,7 @@ function SortableExerciseRow({
             placeholder="10-12"
             className={cn(
               "h-8 w-16 border-border bg-secondary px-2",
-              isCustom("repeticoes") && "ring-2 ring-yellow-500/60",
+              isCustom("repeticoes") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
             )}
           />
         </div>
@@ -769,7 +887,7 @@ function SortableExerciseRow({
           placeholder="—"
           className={cn(
             "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("carga") && "ring-2 ring-yellow-500/60",
+            isCustom("carga") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
           )}
         />
       </td>
@@ -784,7 +902,7 @@ function SortableExerciseRow({
           placeholder="60"
           className={cn(
             "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("intervalo") && "ring-2 ring-yellow-500/60",
+            isCustom("intervalo") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
           )}
         />
       </td>
@@ -795,7 +913,7 @@ function SortableExerciseRow({
           placeholder="2-0-1"
           className={cn(
             "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("cadencia") && "ring-2 ring-yellow-500/60",
+            isCustom("cadencia") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
           )}
           title="Cadência: excêntrica-pausa-concêntrica"
         />
@@ -806,7 +924,7 @@ function SortableExerciseRow({
           onChange={(e) => onUpdate({ rir: e.target.value === "" ? undefined : Number(e.target.value) })}
           className={cn(
             "h-8 w-16 rounded-md border border-border bg-secondary px-2 text-sm",
-            isCustom("rir") && "ring-2 ring-yellow-500/60",
+            isCustom("rir") && "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold",
           )}
         >
           <option value="">—</option>
