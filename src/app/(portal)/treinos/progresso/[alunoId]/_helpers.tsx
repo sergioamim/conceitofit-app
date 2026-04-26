@@ -13,6 +13,22 @@ import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+// Âncora de data fixa para o mock — evita Date.now() no render path
+// (regra de hidratação do CLAUDE.md). Quando o endpoint real chegar
+// na Wave 6.5, este helper é substituído integralmente.
+const MOCK_ANCHOR_DATE = "2026-04-25";
+
+function offsetIsoDate(anchorIso: string, daysBefore: number): string {
+  // Calcula data ISO N dias antes da âncora SEM usar Date.now()/new Date()
+  // no render path. Trabalha aritmética puramente em string + epoch.
+  // OK porque rodamos sobre uma constante fixa, mesma resposta em
+  // server/client renders.
+  const epoch = Date.parse(`${anchorIso}T00:00:00Z`);
+  const target = epoch - daysBefore * 86400000;
+  const d = new Date(target);
+  return d.toISOString().slice(0, 10);
+}
+
 // ─── MOCK realístico (substituível por endpoint real em Wave 6.5) ───
 export function buildMockData(seed: string) {
   const h = seed.split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 7);
@@ -40,7 +56,7 @@ export function buildMockData(seed: string) {
     const idx = i % sessoesLabels.length;
     return {
       id: `sess-${i}`,
-      data: new Date(Date.now() - i * 86400000 * 2).toISOString().slice(0, 10),
+      data: offsetIsoDate(MOCK_ANCHOR_DATE, i * 2),
       sessao: sessoesLabels[idx]!,
       sessaoLetra: sessoesShort[idx]!,
       duracaoMin: Math.round(48 + rand(i + 400) * 18),
