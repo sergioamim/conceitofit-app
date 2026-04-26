@@ -1,17 +1,35 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { formatDateBR } from "@/lib/formatters";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
-import type { Atividade, AtividadeGrade, DiaSemana } from "@/lib/types";
+import type {
+  Atividade,
+  AtividadeGrade,
+  AulaSessao,
+  DiaSemana,
+  Funcionario,
+  HorarioFuncionamento,
+  Sala,
+} from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useGrade } from "@/lib/query/use-grade";
+import { useAulasSessoes } from "@/lib/query/use-aulas";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getModalidadeCor } from "@/lib/grade/modalidade-cor";
+import { GradeWeekCard, type GradeCardItem } from "./grade-week-card";
+import { addDays, assignTracks, startOfWeek, toIsoDate, toMinutes } from "./grade-utils";
+import { GradeHeatmap } from "@/components/grade/grade-heatmap";
+import { GradeDayFocus } from "@/components/grade/grade-day-focus";
+import { GradeRoomKanban } from "@/components/grade/grade-room-kanban";
+import { GradeViewToggle, type GradeViewMode } from "@/components/grade/grade-view-toggle";
+import { GradeWeekFooter } from "./grade-week-footer";
 
 const DIA_ORDER: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
-const DIA_LABEL: Record<DiaSemana, string> = {
+const DIA_FULL: Record<DiaSemana, string> = {
   SEG: "Segunda",
   TER: "Terça",
   QUA: "Quarta",
@@ -21,140 +39,161 @@ const DIA_LABEL: Record<DiaSemana, string> = {
   DOM: "Domingo",
 };
 
-function startOfWeek(date: Date) {
-  const d = new Date(date);
-  const day = d.getDay(); // 0 sunday
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
+const PX_HORA = 56;
+const HORA_INI_DEFAULT = 6;
+const HORA_FIM_DEFAULT = 22;
 
-function addDays(date: Date, days: number) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
+const EMPTY_GRADES: readonly AtividadeGrade[] = [];
+const EMPTY_ATIVIDADES: readonly Atividade[] = [];
+const EMPTY_SALAS: readonly Sala[] = [];
+const EMPTY_FUNCIONARIOS: readonly Funcionario[] = [];
+const EMPTY_HORARIOS: readonly HorarioFuncionamento[] = [];
+const EMPTY_SESSOES: readonly AulaSessao[] = [];
 
-function formatDayDate(date: Date) {
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-}
-
-function toIsoDate(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function toMinutes(time: string) {
-  const [hh, mm] = time.split(":").map(Number);
-  return (hh || 0) * 60 + (mm || 0);
-}
-
-function formatMinutes(totalMinutes: number) {
-  const safe = Math.max(0, totalMinutes);
-  const hh = Math.floor(safe / 60).toString().padStart(2, "0");
-  const mm = Math.floor(safe % 60).toString().padStart(2, "0");
-  return `${hh}:${mm}`;
-}
+type CardItem = GradeCardItem;
 
 export function GradeContent() {
   const { tenantId } = useTenantContext();
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [nowDate, setNowDate] = useState<Date | null>(null);
+  const [activeMods, setActiveMods] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<GradeViewMode>("timeline");
+  const [selectedDia, setSelectedDia] = useState<DiaSemana | null>(null);
 
-  const { data: gradeData, isLoading: loading, isError, error } = useGrade({
+  const { data, isLoading, isError, error } = useGrade({
     tenantId,
     tenantResolved: Boolean(tenantId),
   });
 
-  const grades = gradeData?.grades ?? [];
-  const atividades = gradeData?.atividades ?? [];
-  const salas = gradeData?.salas ?? [];
-  const funcionarios = gradeData?.funcionarios ?? [];
-  const horarios = gradeData?.horarios ?? [];
+  const grades = data?.grades ?? EMPTY_GRADES;
+  const atividades = data?.atividades ?? EMPTY_ATIVIDADES;
+  const salas = data?.salas ?? EMPTY_SALAS;
+  const funcionarios = data?.funcionarios ?? EMPTY_FUNCIONARIOS;
+  const horarios = data?.horarios ?? EMPTY_HORARIOS;
+
+  const weekRangeIso = useMemo(
+    () =>
+      weekStart
+        ? { from: toIsoDate(weekStart), to: toIsoDate(addDays(weekStart, 6)) }
+        : { from: "", to: "" },
+    [weekStart],
+  );
+
+  const { data: sessoesData } = useAulasSessoes({
+    tenantId,
+    dateFrom: weekRangeIso.from,
+    dateTo: weekRangeIso.to,
+  });
+  const sessoes = sessoesData ?? EMPTY_SESSOES;
 
   const atividadeMap = useMemo(() => new Map(atividades.map((a) => [a.id, a])), [atividades]);
   const salaMap = useMemo(() => new Map(salas.map((s) => [s.id, s])), [salas]);
   const funcionarioMap = useMemo(() => new Map(funcionarios.map((f) => [f.id, f])), [funcionarios]);
   const horarioMap = useMemo(() => new Map(horarios.map((h) => [h.dia, h])), [horarios]);
 
-  const byDay = useMemo(() => {
-    const grouped: Record<DiaSemana, (AtividadeGrade & { atividade?: Atividade; diaExibicao: DiaSemana })[]> = {
-      SEG: [],
-      TER: [],
-      QUA: [],
-      QUI: [],
-      SEX: [],
-      SAB: [],
-      DOM: [],
-    };
+  const sessaoLookup = useMemo(() => {
+    const m = new Map<string, AulaSessao>();
+    sessoes.forEach((s) => m.set(`${s.atividadeGradeId}|${s.data}`, s));
+    return m;
+  }, [sessoes]);
 
+  const modalidades = useMemo(() => {
+    const map = new Map<string, Atividade>();
     grades.forEach((g) => {
-      const atividade = atividadeMap.get(g.atividadeId);
-      if (!atividade) return;
-      g.diasSemana.forEach((dia) => {
-        grouped[dia].push({ ...g, atividade, diaExibicao: dia });
-      });
+      const a = atividadeMap.get(g.atividadeId);
+      if (a) map.set(a.id, a);
     });
-
-    DIA_ORDER.forEach((dia) => {
-      grouped[dia].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-    });
-
-    return grouped;
+    return Array.from(map.values()).sort((a, b) => a.nome.localeCompare(b.nome));
   }, [grades, atividadeMap]);
 
-  const slotMinutes = useMemo(() => {
-    const set = new Set<number>();
-    DIA_ORDER.forEach((dia) => {
-      byDay[dia].forEach((item) => {
-        if (item.definicaoHorario === "PREVIAMENTE") set.add(toMinutes(item.horaInicio));
-      });
-    });
-    return Array.from(set).sort((a, b) => a - b);
-  }, [byDay]);
-
-  const byDayBySlot = useMemo(() => {
-    const matrix: Record<DiaSemana, Record<number, (AtividadeGrade & { atividade?: Atividade; diaExibicao: DiaSemana })[]>> = {
-      SEG: {},
-      TER: {},
-      QUA: {},
-      QUI: {},
-      SEX: {},
-      SAB: {},
-      DOM: {},
+  const cardsByDay = useMemo(() => {
+    const grouped: Record<DiaSemana, CardItem[]> = {
+      SEG: [], TER: [], QUA: [], QUI: [], SEX: [], SAB: [], DOM: [],
     };
-    DIA_ORDER.forEach((dia) => {
-      byDay[dia].forEach((item) => {
-        if (item.definicaoHorario !== "PREVIAMENTE") return;
-        const key = toMinutes(item.horaInicio);
-        if (!matrix[dia][key]) matrix[dia][key] = [];
-        matrix[dia][key].push(item);
+    grades.forEach((g) => {
+      if (g.definicaoHorario !== "PREVIAMENTE") return;
+      if (activeMods.size > 0 && !activeMods.has(g.atividadeId)) return;
+      const a = atividadeMap.get(g.atividadeId);
+      if (!a) return;
+      const inicioMin = toMinutes(g.horaInicio);
+      const fimMin = inicioMin + g.duracaoMinutos;
+      g.diasSemana.forEach((dia) => {
+        grouped[dia].push({ ...g, atividade: a, diaExibicao: dia, inicioMin, fimMin });
       });
     });
-    return matrix;
-  }, [byDay]);
+    return grouped;
+  }, [grades, atividadeMap, activeMods]);
+
+  const sobDemandaCount = useMemo(
+    () => grades.filter((g) => g.definicaoHorario === "SOB_DEMANDA").length,
+    [grades],
+  );
+
+  const { hourIni, hourFim } = useMemo(() => {
+    let ini = HORA_INI_DEFAULT;
+    let fim = HORA_FIM_DEFAULT;
+    DIA_ORDER.forEach((dia) => {
+      cardsByDay[dia].forEach((c) => {
+        const sh = Math.floor(c.inicioMin / 60);
+        const eh = Math.ceil(c.fimMin / 60);
+        if (sh < ini) ini = sh;
+        if (eh > fim) fim = eh;
+      });
+    });
+    return {
+      hourIni: Math.max(0, ini),
+      hourFim: Math.min(24, Math.max(fim, ini + 4)),
+    };
+  }, [cardsByDay]);
+
+  const horas = useMemo(
+    () => Array.from({ length: hourFim - hourIni }, (_, i) => hourIni + i),
+    [hourIni, hourFim],
+  );
+  const totalH = horas.length * PX_HORA;
 
   useEffect(() => {
-    const initialNow = new Date();
-    setWeekStart(startOfWeek(getBusinessTodayDate(initialNow)));
-    setNowDate(initialNow);
-
-    // Atualiza a cada 60s — suficiente para logica de check-in window
+    setWeekStart(startOfWeek(getBusinessTodayDate(new Date())));
+    setNowDate(new Date());
     const id = setInterval(() => setNowDate(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
+
+  const kpis = useMemo(() => {
+    let total = 0;
+    let totalMin = 0;
+    DIA_ORDER.forEach((dia) => {
+      cardsByDay[dia].forEach((c) => {
+        total++;
+        totalMin += c.duracaoMinutos;
+      });
+    });
+    let lotadas = 0;
+    sessoes.forEach((s) => {
+      if (s.capacidade > 0 && s.vagasOcupadas >= s.capacidade) lotadas++;
+    });
+    return {
+      total,
+      totalH: Math.round(totalMin / 60),
+      modCount: modalidades.length,
+      lotadas,
+    };
+  }, [cardsByDay, modalidades, sessoes]);
+
+  const toggleMod = (id: string) => {
+    setActiveMods((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   if (!weekStart || !nowDate) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight">Grade</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Calendário semanal das atividades configuradas na Grade
-            </p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
+      <div className="space-y-4">
+        <Header />
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           Carregando grade semanal...
         </div>
       </div>
@@ -165,179 +204,295 @@ export function GradeContent() {
   const todayIso = getBusinessTodayIso(nowDate);
   const weekDays = DIA_ORDER.map((dia, idx) => {
     const date = addDays(weekStart, idx);
-    return {
-      dia,
-      date,
-      isoDate: toIsoDate(date),
-      horarioDia: horarioMap.get(dia),
-    };
+    return { dia, date, isoDate: toIsoDate(date), horarioDia: horarioMap.get(dia) };
   });
 
-  function isCheckinWindowOpen(item: AtividadeGrade, date: Date) {
-    if (item.definicaoHorario !== "PREVIAMENTE" || !nowDate) return false;
-    const [hh, mm] = item.horaInicio.split(":").map(Number);
-    const start = new Date(date);
-    start.setHours(hh || 0, mm || 0, 0, 0);
-    const openAt = new Date(start.getTime() - item.checkinLiberadoMinutosAntes * 60 * 1000);
-    return nowDate >= openAt && nowDate <= start;
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Grade</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Calendário semanal das atividades configuradas na Grade
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" className="border-border" aria-label="Semana anterior" onClick={() => setWeekStart(addDays(weekStart, -7))}>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <Header />
+        <div className="flex flex-wrap items-center gap-2">
+          <GradeViewToggle value={viewMode} onChange={setViewMode} />
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Semana anterior"
+            onClick={() => setWeekStart(addDays(weekStart, -7))}
+          >
             <ChevronLeft className="size-4" />
           </Button>
-          <div className="rounded-md border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground">
+          <div className="rounded-md border border-border bg-card px-3 py-2 text-sm font-medium">
             {formatDateBR(weekStart)} - {formatDateBR(weekEnd)}
           </div>
-          <Button variant="outline" size="icon" className="border-border" aria-label="Próxima semana" onClick={() => setWeekStart(addDays(weekStart, 7))}>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Próxima semana"
+            onClick={() => setWeekStart(addDays(weekStart, 7))}
+          >
             <ChevronRight className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setWeekStart(startOfWeek(getBusinessTodayDate(new Date())))}
+          >
+            Hoje
+          </Button>
+          <Button asChild>
+            <Link href="/administrativo/atividades-grade">
+              <Plus className="size-4" />
+              Nova aula
+            </Link>
           </Button>
         </div>
       </div>
 
+      {viewMode === "timeline" && modalidades.length > 0 ? (
+        <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-card px-3 py-2.5">
+          <span className="shrink-0 text-xs font-semibold text-muted-foreground">Filtrar:</span>
+          {modalidades.map((m) => {
+            const cor = getModalidadeCor(m);
+            const active = activeMods.size === 0 || activeMods.has(m.id);
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => toggleMod(m.id)}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition",
+                  active
+                    ? "border-transparent"
+                    : "border-dashed border-border opacity-60 hover:opacity-100",
+                )}
+                style={active ? { background: cor.bg, color: cor.text } : undefined}
+              >
+                <span className="size-2 rounded-full" style={{ background: cor.cor }} />
+                {m.nome}
+              </button>
+            );
+          })}
+          {activeMods.size > 0 ? (
+            <button
+              type="button"
+              onClick={() => setActiveMods(new Set())}
+              className="ml-auto shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              Limpar filtros
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {isError ? (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error instanceof Error ? error.message : "Falha ao carregar grade."}
         </div>
       ) : null}
 
-      {loading ? (
-        <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
+      {viewMode === "heatmap" && !isLoading ? (
+        <GradeHeatmap
+          grades={[...grades]}
+          atividades={[...atividades]}
+          sessoes={[...sessoes]}
+          weekDates={weekDays.map((w) => ({ dia: w.dia, isoDate: w.isoDate }))}
+          todayIso={todayIso}
+        />
+      ) : null}
+
+      {viewMode === "day" && !isLoading ? (
+        <GradeDayFocus
+          grades={[...grades]}
+          atividades={[...atividades]}
+          salas={[...salas]}
+          funcionarios={[...funcionarios]}
+          sessoes={[...sessoes]}
+          weekDates={weekDays}
+          selectedDia={
+            selectedDia ?? (weekDays.find((w) => w.isoDate === todayIso)?.dia ?? "SEG")
+          }
+          onSelectDia={setSelectedDia}
+          todayIso={todayIso}
+          nowDate={nowDate}
+        />
+      ) : null}
+
+      {viewMode === "kanban" && !isLoading ? (
+        <GradeRoomKanban
+          grades={[...grades]}
+          atividades={[...atividades]}
+          salas={[...salas]}
+          funcionarios={[...funcionarios]}
+          sessoes={[...sessoes]}
+          weekDates={weekDays}
+          todayIso={todayIso}
+        />
+      ) : null}
+
+      {viewMode === "timeline" && isLoading ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           Carregando grade semanal...
         </div>
-      ) : slotMinutes.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border/70 bg-card p-8 text-center text-sm text-muted-foreground">
-          Não há atividades com horário definido nesta semana.
+      ) : viewMode === "timeline" && kpis.total === 0 ? (
+        <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
+          {grades.length === 0 ? (
+            <>
+              Nenhuma atividade configurada na grade.{" "}
+              <Link
+                href="/administrativo/atividades-grade"
+                className="font-semibold text-foreground underline-offset-2 hover:underline"
+              >
+                Cadastrar agora
+              </Link>
+            </>
+          ) : (
+            "Nenhuma atividade encontrada com os filtros aplicados."
+          )}
         </div>
-      ) : (
+      ) : viewMode === "timeline" ? (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <div className="min-w-[1120px]">
-            <div className="grid grid-cols-[88px_repeat(7,minmax(0,1fr))] border-b border-border bg-secondary/45">
-              <div className="px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-foreground/75">Horário</div>
-              {weekDays.map((dayData) => {
-                const isToday = dayData.isoDate === todayIso;
+            <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-card">
+              <div />
+              {weekDays.map((d) => {
+                const isToday = d.isoDate === todayIso;
                 return (
                   <div
-                    key={dayData.dia}
+                    key={d.dia}
                     className={cn(
-                      "border-l border-border px-3 py-3",
-                      isToday && "border-l-gym-accent/50 bg-gym-accent/10"
+                      "border-l border-border px-3 py-2.5",
+                      isToday && "bg-gym-accent/5",
                     )}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{DIA_LABEL[dayData.dia]}</p>
+                    <p
+                      className={cn(
+                        "text-[11px] font-semibold uppercase tracking-wider",
+                        isToday ? "text-gym-accent" : "text-muted-foreground",
+                      )}
+                    >
+                      {DIA_FULL[d.dia]}
+                    </p>
+                    <div className="mt-0.5 flex items-baseline gap-1.5">
+                      <span
+                        className={cn(
+                          "text-xl font-bold leading-none",
+                          isToday ? "text-gym-accent" : "text-foreground",
+                        )}
+                      >
+                        {d.date.getDate()}
+                      </span>
                       {isToday ? (
-                        <span className="inline-flex rounded-full bg-gym-accent px-1.5 py-0.5 text-[10px] font-semibold text-gym-accent-foreground">
+                        <span className="rounded-full bg-gym-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
                           Hoje
                         </span>
                       ) : null}
+                      <span className="text-[11px] text-muted-foreground">
+                        {cardsByDay[d.dia].length}{" "}
+                        {cardsByDay[d.dia].length === 1 ? "aula" : "aulas"}
+                      </span>
                     </div>
-                    <p className={cn("text-sm", isToday && "font-semibold text-gym-accent")}>{formatDayDate(dayData.date)}</p>
-                    <p className={cn("text-[11px] text-muted-foreground", isToday && "text-foreground/80")}>
-                      {dayData.horarioDia?.fechado
-                        ? "Fechado"
-                        : `${dayData.horarioDia?.abre ?? "--:--"} - ${dayData.horarioDia?.fecha ?? "--:--"}`}
-                    </p>
+                    {d.horarioDia ? (
+                      <p className="mt-0.5 text-[10px] text-muted-foreground">
+                        {d.horarioDia.fechado
+                          ? "Fechado"
+                          : `${d.horarioDia.abre} - ${d.horarioDia.fecha}`}
+                      </p>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
 
-            {slotMinutes.map((slot, rowIndex) => (
-              <div key={slot} className="grid grid-cols-[88px_repeat(7,minmax(0,1fr))] border-b border-border/80 last:border-b-0">
-                <div
-                  className={cn(
-                    "px-3 py-3 text-xs font-semibold text-foreground/80",
-                    rowIndex % 2 === 1 ? "bg-secondary/20" : "bg-card"
-                  )}
-                >
-                  {formatMinutes(slot)}
-                </div>
-                {weekDays.map((dayData) => {
-                  const items = byDayBySlot[dayData.dia][slot] ?? [];
-                  const isToday = dayData.isoDate === todayIso;
-                  return (
-                    <div
-                      key={`${dayData.dia}-${slot}`}
-                      className={cn(
-                        "min-h-[160px] border-l p-2",
-                        isToday ? "border-l-gym-accent/45 bg-gym-accent/5" : "border-border",
-                        !isToday && rowIndex % 2 === 1 && "bg-secondary/10"
-                      )}
-                    >
-                      {items.length === 0 ? (
-                        <div
-                          className={cn(
-                            "h-full rounded-md border border-dashed",
-                            isToday ? "border-gym-accent/45 bg-gym-accent/10" : "border-border/55 bg-secondary/20"
-                          )}
-                        />
-                      ) : (
-                        <div className="space-y-2">
-                          {items.map((item) => (
-                            <div key={`${item.id}-${item.diaExibicao}`} className="rounded-lg border border-border/90 bg-card p-3 shadow-sm">
-                              <p className="text-xs font-semibold text-foreground">{item.atividade?.nome ?? "Atividade"}</p>
-
-                              <div className="mt-1.5 space-y-1 text-[11px] text-muted-foreground">
-                                <p className="break-words">
-                                  <span className="text-foreground/70">Local:</span>{" "}
-                                  {item.salaId
-                                    ? (salaMap.get(item.salaId)?.nome ?? "Sala removida")
-                                    : (item.local ?? "Não definido")}
-                                </p>
-                                <p className="break-words">
-                                  <span className="text-foreground/70">Professor:</span>{" "}
-                                  {item.funcionarioId
-                                    ? (funcionarioMap.get(item.funcionarioId)?.nome ?? "Funcionário removido")
-                                    : (item.instrutor ?? "Não definido")}
-                                </p>
-                              </div>
-
-                              <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
-                                <p className="break-words">
-                                  {item.atividade?.permiteCheckin
-                                    ? isCheckinWindowOpen(item, dayData.date)
-                                      ? `Vagas disponíveis: ${item.capacidade}`
-                                      : `Check-in abre ${item.checkinLiberadoMinutosAntes} min antes`
-                                    : `Capacidade da sala: ${item.capacidade}`}
-                                </p>
-                                {item.atividade?.checkinObrigatorio ? (
-                                  <span className="inline-flex w-fit rounded-full bg-gym-warning/15 px-2 py-0.5 text-[10px] font-semibold text-gym-warning">
-                                    Check-in obrigatório
-                                  </span>
-                                ) : null}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+            <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))]">
+              <div className="border-r border-border bg-card" style={{ height: totalH }}>
+                {horas.map((h) => (
+                  <div
+                    key={h}
+                    className="pr-2.5 pt-1 text-right text-[11px] font-medium text-muted-foreground"
+                    style={{ height: PX_HORA }}
+                  >
+                    {String(h).padStart(2, "0")}:00
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {weekDays.map((d) => {
+                const isToday = d.isoDate === todayIso;
+                const placements = assignTracks(cardsByDay[d.dia]);
+                const nowMinutes = isToday
+                  ? nowDate.getHours() * 60 + nowDate.getMinutes()
+                  : null;
+                const showNow =
+                  nowMinutes != null &&
+                  nowMinutes >= hourIni * 60 &&
+                  nowMinutes <= hourFim * 60;
+
+                return (
+                  <div
+                    key={d.dia}
+                    className={cn(
+                      "relative border-l border-border",
+                      isToday && "bg-gym-accent/5",
+                    )}
+                    style={{ height: totalH }}
+                  >
+                    {horas.map((_, i) =>
+                      i === 0 ? null : (
+                        <div
+                          key={i}
+                          className="absolute left-0 right-0 border-t border-border/50"
+                          style={{ top: i * PX_HORA }}
+                        />
+                      ),
+                    )}
+
+                    {showNow && nowMinutes != null ? (
+                      <div
+                        className="absolute left-0 right-0 z-20 h-0.5 bg-destructive"
+                        style={{ top: ((nowMinutes - hourIni * 60) / 60) * PX_HORA }}
+                      >
+                        <div className="absolute -left-1 -top-1 size-2.5 rounded-full bg-destructive" />
+                      </div>
+                    ) : null}
+
+                    {placements.map(({ item, track, trackCount }) => (
+                      <GradeWeekCard
+                        key={`${item.id}-${item.diaExibicao}`}
+                        item={item}
+                        track={track}
+                        trackCount={trackCount}
+                        hourIni={hourIni}
+                        pxHora={PX_HORA}
+                        salaMap={salaMap}
+                        funcionarioMap={funcionarioMap}
+                        sessao={sessaoLookup.get(`${item.id}|${d.isoDate}`)}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-          <CalendarDays className="mt-0.5 size-4 shrink-0 text-gym-accent" />
-          <p>
-            Esta visão semanal consome os cadastros de <strong>Administrativo - Atividades - Grade</strong>.
-            Em seguida, essa mesma base será usada no calendário operacional de atividades.
-          </p>
-        </div>
-      </div>
+      <GradeWeekFooter
+        total={kpis.total}
+        totalH={kpis.totalH}
+        modCount={kpis.modCount}
+        lotadas={kpis.lotadas}
+        sobDemandaCount={sobDemandaCount}
+      />
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <div>
+      <h1 className="font-display text-2xl font-bold tracking-tight">Grade de Atividades</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Programação semanal · Cards posicionados por horário
+      </p>
     </div>
   );
 }
