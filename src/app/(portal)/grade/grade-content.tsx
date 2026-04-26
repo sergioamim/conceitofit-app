@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Flame, LayoutGrid, Plus } from "lucide-react";
 import { formatDateBR } from "@/lib/formatters";
 import { getBusinessTodayDate, getBusinessTodayIso } from "@/lib/business-date";
 import type {
@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { getModalidadeCor } from "@/lib/grade/modalidade-cor";
 import { GradeWeekCard, type GradeCardItem } from "./grade-week-card";
 import { addDays, assignTracks, startOfWeek, toIsoDate, toMinutes } from "./grade-utils";
+import { GradeHeatmap } from "@/components/grade/grade-heatmap";
 
 const DIA_ORDER: DiaSemana[] = ["SEG", "TER", "QUA", "QUI", "SEX", "SAB", "DOM"];
 const DIA_FULL: Record<DiaSemana, string> = {
@@ -52,6 +53,7 @@ export function GradeContent() {
   const [weekStart, setWeekStart] = useState<Date | null>(null);
   const [nowDate, setNowDate] = useState<Date | null>(null);
   const [activeMods, setActiveMods] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<"timeline" | "heatmap">("timeline");
 
   const { data, isLoading, isError, error } = useGrade({
     tenantId,
@@ -205,6 +207,32 @@ export function GradeContent() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Header />
         <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-md border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("timeline")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition",
+                viewMode === "timeline"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <LayoutGrid className="size-3.5" /> Timeline
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("heatmap")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition",
+                viewMode === "heatmap"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Flame className="size-3.5" /> Heatmap
+            </button>
+          </div>
           <Button
             variant="outline"
             size="icon"
@@ -239,7 +267,7 @@ export function GradeContent() {
         </div>
       </div>
 
-      {modalidades.length > 0 ? (
+      {viewMode === "timeline" && modalidades.length > 0 ? (
         <div className="flex items-center gap-2 overflow-x-auto rounded-xl border border-border bg-card px-3 py-2.5">
           <span className="shrink-0 text-xs font-semibold text-muted-foreground">Filtrar:</span>
           {modalidades.map((m) => {
@@ -281,11 +309,21 @@ export function GradeContent() {
         </div>
       ) : null}
 
-      {isLoading ? (
+      {viewMode === "heatmap" && !isLoading ? (
+        <GradeHeatmap
+          grades={[...grades]}
+          atividades={[...atividades]}
+          sessoes={[...sessoes]}
+          weekDates={weekDays.map((w) => ({ dia: w.dia, isoDate: w.isoDate }))}
+          todayIso={todayIso}
+        />
+      ) : null}
+
+      {viewMode === "timeline" && isLoading ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           Carregando grade semanal...
         </div>
-      ) : kpis.total === 0 ? (
+      ) : viewMode === "timeline" && kpis.total === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-sm text-muted-foreground">
           {grades.length === 0 ? (
             <>
@@ -301,7 +339,7 @@ export function GradeContent() {
             "Nenhuma atividade encontrada com os filtros aplicados."
           )}
         </div>
-      ) : (
+      ) : viewMode === "timeline" ? (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
           <div className="min-w-[1120px]">
             <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-card">
@@ -426,7 +464,7 @@ export function GradeContent() {
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {kpis.total > 0 ? (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-border bg-card px-4 py-3 text-xs text-muted-foreground">
