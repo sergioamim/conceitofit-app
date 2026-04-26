@@ -63,6 +63,7 @@ import {
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { BibliotecaExerciciosModal } from "./biblioteca-exercicios-modal";
 import { computeOverrides } from "./editor-v3/instance-overrides";
+import { PreviewModal } from "./editor-v3/preview-modal";
 import { SortableExerciseRow } from "./editor-v3/sortable-exercise-row";
 import type { EditorProps } from "./editor/types";
 
@@ -97,6 +98,7 @@ export function TreinoV3Editor({
   const [saving, setSaving] = useState(false);
   const [instanciaId, setInstanciaId] = useState<string | undefined>();
   const [bibliotecaOpen, setBibliotecaOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Em modo instance, garante que existe uma instância no backend (idempotente).
   useEffect(() => {
@@ -463,6 +465,12 @@ export function TreinoV3Editor({
         excludeIds={idsJaPresentes}
         onAdd={addItensFromBiblioteca}
       />
+      <PreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        editor={editor}
+        catalog={catalogById}
+      />
 
       {/* ─── Header ─── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
@@ -516,7 +524,12 @@ export function TreinoV3Editor({
               Resetar
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" className="border-border">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-border"
+            onClick={() => setPreviewOpen(true)}
+          >
             <Send className="mr-2 size-4" />
             Pré-visualizar
           </Button>
