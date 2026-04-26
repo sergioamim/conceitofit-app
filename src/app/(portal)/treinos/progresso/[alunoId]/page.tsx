@@ -1,16 +1,17 @@
 "use client";
 
 /**
- * Tela de Progresso do Aluno (Wave 6 PRD V3).
+ * Tela de Progresso do Aluno (Wave 6 PRD V3 + Wave J.2).
  * Rota: /treinos/progresso/[alunoId]
  *
  * 3 visões: gráfico de progressão de carga (SVG line), heatmap de
  * adesão (CSS grid 7 cols × N semanas) e histórico em lista.
  *
- * **Backend ainda não tem endpoint agregado de progresso/heatmap.**
- * Implementação atual usa MOCK realístico baseado no alunoId — assim
- * que o endpoint existir, basta plugar no useEffect de carga. TODO
- * marcado nos pontos de fetch.
+ * Wave J.2: backend agora expõe endpoint real
+ * GET /api/v1/treinos/aluno/{alunoId}/progresso retornando heatmap +
+ * histórico + KPIs. Quando o aluno tem execuções, mostramos os dados
+ * reais; senão (aluno novo, ainda sem execuções), caímos pro mock
+ * determinístico — preserva uma tela navegável pra demos.
  */
 
 import Link from "next/link";
@@ -25,6 +26,7 @@ import { Breadcrumb } from "@/components/shared/breadcrumb";
 import { cn } from "@/lib/utils";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getAlunoApi } from "@/lib/api/alunos";
+import { getProgressoAlunoApi } from "@/lib/api/treinos";
 import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 import { formatDate } from "@/lib/formatters";
 import { buildMockData, ChartStat, KpiCard } from "./_helpers";
@@ -34,9 +36,49 @@ export default function ProgressoAlunoPage() {
   const alunoId = params?.alunoId ?? "";
   const { tenantId, tenantResolved } = useTenantContext();
 
-  // TODO Wave 6.5: substituir mock por fetch ao endpoint real quando
-  // backend expor /api/v1/treinos/aluno/{alunoId}/progresso.
-  const data = useMemo(() => buildMockData(alunoId), [alunoId]);
+  // Endpoint real (Wave J.2). Cai pro mock quando o aluno ainda não tem
+  // execuções registradas — fallback usa o mesmo formato.
+  const { data: progressoReal } = useQuery({
+    queryKey: ["aluno-progresso", tenantId, alunoId],
+    enabled: Boolean(tenantId && alunoId && tenantResolved),
+    staleTime: 60_000,
+    queryFn: () =>
+      getProgressoAlunoApi({ tenantId: tenantId!, alunoId, semanas: 12 }),
+  });
+
+  const data = useMemo(() => {
+    // Sem dados reais ou tenant ainda não resolvido → mock determinístico
+    if (!progressoReal || progressoReal.kpis.totalSessoes === 0) {
+      return buildMockData(alunoId);
+    }
+    // Mapeia resposta do backend pro shape esperado pelos charts
+    return {
+      progressao:
+        progressoReal.progressao.length > 0
+          ? progressoReal.progressao.map((p, i) => ({
+              semana: i + 1,
+              cargaKg: p.cargaKg,
+            }))
+          : buildMockData(alunoId).progressao,
+      heatmap: progressoReal.heatmap,
+      historico: progressoReal.historico.map((h, i) => ({
+        id: h.id,
+        data: h.data,
+        sessao: h.treinoNome ?? "Sessão",
+        sessaoLetra: String.fromCharCode(65 + (i % 3)),
+        duracaoMin: h.duracaoMin,
+        volume: 0,
+        prs: 0,
+        completa: h.completa,
+        notas: null,
+      })),
+      adesaoPct: progressoReal.kpis.adesaoPct,
+      sessoesCompletas: progressoReal.kpis.sessoesCompletas,
+      totalSessoes: progressoReal.kpis.totalSessoes,
+      totalVolume: progressoReal.kpis.totalVolume,
+      totalPRs: progressoReal.kpis.totalPRs,
+    };
+  }, [progressoReal, alunoId]);
 
   // Aluno (nome + objetivo via observações médicas / status — best-effort)
   const { data: aluno } = useQuery({

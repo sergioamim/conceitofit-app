@@ -528,6 +528,47 @@ export async function listTemplatesUsandoExercicioApi(input: {
   });
 }
 
+// ─── Wave J.2 — Progresso do aluno (endpoint real) ─────────────────
+export interface ProgressoAlunoKpis {
+  adesaoPct: number;
+  sessoesCompletas: number;
+  totalSessoes: number;
+  totalVolume: number;
+  totalPRs: number;
+}
+
+export interface ProgressoAlunoHistorico {
+  id: string;
+  data: string;
+  treinoNome?: string | null;
+  duracaoMin: number;
+  completa: boolean;
+}
+
+export interface ProgressoAlunoProgressao {
+  semana: string;
+  cargaKg: number;
+}
+
+export interface ProgressoAlunoApiResponse {
+  kpis: ProgressoAlunoKpis;
+  heatmap: number[];
+  historico: ProgressoAlunoHistorico[];
+  progressao: ProgressoAlunoProgressao[];
+  janelaDias: number;
+}
+
+export async function getProgressoAlunoApi(input: {
+  tenantId?: string;
+  alunoId: string;
+  semanas?: number;
+}): Promise<ProgressoAlunoApiResponse> {
+  return apiRequest<ProgressoAlunoApiResponse>({
+    path: `/api/v1/treinos/aluno/${input.alunoId}/progresso`,
+    query: { tenantId: input.tenantId, semanas: input.semanas },
+  });
+}
+
 export async function createExercicioApi(input: {
   tenantId?: string;
   data: CreateExercicioApiInput;
