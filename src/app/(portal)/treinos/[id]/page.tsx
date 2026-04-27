@@ -60,6 +60,7 @@ export default function TreinoDetalhePage() {
   const customizeMode = searchParams?.get("customize") === "1";
   const customAlunoId = searchParams?.get("alunoId") ?? undefined;
   const customAlunoNome = searchParams?.get("alunoNome") ?? undefined;
+  const customAtribuicaoId = searchParams?.get("atribuicaoId") ?? undefined;
 
   if (loading) {
     return (
@@ -111,6 +112,7 @@ export default function TreinoDetalhePage() {
           mode={customizeMode && customAlunoId ? "instance" : "template"}
           alunoId={customAlunoId}
           alunoNome={customAlunoNome}
+          atribuicaoId={customAtribuicaoId}
           onTreinoChange={() => handleInvalidate()}
           onCatalogChange={() => handleInvalidate()}
         />

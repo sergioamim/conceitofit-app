@@ -476,7 +476,7 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
                           title="Customizar template para este aluno (modo instance)"
                         >
                           <Link
-                            href={`/treinos/${governance.templateOrigemId}?customize=1&alunoId=${workout.alunoId}&alunoNome=${encodeURIComponent(workout.alunoNome ?? "")}`}
+                            href={`/treinos/${governance.templateOrigemId}?customize=1&alunoId=${workout.alunoId}&alunoNome=${encodeURIComponent(workout.alunoNome ?? "")}&atribuicaoId=${workout.id}`}
                           >
                             <Edit3 className="mr-1 size-3.5" />
                             Customizar

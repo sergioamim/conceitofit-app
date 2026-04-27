@@ -1,6 +1,6 @@
 # PRD — Template vs Atribuição vs Customização (Wave C)
 
-**Status:** Wave C.1 + C.2 entregues (2026-04-27)
+**Status:** Wave C.1 + C.2 (incl. Item 1) entregues (2026-04-27)
 **Origem:** sessão 2026-04-27 — diretriz do PO sobre separação conceitual
 
 ## Modelo conceitual
@@ -50,9 +50,19 @@ Adicionar 3 colunas em `treino_atribuicao` (ou usar JSONB) é mudança de domín
 8. **Frontend** — `TreinoApiResponse`, `Treino` interface, `assignTreinoTemplateApi` data, `mapTreinoApiToDomain` e `assignTreinoTemplate` workspace estendidos. `handleAssignTemplate` envia primitivos diretos (não mais markdown).
 9. **Compatibilidade** — `buildAssignmentState` lê dos campos primitivos quando presentes; faz fallback no parser markdown apenas se os 3 vierem null (preserva atribuições antigas pré-V100).
 
+### Item 1 (entregue 2026-04-27): Editor V3 instance mode com card "Personalização do aluno"
+- `treinos-atribuidos-content.tsx` agora propaga `&atribuicaoId={workout.id}` ao link "Customizar".
+- `/treinos/[id]/page.tsx` lê o param e passa ao `TreinoV3Editor`.
+- `TreinoV3Editor` (modo instance, com `atribuicaoId`):
+  - Carrega o treino atribuído via `getTreinoApi` no mount; guarda response inteiro em state para preservar campos no PUT.
+  - Renderiza card colapsável com 3 textareas (Objetivo individual · Restrições · Notas do professor).
+  - `handleSave` aplica overrides (PATCH) **e** PUT na atribuição em `Promise.all`, remontando todos os campos do treino atribuído + os 3 personalizados (backend `updateTreino` zera campos não enviados).
+- Backend: `UpsertTreinoRequest` + `UpsertTreinoCommand` extendidos com os 3 campos; `updateTreino` faz fallback no valor existente quando o command vem `null` (PUT parcial seguro).
+- Compatibilidade: card aparece **só** quando `atribuicaoId` está na URL — entry points antigos sem o param continuam funcionando sem regressão.
+
 ### Pendente (futuras waves)
-- Editor V3 instance mode: card "Personalização do aluno" mostrando/editando os 3 campos da atribuição via PATCH.
-- Backfill SQL opcional: parsear `observacoes` legado em produção e popular as 3 colunas (parseamento markdown em PostgreSQL é frágil; deixar pro próximo "save" naturalmente migrar via UI).
+- Backfill SQL opcional: parsear `observacoes` legado em produção e popular as 3 colunas (parseamento markdown em PostgreSQL é frágil; **alternativa**: script Node.js reusando `parseAssignmentNotes`. Decisão atual: deixar pro próximo "save" naturalmente migrar via UI).
+- Tags de Foco multi-valor (Wave A item 4 reuso de `perfilIndicacao` é workaround; tags livres requerem schema novo).
 
 ## Decisões pendentes
 - **Onde armazenar observações de instance**: `Treino.observacoes` (do treino atribuído) ou `TreinoInstanciaCustomizada` (do overlay)? Recomendação: `Treino.observacoes` — instância é apenas overlay sobre exercícios; contexto pessoal pertence ao treino atribuído.

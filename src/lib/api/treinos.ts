@@ -204,6 +204,10 @@ type CreateTreinoApiInput = {
   nome: string;
   objetivo?: string;
   observacoes?: string;
+  /** Wave C.2 (Item 1): personalização do aluno editável via PUT/POST. */
+  objetivoIndividual?: string;
+  restricoes?: string;
+  notasProfessor?: string;
   divisao?: string;
   metaSessoesSemana?: number;
   frequenciaSemanal?: number;
@@ -236,6 +240,10 @@ export type UpdateTreinoApiInput = {
   nome: string;
   objetivo?: string | null;
   observacoes?: string | null;
+  /** Wave C.2 (Item 1): personalização — null preserva valor existente no backend. */
+  objetivoIndividual?: string | null;
+  restricoes?: string | null;
+  notasProfessor?: string | null;
   divisao?: string | null;
   metaSessoesSemana?: number | null;
   frequenciaSemanal?: number | null;

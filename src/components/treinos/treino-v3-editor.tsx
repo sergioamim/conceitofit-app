@@ -29,7 +29,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +40,7 @@ import {
   buildTreinoV2SaveInput,
   type TreinoV2EditorSeed,
 } from "@/lib/tenant/treinos/v2-runtime";
+import { getTreinoApi, updateTreinoApi, type TreinoApiResponse } from "@/lib/api/treinos";
 import { saveTreinoWorkspace } from "@/lib/tenant/treinos/workspace";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 import {
@@ -89,6 +90,52 @@ export function TreinoV3Editor({
   const [instanciaId, setInstanciaId] = useState<string | undefined>();
   const [bibliotecaOpen, setBibliotecaOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Wave C.2 (Item 1): personalização do aluno (treino atribuído).
+  // Hidratado de getTreinoApi(atribuicaoId) quando isInstance && atribuicaoId.
+  // Guarda o response inteiro para preservar campos no PUT (backend zera o
+  // que não vier no payload, então remontamos com todos os valores atuais).
+  const [personalizacaoOpen, setPersonalizacaoOpen] = useState(true);
+  const [personalizacaoLoading, setPersonalizacaoLoading] = useState(false);
+  const [atribuicaoTreino, setAtribuicaoTreino] = useState<TreinoApiResponse | null>(null);
+  const [personalizacao, setPersonalizacao] = useState<{
+    objetivoIndividual: string;
+    restricoes: string;
+    notasProfessor: string;
+  }>({ objetivoIndividual: "", restricoes: "", notasProfessor: "" });
+  const showPersonalizacao = isInstance && Boolean(atribuicaoId);
+
+  // Wave C.2 (Item 1): carrega personalização do treino atribuído quando disponível.
+  useEffect(() => {
+    if (!showPersonalizacao || !atribuicaoId) return;
+    let cancelled = false;
+    setPersonalizacaoLoading(true);
+    void (async () => {
+      try {
+        const atribuicao = await getTreinoApi({ tenantId, id: atribuicaoId });
+        if (cancelled) return;
+        setAtribuicaoTreino(atribuicao);
+        setPersonalizacao({
+          objetivoIndividual: atribuicao.objetivoIndividual ?? "",
+          restricoes: atribuicao.restricoes ?? "",
+          notasProfessor: atribuicao.notasProfessor ?? "",
+        });
+      } catch (err) {
+        if (!cancelled) {
+          toast({
+            variant: "destructive",
+            title: "Não foi possível carregar a personalização",
+            description: err instanceof Error ? err.message : "Tente novamente.",
+          });
+        }
+      } finally {
+        if (!cancelled) setPersonalizacaoLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [showPersonalizacao, atribuicaoId, tenantId, toast]);
 
   // Em modo instance, garante que existe uma instância no backend (idempotente).
   useEffect(() => {
@@ -226,7 +273,48 @@ export function TreinoV3Editor({
     try {
       if (isInstance && instanciaId) {
         const overrides = computeOverrides(baseline, editor);
-        await aplicarOverridesApi(instanciaId, overrides);
+        // Wave C.2 (Item 1): em paralelo, atualiza personalização no treino
+        // atribuído quando temos o ID — UI só mostra o card nesse caso.
+        await Promise.all([
+          aplicarOverridesApi(instanciaId, overrides),
+          // Wave C.2 (Item 1): atualiza personalização preservando demais
+          // campos do treino atribuído (backend zera o que não vier no PUT).
+          atribuicaoId && atribuicaoTreino
+            ? updateTreinoApi({
+                tenantId,
+                id: atribuicaoId,
+                data: {
+                  clienteId: atribuicaoTreino.clienteId,
+                  professorId: atribuicaoTreino.professorId,
+                  nome: atribuicaoTreino.nome,
+                  objetivo: atribuicaoTreino.objetivo,
+                  observacoes: atribuicaoTreino.observacoes,
+                  divisao: atribuicaoTreino.divisao,
+                  metaSessoesSemana: atribuicaoTreino.metaSessoesSemana,
+                  frequenciaSemanal: atribuicaoTreino.frequenciaPlanejada,
+                  totalSemanas:
+                    atribuicaoTreino.frequenciaPlanejada && atribuicaoTreino.quantidadePrevista
+                      ? Math.max(
+                          1,
+                          Math.ceil(
+                            atribuicaoTreino.quantidadePrevista /
+                              atribuicaoTreino.frequenciaPlanejada,
+                          ),
+                        )
+                      : undefined,
+                  dataInicio: atribuicaoTreino.dataInicio,
+                  dataFim: atribuicaoTreino.dataFim,
+                  status: atribuicaoTreino.status,
+                  tipoTreino: atribuicaoTreino.tipoTreino,
+                  treinoBaseId: atribuicaoTreino.treinoBaseId,
+                  ativo: atribuicaoTreino.ativo,
+                  objetivoIndividual: personalizacao.objetivoIndividual.trim() || null,
+                  restricoes: personalizacao.restricoes.trim() || null,
+                  notasProfessor: personalizacao.notasProfessor.trim() || null,
+                },
+              })
+            : Promise.resolve(),
+        ]);
         toast({
           title: `Salvo para ${alunoNome ?? "aluno"}`,
           description: `${overrides.length} customizações persistidas como overlay do template.`,
@@ -297,6 +385,9 @@ export function TreinoV3Editor({
     onTreinoChange,
     treino,
     tenantId,
+    atribuicaoId,
+    atribuicaoTreino,
+    personalizacao,
   ]);
 
   // ─── DnD setup ───
@@ -371,6 +462,80 @@ export function TreinoV3Editor({
         onPreview={() => setPreviewOpen(true)}
         onSave={handleSave}
       />
+
+      {/* Wave C.2 (Item 1): Card "Personalização do aluno" — só em modo
+          instance com atribuicaoId conhecido. Edita 3 campos do treino
+          atribuído (objetivo individual, restrições, notas do professor),
+          persistidos via PUT em paralelo aos overrides JSONB. */}
+      {showPersonalizacao ? (
+        <section className="rounded-xl border border-border bg-card">
+          <button
+            type="button"
+            onClick={() => setPersonalizacaoOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition-colors hover:bg-secondary/40"
+            aria-expanded={personalizacaoOpen}
+          >
+            <span className="flex items-center gap-2 text-sm font-medium">
+              <UserCog className="size-4 text-gym-accent" />
+              Personalização do aluno
+              {personalizacaoLoading ? (
+                <span className="text-[11px] text-muted-foreground">carregando…</span>
+              ) : null}
+            </span>
+            {personalizacaoOpen ? (
+              <ChevronUp className="size-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="size-4 text-muted-foreground" />
+            )}
+          </button>
+          {personalizacaoOpen ? (
+            <div className="grid gap-4 border-t border-border p-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="personalizacao-objetivo">Objetivo individual</Label>
+                <Textarea
+                  id="personalizacao-objetivo"
+                  value={personalizacao.objetivoIndividual}
+                  onChange={(e) =>
+                    setPersonalizacao((p) => ({ ...p, objetivoIndividual: e.target.value }))
+                  }
+                  className="min-h-16"
+                  placeholder="Meta específica deste aluno (ex.: perder 5kg em 8 semanas)"
+                  disabled={personalizacaoLoading}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="personalizacao-restricoes">Restrições / Lesões</Label>
+                <Textarea
+                  id="personalizacao-restricoes"
+                  value={personalizacao.restricoes}
+                  onChange={(e) =>
+                    setPersonalizacao((p) => ({ ...p, restricoes: e.target.value }))
+                  }
+                  className="min-h-16"
+                  placeholder="Lesões a respeitar, exercícios a evitar"
+                  disabled={personalizacaoLoading}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="personalizacao-notas">Notas do professor</Label>
+                <Textarea
+                  id="personalizacao-notas"
+                  value={personalizacao.notasProfessor}
+                  onChange={(e) =>
+                    setPersonalizacao((p) => ({ ...p, notasProfessor: e.target.value }))
+                  }
+                  className="min-h-20"
+                  placeholder="Orientações livres (cargas iniciais, evolução, observações)"
+                  disabled={personalizacaoLoading}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground md:col-span-2">
+                Salvo junto com as customizações ao clicar em &ldquo;Salvar&rdquo; no topo.
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* ─── Grid: sessões sidebar + main table ───
         DndContext envolve ambos para suportar drag de itens entre as

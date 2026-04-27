@@ -123,6 +123,10 @@ type SaveTreinoInput = {
   status?: Treino["status"];
   ativo?: boolean;
   itens?: Treino["itens"];
+  /** Wave C.2 (Item 1): personalização do aluno, persistida via PUT no treino atribuído. */
+  objetivoIndividual?: string;
+  restricoes?: string;
+  notasProfessor?: string;
 };
 
 type AssignTemplateInput = {
@@ -431,6 +435,9 @@ function toTreinoApiPayload(input: SaveTreinoInput) {
     nome,
     objetivo: trimString(input.objetivo),
     observacoes: trimString(input.observacoes),
+    objetivoIndividual: trimString(input.objetivoIndividual),
+    restricoes: trimString(input.restricoes),
+    notasProfessor: trimString(input.notasProfessor),
     divisao: trimString(input.divisao),
     metaSessoesSemana: input.metaSessoesSemana,
     frequenciaSemanal,
