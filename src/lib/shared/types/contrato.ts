@@ -43,3 +43,17 @@ export interface Contrato {
   assinaturaId?: UUID;
   assinaturaStatus?: StatusAssinatura;
 }
+
+export interface ContratoEdicaoResumo {
+  contratoId: UUID;
+  tenantId: UUID;
+  alunoId?: UUID;
+  dataInicioAnterior: LocalDate;
+  dataInicioNova: LocalDate;
+  dataFimAnterior: LocalDate;
+  dataFimNova: LocalDate;
+  duracaoEfetivaDias: number;
+  diasCreditoPreservados: number;
+  motivo: string;
+  auditId: UUID;
+}

@@ -36,6 +36,7 @@ import { computeClienteBanners } from "./cliente-status-banners";
 import { ClienteSinaisRail, buildSinaisCliente } from "./cliente-sinais-rail";
 import { ClienteAcoesDrawer } from "./cliente-acoes-drawer";
 import { ClienteFrequenciaCard } from "./cliente-frequencia-card";
+import { ClienteCreditoDiasPanel } from "./cliente-credito-dias-panel";
 import { ClientePlanoCard } from "./cliente-plano-card";
 import { ClienteRiscoCard } from "./cliente-risco-card";
 import { ClienteEditDrawer } from "./cliente-edit-drawer";
@@ -587,19 +588,27 @@ export default function ClienteDetalhePage() {
           )}
 
           {w.tab === "matriculas" && (
-            <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="font-display text-base font-bold">Histórico de contratos</h2>
-              <div className="mt-3 divide-y divide-border">
-                {w.matriculas.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">Nenhum contrato encontrado</p>}
-                {w.matriculas.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium">{w.planos.find((p) => p.id === m.planoId)?.nome ?? "Plano"}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(m.dataInicio)} → {formatDate(m.dataFim)}</p>
+            <div className="space-y-4">
+              <ClienteCreditoDiasPanel
+                contratoAtivo={w.planoAtivo ?? null}
+                planoNome={w.planoAtivoInfo?.nome}
+                onReload={w.reload}
+              />
+
+              <div className="rounded-xl border border-border bg-card p-5">
+                <h2 className="font-display text-base font-bold">Histórico de contratos</h2>
+                <div className="mt-3 divide-y divide-border">
+                  {w.matriculas.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">Nenhum contrato encontrado</p>}
+                  {w.matriculas.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between py-3">
+                      <div>
+                        <p className="text-sm font-medium">{w.planos.find((p) => p.id === m.planoId)?.nome ?? "Plano"}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(m.dataInicio)} → {formatDate(m.dataFim)}</p>
+                      </div>
+                      <StatusBadge status={m.status} />
                     </div>
-                    <StatusBadge status={m.status} />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}

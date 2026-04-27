@@ -3,6 +3,7 @@
 import {
   cancelarContratoApi,
   createContratoApi,
+  editarContratoApi,
   listContratosDashboardMensalApi,
   listContratosApi,
   listContratosByAlunoApi,
@@ -115,3 +116,11 @@ export async function renovarContratoService(input: {
   return renovarContratoApi(input);
 }
 
+export async function editarContratoService(input: {
+  tenantId: string;
+  id: string;
+  dataInicio: string;
+  motivo: string;
+}) {
+  return editarContratoApi(input);
+}

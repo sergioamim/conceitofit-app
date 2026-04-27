@@ -10,6 +10,7 @@ export * from './types/prospect';
 export * from './types/plano';
 export * from './types/pagamento';
 export * from './types/contrato';
+export * from './types/contrato-credito-dias';
 export * from './types/venda';
 export * from './types/tenant';
 export * from './types/financial';

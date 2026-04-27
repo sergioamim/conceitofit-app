@@ -4,6 +4,7 @@ export * from './prospect';
 export * from './plano';
 export * from './pagamento';
 export * from './contrato';
+export * from './contrato-credito-dias';
 export * from './venda';
 export * from './tenant';
 export * from './lead-b2b';

@@ -140,44 +140,44 @@ export async function listarCapacidades(dominio: string): Promise<CapacidadesPor
 // ---------------------------------------------------------------------------
 
 /** `GET /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}` */
-export async function listarPerfisUsuario(userId: number): Promise<UsuarioPerfil[]> {
+export async function listarPerfisUsuario(userId: number | string): Promise<UsuarioPerfil[]> {
   return apiRequest<UsuarioPerfil[]>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}`,
   });
 }
 
 /** `GET /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}` */
 export async function obterPerfilUsuarioTenant(
-  userId: number,
+  userId: number | string,
   tenantId: string,
 ): Promise<UsuarioPerfilDetalhe> {
   return apiRequest<UsuarioPerfilDetalhe>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}`,
   });
 }
 
 /** `GET /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/capacidades` */
 export async function obterCapacidadesEfetivas(
-  userId: number,
+  userId: number | string,
   tenantId: string,
 ): Promise<string[]> {
   return apiRequest<string[]>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/capacidades`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}/capacidades`,
   });
 }
 
 /** `POST /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/atribuir` */
 export async function atribuirPerfil(
-  userId: number,
+  userId: number | string,
   tenantId: string,
   perfilId: string,
 ): Promise<UsuarioPerfil> {
   return apiRequest<UsuarioPerfil>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/atribuir`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}/atribuir`,
     method: "POST",
     body: { perfilId },
   });
@@ -185,7 +185,7 @@ export async function atribuirPerfil(
 
 /** `POST /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/override` */
 export async function adicionarOverride(
-  userId: number,
+  userId: number | string,
   tenantId: string,
   capacidadeKey: string,
   tipo: "GRANT" | "DENY",
@@ -193,7 +193,7 @@ export async function adicionarOverride(
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/override`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}/override`,
     method: "POST",
     body: { capacidadeKey, tipo, motivo },
   });
@@ -201,13 +201,13 @@ export async function adicionarOverride(
 
 /** `DELETE /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/override/{capacidadeKey}` */
 export async function removerOverride(
-  userId: number,
+  userId: number | string,
   tenantId: string,
   capacidadeKey: string,
 ): Promise<void> {
   await apiRequest<void>({
     ...GA_API_OPTIONS,
-    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${userId}/tenant/${encodeURIComponent(tenantId)}/override/${encodeURIComponent(capacidadeKey)}`,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}/override/${encodeURIComponent(capacidadeKey)}`,
     method: "DELETE",
   });
 }

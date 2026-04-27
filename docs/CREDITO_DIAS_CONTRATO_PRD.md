@@ -1,6 +1,7 @@
 # Crédito de dias em contrato — PRD
 
-**Status:** proposto (2026-04-24) — implementação pendente.
+**Status:** parcialmente entregue.
+Backend Wave 1 implementado em 2026-04-27; UX web ainda pendente.
 **Autor:** levantado por CEO em sessão de 2026-04-24.
 **Prioridade:** média. Cria gancho de compensação operacional hoje feito no braço.
 
@@ -38,8 +39,8 @@ Ambas precisam:
 - Registrar **quem** autorizou, **quando**, **quantos dias**, **motivo**
   (texto livre obrigatório).
 - Refletir imediatamente no **vencimento** do contrato ativo do cliente.
-- Notificar o cliente (push/email, conforme canal padrão) — opcional por
-  flag na própria ação.
+- Notificação ao cliente fica fora da Wave 1. O backend atual grava
+  `notificar_cliente=false` e não expõe flag de envio nesta etapa.
 - Ficar visível no **histórico do contrato** e no **extrato financeiro**
   do cliente.
 - Ser **reversível por 7 dias** via ação "Estornar crédito" (mesma
@@ -116,13 +117,12 @@ Payload `POST /lote`:
 }
 ```
 
-## Telas (futuras)
+## Telas
 
-1. **Individual** — dentro do drawer do contrato do cliente:
+1. **Individual** — dentro da página do cliente, aba de contratos:
    botão "Creditar dias" → modal simples com:
    - Dias (1–30)
    - Motivo (textarea, ≥20 chars)
-   - Toggle "Notificar cliente"
    - Preview: "Novo vencimento: 12/08/2026"
    - Confirmar
 
@@ -134,8 +134,8 @@ Payload `POST /lote`:
    - Double-confirm com senha do usuário
    - Após envio: job assíncrono + status em tempo real
 
-3. **Histórico de créditos** — aba no perfil do cliente + dashboard
-   admin com lotes dos últimos 90 dias.
+3. **Histórico de créditos** — seção na aba de contratos do perfil do
+   cliente. Dashboard/lotes admin continuam para waves futuras.
 
 ## Auditoria
 
@@ -150,7 +150,9 @@ Retention: 5 anos (alinhado com receita diferida e auditoria fiscal).
 
 ## Notificação ao cliente
 
-Usar adapter de notificação existente. Template:
+Planejada para Wave 2. Não entra na entrega atual.
+
+Template alvo:
 > Oi {{nome}}! A {{academia}} creditou {{dias}} dias no seu contrato.
 > Motivo: {{motivo_publico}}. Novo vencimento: {{novo_vencimento}}.
 
@@ -184,7 +186,7 @@ emissor.
 ## Plano de corte
 
 - **Wave 1**: crédito individual + histórico + estorno. Sem notificação.
-  (Entrega valor imediato aos operadores.)
+  Backend já entregue; FE web ainda em implementação.
 - **Wave 2**: notificação ao cliente + template curado.
 - **Wave 3**: crédito em massa por unidade (ADMIN_UNIDADE).
 - **Wave 4**: crédito em massa por rede (SUPER_USER) com double-confirm.

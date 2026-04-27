@@ -1,4 +1,4 @@
-import type { Aluno, Contrato, PaginatedResult, PagamentoResumo, Plano, TipoFormaPagamento } from "@/lib/types";
+import type { Aluno, Contrato, ContratoEdicaoResumo, PaginatedResult, PagamentoResumo, Plano, TipoFormaPagamento } from "@/lib/types";
 import { ApiRequestError, apiRequest, apiRequestWithMeta } from "./http";
 
 export type ContratoApiResponse = {
@@ -39,6 +39,8 @@ export type ContratoApiResponse = {
     formaPagamento?: TipoFormaPagamento | null;
   } | null;
 };
+
+export type ContratoEdicaoResumoApiResponse = Partial<ContratoEdicaoResumo>;
 
 const LIST_ADESOES_PATH = "/api/v1/comercial/adesoes";
 const LIST_MATRICULAS_PATH = "/api/v1/comercial/matriculas";
@@ -108,6 +110,13 @@ export type CreateContratoApiInput = {
   observacoes?: string;
   convenioId?: string;
   dataPagamento?: string;
+};
+
+export type EditarContratoApiInput = {
+  tenantId?: string;
+  id: string;
+  dataInicio: string;
+  motivo: string;
 };
 
 const toNumber = (value: unknown, fallback = 0): number => {
@@ -538,4 +547,43 @@ export async function signContratoApi(input: {
     },
   });
   return normalizeContratoApiResponse(response);
+}
+
+function normalizeContratoEdicaoResumoApiResponse(
+  input: ContratoEdicaoResumoApiResponse,
+): ContratoEdicaoResumo {
+  return {
+    contratoId: typeof input.contratoId === "string" ? input.contratoId : "",
+    tenantId: typeof input.tenantId === "string" ? input.tenantId : "",
+    alunoId: typeof input.alunoId === "string" ? input.alunoId : undefined,
+    dataInicioAnterior:
+      typeof input.dataInicioAnterior === "string" ? input.dataInicioAnterior : "",
+    dataInicioNova:
+      typeof input.dataInicioNova === "string" ? input.dataInicioNova : "",
+    dataFimAnterior:
+      typeof input.dataFimAnterior === "string" ? input.dataFimAnterior : "",
+    dataFimNova:
+      typeof input.dataFimNova === "string" ? input.dataFimNova : "",
+    duracaoEfetivaDias: toNumber(input.duracaoEfetivaDias),
+    diasCreditoPreservados: toNumber(input.diasCreditoPreservados),
+    motivo: typeof input.motivo === "string" ? input.motivo : "",
+    auditId: typeof input.auditId === "string" ? input.auditId : "",
+  };
+}
+
+export async function editarContratoApi(
+  input: EditarContratoApiInput,
+): Promise<ContratoEdicaoResumo> {
+  const response = await apiRequest<ContratoEdicaoResumoApiResponse>({
+    path: `/api/v1/contratos/${encodeURIComponent(input.id)}`,
+    method: "PUT",
+    query: {
+      tenantId: input.tenantId,
+    },
+    body: {
+      dataInicio: input.dataInicio,
+      motivo: input.motivo,
+    },
+  });
+  return normalizeContratoEdicaoResumoApiResponse(response);
 }
