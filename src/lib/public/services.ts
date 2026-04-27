@@ -112,6 +112,7 @@ export type PublicTenantContext = {
 
 export type PublicCheckoutSummary = {
   checkoutId: string;
+  adesaoToken?: string;
   tenantId: string;
   tenantRef: string;
   alunoId: string;
@@ -614,25 +615,21 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
     meioPagamento: meioPagamentoMap[input.pagamento.formaPagamento] ?? "OUTRO",
   });
 
-  // 3. Se aceitou contrato e tem OTP disponível, assinar automaticamente
+  // 3. Se o usuário pediu assinatura imediata, apenas dispara o OTP.
+  // A assinatura real depende do código recebido pelo candidato.
   if (
     input.aceitarContratoAgora &&
     adesao.contratoStatus === "PENDENTE"
   ) {
     try {
       await enviarOtpContrato(adesao.id, adesaoToken);
-      // OTP automático com código "000000" para assinatura digital imediata
-      await assinarContrato(adesao.id, adesaoToken, {
-        otp: "auto-sign",
-        evidenciasJson: JSON.stringify({ aceiteDigital: true, timestamp: now() }),
-      });
     } catch (error) {
-      logger.warn("[PublicServices/Checkout] Auto-signature failed, continuing checkout", { error });
+      logger.warn("[PublicServices/Checkout] OTP dispatch failed, continuing checkout", { error });
     }
   }
 
   // 4. Converter para PublicCheckoutSummary (compatibilidade)
-  return convertAdesaoToCheckoutSummary(adesao, context, plano, adesaoToken);
+  return convertAdesaoToCheckoutSummary(adesao, context, plano, adesaoToken, input.pagamento.formaPagamento);
 }
 
 export async function getPublicCheckoutStatus(params: {
@@ -652,17 +649,25 @@ export async function getPublicCheckoutStatus(params: {
   return convertAdesaoToCheckoutSummary(adesao, context, plano, token);
 }
 
+export async function requestPublicCheckoutContractOtp(params: {
+  checkoutId: string;
+  adesaoToken?: string;
+  destino?: string;
+}): Promise<{ otpValidoAte: string; enviadoEm: string }> {
+  const token = params.adesaoToken ?? "";
+  return enviarOtpContrato(params.checkoutId, token, params.destino ? { destino: params.destino } : undefined);
+}
+
 export async function signPublicCheckoutContract(params: {
   tenantRef?: string | null;
   checkoutId: string;
   adesaoToken?: string;
+  otp: string;
 }): Promise<PublicCheckoutSummary> {
   const token = params.adesaoToken ?? "";
 
-  // Envia OTP e assina via endpoints reais do backend
-  await enviarOtpContrato(params.checkoutId, token);
   const adesao = await assinarContrato(params.checkoutId, token, {
-    otp: "auto-sign",
+    otp: params.otp.trim(),
     evidenciasJson: JSON.stringify({ aceiteDigital: true, timestamp: now() }),
   });
 
@@ -704,6 +709,7 @@ function convertAdesaoToCheckoutSummary(
   context: PublicTenantContext,
   plano: Plano | undefined,
   _adesaoToken: string,
+  fallbackFormaPagamento: TipoFormaPagamento = "PIX",
 ): PublicCheckoutSummary {
   const pagamentoStatus: StatusPagamento =
     adesao.pagamentoStatus === "LIQUIDADO" || adesao.pagamentoStatus === "CAPTURADO"
@@ -721,6 +727,7 @@ function convertAdesaoToCheckoutSummary(
 
   return {
     checkoutId: adesao.id,
+    adesaoToken: _adesaoToken || undefined,
     tenantId: adesao.tenantId,
     tenantRef: context.tenant.subdomain ?? context.tenant.id,
     alunoId: adesao.alunoId ?? "",
@@ -728,7 +735,7 @@ function convertAdesaoToCheckoutSummary(
     vendaId: adesao.id,
     planoId: adesao.planoId ?? "",
     planoNome: plano?.nome ?? "",
-    formaPagamento: "PIX" as TipoFormaPagamento,
+    formaPagamento: fallbackFormaPagamento,
     total: plano?.valor ?? 0,
     pagamentoStatus,
     contratoStatus,

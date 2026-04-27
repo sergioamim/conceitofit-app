@@ -5,11 +5,13 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePublicTenants } from "@/lib/query/use-public-tenants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import {
   buildPublicJourneyHref,
   confirmPublicCheckoutPayment,
   getPublicCheckoutStatus,
+  requestPublicCheckoutContractOtp,
   signPublicCheckoutContract,
   type PublicCheckoutSummary,
 } from "@/lib/public/services";
@@ -40,6 +42,9 @@ function PendenciasPublicasPageContent() {
   const [summary, setSummary] = useState<PublicCheckoutSummary | null>(null);
   const [saving, setSaving] = useState<"" | "PAYMENT" | "CONTRACT">("");
   const [pageError, setPageError] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
+  const [otpStep, setOtpStep] = useState<"idle" | "sending" | "enter">("idle");
   // Sanitiza HTML do contrato — vem do backend mas pode conter dados de input do usuário
   const safeContractHtml = useMemo(
     () => (summary?.contractHtml ? sanitizeHtml(summary.contractHtml) : undefined),
@@ -61,6 +66,7 @@ function PendenciasPublicasPageContent() {
         const next = await getPublicCheckoutStatus({
           tenantRef: resolvedTenantRef,
           checkoutId: currentCheckoutId,
+          adesaoToken: draft.checkout?.adesaoToken,
         });
         if (!active) return;
         setSummary(next);
@@ -76,7 +82,7 @@ function PendenciasPublicasPageContent() {
     return () => {
       active = false;
     };
-  }, [checkoutId, context, draft.checkout?.checkoutId, persistDraft, resolvedTenantRef]);
+  }, [checkoutId, context, draft.checkout?.adesaoToken, draft.checkout?.checkoutId, persistDraft, resolvedTenantRef]);
 
   if (loading) {
     return (
@@ -104,13 +110,36 @@ function PendenciasPublicasPageContent() {
       const next = await signPublicCheckoutContract({
         tenantRef: resolvedTenantRef,
         checkoutId: summary.checkoutId,
+        adesaoToken: summary.adesaoToken ?? draft.checkout?.adesaoToken,
+        otp: otpCode,
       });
       setSummary(next);
       persistDraft({ checkout: next });
+      setOtpCode("");
+      setOtpMessage("");
+      setOtpStep("idle");
     } catch (signError) {
       setPageError(signError instanceof Error ? signError.message : "Falha ao assinar contrato.");
     } finally {
       setSaving("");
+    }
+  }
+
+  async function handleSendOtp() {
+    if (!summary) return;
+    setOtpStep("sending");
+    setPageError("");
+    try {
+      const response = await requestPublicCheckoutContractOtp({
+        checkoutId: summary.checkoutId,
+        adesaoToken: summary.adesaoToken ?? draft.checkout?.adesaoToken,
+        destino: summary.alunoEmail,
+      });
+      setOtpMessage(`Código enviado. Válido até ${new Date(response.otpValidoAte).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`);
+      setOtpStep("enter");
+    } catch (otpError) {
+      setOtpStep("idle");
+      setPageError(otpError instanceof Error ? otpError.message : "Falha ao enviar código de assinatura.");
     }
   }
 
@@ -122,6 +151,7 @@ function PendenciasPublicasPageContent() {
       const next = await confirmPublicCheckoutPayment({
         tenantRef: resolvedTenantRef,
         checkoutId: summary.checkoutId,
+        adesaoToken: summary.adesaoToken ?? draft.checkout?.adesaoToken,
       });
       setSummary(next);
       persistDraft({ checkout: next });
@@ -209,15 +239,59 @@ function PendenciasPublicasPageContent() {
                     </p>
                     {summary.contratoStatus === "PENDENTE_ASSINATURA" ? (
                       summary.allowDigitalSignature ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="mt-4 w-full"
-                          onClick={handleContract}
-                          disabled={saving === "CONTRACT"}
-                        >
-                          {saving === "CONTRACT" ? "Assinando..." : "Assinar contrato agora"}
-                        </Button>
+                        <div className="mt-4 space-y-3">
+                          {otpStep === "idle" ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="w-full"
+                              onClick={handleSendOtp}
+                              disabled={saving === "CONTRACT"}
+                            >
+                              Enviar código para assinatura
+                            </Button>
+                          ) : null}
+
+                          {otpStep === "sending" ? (
+                            <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+                              Enviando código OTP...
+                            </div>
+                          ) : null}
+
+                          {otpStep === "enter" ? (
+                            <div className="space-y-3">
+                              <div className="rounded-xl border border-border/70 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
+                                {otpMessage || "Digite o código recebido por e-mail para concluir a assinatura."}
+                              </div>
+                              <Input
+                                type="text"
+                                value={otpCode}
+                                onChange={(event) => setOtpCode(event.target.value)}
+                                placeholder="Código OTP"
+                                inputMode="numeric"
+                              />
+                              <div className="flex gap-3">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="flex-1 border-border bg-transparent"
+                                  onClick={handleSendOtp}
+                                  disabled={saving === "CONTRACT"}
+                                >
+                                  Reenviar código
+                                </Button>
+                                <Button
+                                  type="button"
+                                  className="flex-1"
+                                  onClick={handleContract}
+                                  disabled={saving === "CONTRACT" || !otpCode.trim()}
+                                >
+                                  {saving === "CONTRACT" ? "Assinando..." : "Confirmar assinatura"}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
                       ) : (
                         <div className="mt-4 rounded-xl border border-border/70 bg-background/40 px-3 py-2 text-sm text-muted-foreground">
                           Assinatura presencial exigida pela unidade.
