@@ -103,7 +103,7 @@
 - Host/subdomínio storefront:
   - resolvido em `src/proxy.ts` por chamada ao backend público
 - Dependências documentadas de produção/local:
-  - PostgreSQL, MinIO, Cloud Run/Vercel, conforme `docs/RUNBOOK.md`
+  - VPS com Docker Compose, PostgreSQL, MinIO e observabilidade, conforme `docs/RUNBOOK.md`
 
 ## Observações de build e runtime
 

@@ -2,56 +2,48 @@
 
 ## Visao Geral
 
-O projeto utiliza dois ambientes no Vercel, controlados via GitHub Actions:
+O unico ambiente operacional em uso hoje e a VPS do Conceito Fit.
 
-| Ambiente   | Branch/Trigger          | URL                         | Approval |
-|-----------|------------------------|-----------------------------|----------|
-| Staging   | Push na `main`         | Preview URL (Vercel)        | Nao      |
-| Production| Manual dispatch ou tag | URL de producao (Vercel)    | Sim      |
+| Ambiente | Runtime | URL | Deploy |
+| --- | --- | --- | --- |
+| Sandbox/Prod | Docker Compose na VPS | `https://app.conceito.fit` | GHCR + SSH + `docker compose` |
 
-## Variaveis de Ambiente
+Os fluxos antigos de Vercel e Cloud Run foram removidos do repositorio. Nao
+configure `VERCEL_*` ou `GCP_*` para deploy deste app.
 
-As variaveis sao configuradas no dashboard da Vercel com escopos separados:
+## Como a VPS roda o frontend
 
-| Variavel                  | Preview (Staging)              | Production                    |
-|--------------------------|-------------------------------|-------------------------------|
-| `NEXT_PUBLIC_APP_ENV`    | `staging`                     | `production`                  |
-| `NEXT_PUBLIC_API_URL`    | URL do backend staging        | URL do backend producao       |
-| `DATABASE_URL`           | String conexao DB staging     | String conexao DB producao    |
-| `BACKEND_PROXY_TARGET`   | URL backend staging           | URL backend producao          |
+O frontend roda como container Docker no compose de producao mantido no repo
+backend:
 
-## GitHub Secrets Necessarios
+- `academia-java/deploy/docker-compose.prod.yml`
+- servico `frontend`
+- imagem `ghcr.io/sergioamim/conceito-frontend:${FRONTEND_TAG}`
 
-Configurar no repositorio GitHub (Settings > Secrets and variables > Actions):
+O backend ativo e exposto para o frontend pelo alias Docker `backend`, mantido
+pelos scripts de deploy do backend para respeitar o blue/green.
 
-- `VERCEL_TOKEN` — Token de acesso da Vercel (Account Settings > Tokens)
-- `VERCEL_ORG_ID` — ID da organizacao Vercel (Project Settings > General)
-- `VERCEL_PROJECT_ID` — ID do projeto Vercel (Project Settings > General)
+## Variaveis principais
 
-## Fluxo de Deploy
+| Variavel | Onde vive | Uso |
+| --- | --- | --- |
+| `FRONTEND_TAG` | `/opt/conceito-fit/.env.prod` na VPS | Tag da imagem do frontend |
+| `NEXT_PUBLIC_API_BASE_URL` | `/opt/conceito-fit/.env.prod` na VPS | URL publica da API |
+| `BACKEND_PROXY_TARGET` | compose de producao | Alias interno do backend ativo |
+| `NEXT_PUBLIC_SENTRY_DSN` | `/opt/conceito-fit/.env.prod` na VPS | Sentry do frontend, opcional |
 
-```
-Push main -> GitHub Actions (staging-deploy.yml)
-                 |
-                 v
-         Vercel Preview Deploy (staging)
-                 |
-                 v
-        Validacao manual em staging
-                 |
-                 v
-  workflow_dispatch ou tag v* -> GitHub Actions (production-deploy.yml)
-                 |
-                 v
-        Aprovacao manual (environment: production)
-                 |
-                 v
-         Vercel Production Deploy
+## Deploy
+
+O deploy da stack VPS deve ser orquestrado pelo pipeline/scripts do backend,
+porque o compose de producao, Caddy e blue/green ficam em `academia-java`.
+
+Fluxo esperado:
+
+```bash
+cd ../academia-java
+./deploy/deploy-bluegreen.sh conceito-fit status
 ```
 
-## Como fazer deploy em producao
-
-1. Valide as mudancas no ambiente de staging
-2. Va em Actions > "Deploy Production" > "Run workflow" e selecione a branch `main`
-   - OU crie uma tag: `git tag v1.0.0 && git push origin v1.0.0`
-3. Aprove o deploy no GitHub Actions quando solicitado
+Para atualizar somente o frontend, publique a imagem
+`ghcr.io/sergioamim/conceito-frontend:<tag>`, atualize `FRONTEND_TAG` na VPS e
+recrie o servico `frontend` pelo compose de producao.

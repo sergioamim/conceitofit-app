@@ -30,9 +30,9 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# A porta padrão do Cloud Run é 8080, mas o Next.js costuma usar 3000.
+# A VPS usa porta 3000 para o container do frontend no compose de producao.
 # O script de inicialização do standalone respeita a variável PORT.
-ENV PORT=8080
+ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 RUN addgroup --system --gid 1001 nodejs

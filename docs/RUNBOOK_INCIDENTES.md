@@ -33,11 +33,11 @@ Todos os requests API falham com 500/502/503. Página de pagamentos mostra loadi
 1. Acesse `/api/health` — verifique `backend.status`
 2. Se `unreachable`: backend está down ou rede bloqueada
 3. Se `unhealthy`: backend está up mas com erro interno
-4. Verifique Cloud Run / GCP Console do backend Java
+4. Verifique a VPS e os containers Docker do backend Java
 
 ### Ação
-1. Verifique se o backend está respondendo: `curl -v https://SEU_BACKEND/actuator/health/liveness`
-2. Se down, reinicie o serviço no Cloud Run
+1. Verifique se o backend está respondendo: `curl -v https://api.conceito.fit/actuator/health/liveness`
+2. Se down, confira o slot ativo e reinicie/rollback via `academia-java/deploy/deploy-bluegreen.sh`
 3. Verifique logs do backend para causa raiz
 4. Comunique aos usuários via status page se disponível
 

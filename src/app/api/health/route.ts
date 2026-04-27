@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 /**
  * GET /api/health
  *
- * Task 471: Health check endpoint para Cloud Run e monitoramento.
+ * Task 471: Health check endpoint para VPS e monitoramento.
  * Retorna status do app, Sentry, backend e métricas básicas.
  */
 export async function GET() {
