@@ -378,13 +378,22 @@ export async function adminEntrarComoUnidadeApi(input: AdminEntrarComoUnidadeReq
     preserveTenantContext: true,
     fallbackActiveTenantId: input.tenantId,
   });
-  saveAuthSession(session);
+  // O handoff Admin -> Operacional precisa ficar consistente mesmo quando o backend
+  // ainda não refletiu `session_mode`/claims novos no payload imediato do browser.
+  // Se mantivermos o modo anterior (`BACKOFFICE_ADMIN`), o shell operacional se
+  // protege redirecionando de volta para `/admin`.
+  const operationalSession: AuthSession = {
+    ...session,
+    activeTenantId: session.activeTenantId ?? input.tenantId,
+    sessionMode: "BACKOFFICE_TO_OPERATIONAL",
+  };
+  saveAuthSession(operationalSession);
   void import("@/lib/shared/analytics")
     .then(({ trackLogin }) => {
-      trackLogin(session.activeTenantId, session.userId);
+      trackLogin(operationalSession.activeTenantId, operationalSession.userId);
     })
     .catch(() => undefined);
-  return session;
+  return operationalSession;
 }
 
 export async function refreshTokenApi(refreshToken?: string): Promise<AuthSession> {
