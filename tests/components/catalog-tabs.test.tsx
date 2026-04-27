@@ -27,6 +27,7 @@ function makePlano(overrides: Partial<Plano> = {}): Plano {
     atividades: [],
     beneficios: [],
     destaque: false,
+    permiteVendaOnline: true,
     ativo: true,
     ...overrides,
   };

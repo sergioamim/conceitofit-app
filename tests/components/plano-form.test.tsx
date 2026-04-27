@@ -329,6 +329,14 @@ describe("PlanoForm", () => {
       const checkbox = screen.getByLabelText(/exibir plano como destaque/i);
       expect(checkbox).toBeInTheDocument();
     });
+
+    it("checkbox venda online disponivel e habilitado por padrao", () => {
+      renderPlanoForm();
+
+      const checkbox = screen.getByLabelText(/permitir venda online na storefront/i);
+      expect(checkbox).toBeInTheDocument();
+      expect(checkbox).toBeChecked();
+    });
   });
 
   describe("acoes", () => {

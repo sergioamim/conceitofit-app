@@ -173,10 +173,20 @@ test("mantém storefront por slug, rewrite por subdomínio e not-found público"
   await page.goto("/storefront/academia-demo", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Academia Demo" })).toBeVisible();
   await expect(page.getByText("Seu treino começa aqui.")).toBeVisible();
+  await expect(page.getByText("Plano Demo Premium")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Assinar agora" })).toHaveAttribute(
+    "href",
+    /\/adesao\/cadastro\?tenant=tenant-demo&plan=plano-demo-premium/,
+  );
 
   await page.goto(`http://academia-demo.localhost:${PLAYWRIGHT_BASE_ORIGIN.port}/`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Academia Demo" })).toBeVisible();
   await expect(page.getByText("Seu treino começa aqui.")).toBeVisible();
+  await expect(page.getByText("Plano Demo Premium")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Assinar agora" })).toHaveAttribute(
+    "href",
+    /\/adesao\/cadastro\?tenant=tenant-demo&plan=plano-demo-premium/,
+  );
 
   await page.goto(`http://nao-existe.localhost:${PLAYWRIGHT_BASE_ORIGIN.port}/qualquer`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Storefront não encontrada" })).toBeVisible();

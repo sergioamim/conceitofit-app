@@ -5,7 +5,6 @@ import {
   Plus, 
   Search, 
   Filter, 
-  MoreHorizontal, 
   UserPlus, 
   Users, 
   CreditCard, 
@@ -21,7 +20,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/shared/table-skeleton";
 import { NovoClienteWizard } from "@/components/shared/novo-cliente-wizard";
@@ -37,10 +36,22 @@ import {
 import { cn } from "@/lib/utils";
 
 import { useClientesWorkspace } from "../../clientes/components/use-clientes-workspace";
-import { ClientesFilterBar } from "../../clientes/components/clientes-filter-bar";
-import { ClienteResumoDialog } from "../../clientes/components/cliente-resumo-dialog";
 
-function MetricCardV2({ label, value, icon: Icon, tone, description }: any) {
+type MetricTone = "accent" | "teal" | "warning" | "danger";
+
+function MetricCardV2({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  description,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ComponentType<{ size?: number }>;
+  tone: MetricTone;
+  description?: string;
+}) {
   const tones = {
     accent: "text-gym-accent bg-gym-accent/10 border-gym-accent/20",
     teal: "text-gym-teal bg-gym-teal/10 border-gym-teal/20",
@@ -93,8 +104,6 @@ function ClientesV2PageContent() {
 
   return (
     <div className="space-y-8 pb-10">
-      {ws.ConfirmDialog}
-
       {ws.wizard.isOpen ? (
         <NovoClienteWizard
           open
@@ -184,7 +193,7 @@ function ClientesV2PageContent() {
               <Filter className="size-4 mr-2" />
               Filtros Avançados
             </Button>
-            <Select value={ws.sortBy} onValueChange={(v: any) => ws.setSortBy(v)}>
+            <Select value={ws.sortBy} onValueChange={(v: "cadastro" | "nome") => ws.setSortBy(v)}>
               <SelectTrigger className="h-11 rounded-xl border-border/60 w-44 bg-background/50">
                 <SelectValue placeholder="Ordenar por" />
               </SelectTrigger>
@@ -233,10 +242,7 @@ function ClientesV2PageContent() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.03 }}
-                      onClick={() => {
-                        ws.setClienteResumo(aluno);
-                        ws.resumoDialog.open();
-                      }}
+                      onClick={() => ws.router.push(`/clientes/${aluno.id}`)}
                       className="group border-b border-border/20 hover:bg-primary/5 transition-colors cursor-pointer"
                     >
                       <TableCell className="py-5 pl-6">
@@ -275,7 +281,16 @@ function ClientesV2PageContent() {
                       </TableCell>
                       <TableCell className="py-5 pr-6 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" aria-label="Ver detalhes do aluno" className="size-9 rounded-xl hover:bg-primary/10 hover:text-primary">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Ver detalhes do aluno"
+                            className="size-9 rounded-xl hover:bg-primary/10 hover:text-primary"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              ws.router.push(`/clientes/${aluno.id}`);
+                            }}
+                          >
                             <ArrowRight size={18} />
                           </Button>
                         </div>
@@ -323,17 +338,6 @@ function ClientesV2PageContent() {
         </div>
       </Card>
 
-      <ClienteResumoDialog
-        isOpen={ws.resumoDialog.isOpen}
-        onOpenChange={ws.resumoDialog.onOpenChange}
-        clienteResumo={ws.clienteResumo}
-        clienteResumoPlano={ws.clienteResumoPlano}
-        clienteResumoBaseHref={ws.clienteResumoBaseHref}
-        liberandoSuspensao={ws.liberandoSuspensao}
-        onLiberarSuspensao={ws.handleLiberarSuspensao}
-        onVerPerfil={ws.handleVerPerfil}
-        onClose={ws.resumoDialog.close}
-      />
     </div>
   );
 }

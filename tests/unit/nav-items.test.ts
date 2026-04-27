@@ -12,11 +12,12 @@ import {
 
 describe("nav-items", () => {
   it("exporta 4 grupos na ordem correta", () => {
-    expect(allGroups).toHaveLength(4);
+    expect(allGroups).toHaveLength(5);
     expect(allGroups.map((g) => g.label)).toEqual([
       "Crescimento",
       "Operação",
       "Financeiro",
+      "Gestão de Acesso",
       "Estratégico",
     ]);
   });
@@ -86,7 +87,14 @@ describe("nav-items", () => {
     expect(hrefs).toContain("/gerencial/bi");
     expect(hrefs).toContain("/gerencial/dre");
     expect(hrefs).toContain("/administrativo/academia");
-    expect(hrefs).toContain("/seguranca/rbac");
+  });
+
+  it("Gestão de Acesso substitui o antigo atalho de RBAC", () => {
+    const accessGroup = allGroups.find((group) => group.label === "Gestão de Acesso");
+    const hrefs = accessGroup?.items.map((item) => item.href) ?? [];
+    expect(hrefs).toContain("/gestao-acessos");
+    expect(hrefs).toContain("/gestao-acessos/usuarios");
+    expect(hrefs).toContain("/gestao-acessos/papeis");
   });
 
   it("Dashboard é marcado como exact", () => {

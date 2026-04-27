@@ -164,7 +164,6 @@ test.describe("administrativo api - atividades", () => {
       expect(calls).toHaveLength(2);
       expect(calls[0]?.method).toBe("POST");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
-        tenantId: "tenant-atividade",
         nome: "Pilates Solo",
         descricao: "Alongamento guiado",
         categoria: "COLETIVA",
@@ -175,7 +174,6 @@ test.describe("administrativo api - atividades", () => {
       });
       expect(calls[1]?.method).toBe("PUT");
       expect(JSON.parse(calls[1]?.body ?? "{}")).toEqual({
-        tenantId: "tenant-atividade",
         nome: "Pilates Solo",
         descricao: "Alongamento guiado",
         categoria: "COLETIVA",

@@ -211,6 +211,37 @@ function handler(request: IncomingMessage, response: ServerResponse) {
     return;
   }
 
+  if (pathname === `/api/v1/publico/storefront/${DEFAULT_SLUG}/planos`) {
+    sendJson(response, 200, {
+      academiaId: "academia-demo",
+      academiaNome: "Academia Demo",
+      academiaSlug: DEFAULT_SLUG,
+      unidades: [
+        {
+          tenantId: DEFAULT_TENANT_ID,
+          nomeUnidade: "Unidade Centro",
+          subdomain: "academia-demo",
+          planos: [
+            {
+              id: "plano-demo-premium",
+              nome: "Plano Demo Premium",
+              slug: "plano-demo-premium",
+              descricao: "Plano de demonstração para a vitrine pública.",
+              tipo: "MENSAL",
+              duracaoDias: 30,
+              valor: 149.9,
+              valorMatricula: 19.9,
+              destaque: true,
+              beneficios: ["Musculação", "Aulas coletivas"],
+              ordem: 1,
+            },
+          ],
+        },
+      ],
+    });
+    return;
+  }
+
   if (pathname === `/api/v1/publico/storefront/${DEFAULT_SLUG}/seo`) {
     sendJson(response, 200, buildSeo(DEFAULT_SLUG));
     return;

@@ -105,6 +105,7 @@ function installPublicJourneyFetchMock() {
             parcelasMaxAnuidade: 1,
             permiteRenovacaoAutomatica: true,
             permiteCobrancaRecorrente: true,
+            permiteVendaOnline: true,
             contratoAssinatura: "AMBAS",
             contratoTemplateHtml:
               "<p>{{NOME_PLANO}}</p><p>{{NOME_CLIENTE}}</p><p>{{CPF_CLIENTE}}</p><p>{{NOME_UNIDADE}}</p>",

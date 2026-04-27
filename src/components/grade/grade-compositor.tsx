@@ -50,6 +50,53 @@ function snapMin(min: number, snap = SNAP_MIN) {
   return Math.round(min / snap) * snap;
 }
 
+type CompositorCard = AtividadeGrade & { atividade: Atividade };
+type CompositorPlacement = { card: CompositorCard; track: number; trackCount: number };
+
+/**
+ * Posiciona cards sobrepostos em "tracks" (colunas) lado a lado.
+ * `trackCount` é local ao cluster de overlap — cards isolados mantém largura total.
+ */
+function assignCompositorTracks(cards: CompositorCard[]): CompositorPlacement[] {
+  if (cards.length === 0) return [];
+  const sorted = [...cards].sort((a, b) => {
+    const aIni = toMinutes(a.horaInicio);
+    const bIni = toMinutes(b.horaInicio);
+    if (aIni !== bIni) return aIni - bIni;
+    return a.duracaoMinutos - b.duracaoMinutos;
+  });
+  const out: CompositorPlacement[] = [];
+
+  let cluster: { card: CompositorCard; track: number }[] = [];
+  let clusterEnd = 0;
+  let trackEnds: number[] = [];
+
+  function flush() {
+    const trackCount = trackEnds.length;
+    cluster.forEach(({ card, track }) => out.push({ card, track, trackCount }));
+    cluster = [];
+    trackEnds = [];
+    clusterEnd = 0;
+  }
+
+  for (const card of sorted) {
+    const ini = toMinutes(card.horaInicio);
+    const fim = ini + card.duracaoMinutos;
+    if (cluster.length > 0 && ini >= clusterEnd) flush();
+    let track = trackEnds.findIndex((end) => end <= ini);
+    if (track === -1) {
+      trackEnds.push(fim);
+      track = trackEnds.length - 1;
+    } else {
+      trackEnds[track] = fim;
+    }
+    cluster.push({ card, track });
+    if (fim > clusterEnd) clusterEnd = fim;
+  }
+  flush();
+  return out;
+}
+
 export interface GradeCompositorDropPayload {
   atividadeId: string;
   dia: DiaSemana;
@@ -58,6 +105,9 @@ export interface GradeCompositorDropPayload {
 
 export interface GradeCompositorMovePayload {
   gradeId: string;
+  /** Dia da coluna de onde o card foi arrastado (origem). */
+  sourceDia: DiaSemana;
+  /** Dia da coluna onde o card foi solto (destino). */
   dia: DiaSemana;
   horaInicio: string;
 }
@@ -176,6 +226,7 @@ export function GradeCompositor({
     e.preventDefault();
     const atividadeId = e.dataTransfer.getData("text/atividade-id");
     const gradeId = e.dataTransfer.getData("text/grade-id");
+    const sourceDia = e.dataTransfer.getData("text/grade-source-dia") as DiaSemana | "";
     const horaInicio = pointToHora(dia, e.clientY);
     setGhost(null);
     setDraggingAtividadeId(null);
@@ -183,8 +234,8 @@ export function GradeCompositor({
     if (!horaInicio) return;
     if (atividadeId) {
       onDropNewAtividade({ atividadeId, dia, horaInicio });
-    } else if (gradeId) {
-      onMoveExisting({ gradeId, dia, horaInicio });
+    } else if (gradeId && sourceDia) {
+      onMoveExisting({ gradeId, sourceDia, dia, horaInicio });
     }
   }
 
@@ -206,7 +257,7 @@ export function GradeCompositor({
         </div>
 
         <div className="overflow-auto">
-          <div className="min-w-[1080px]">
+          <div className="min-w-[1300px]">
             <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-border">
               <div />
               {DIA_ORDER.map((dia) => (
@@ -333,53 +384,64 @@ function DayColumn({
         />
       ))}
 
-      {cards.map((c) => {
+      {assignCompositorTracks(cards).map(({ card: c, track, trackCount }) => {
         const cor = getModalidadeCor(c.atividade);
         const top = ((toMinutes(c.horaInicio) - hourIni * 60) / 60) * PX_HORA;
         const heightPx = (c.duracaoMinutos / 60) * PX_HORA - 3;
+        const widthPct = 100 / trackCount;
         const sala = c.salaId ? salaMap.get(c.salaId) : null;
         const prof = c.funcionarioId ? funcionarioMap.get(c.funcionarioId) : null;
+        const tight = trackCount >= 3;
+        const compact = trackCount === 2;
         return (
           <button
             key={`${c.id}-${dia}`}
             type="button"
             draggable
             onClick={() => onCardClick(c)}
-            onDragStart={(e) => onCardDragStart(c, e)}
+            onDragStart={(e) => {
+              onCardDragStart(c, e);
+              e.dataTransfer.setData("text/grade-source-dia", dia);
+            }}
             onDragEnd={onCardDragEnd}
             className={cn(
-              "absolute left-1 right-1 cursor-grab overflow-hidden rounded-md border border-border text-left shadow-sm transition hover:shadow-md active:cursor-grabbing",
+              "absolute cursor-grab overflow-hidden rounded-md border border-border text-left shadow-sm transition hover:shadow-md active:cursor-grabbing",
               draggingGradeId === c.id && "opacity-40",
             )}
             style={{
               top,
               height: heightPx,
+              left: `calc(${track * widthPct}% + 3px)`,
+              width: `calc(${widthPct}% - 6px)`,
               background: cor.bg,
               borderLeftColor: cor.cor,
               borderLeftWidth: 3,
             }}
             title={`${c.atividade.nome} · ${c.horaInicio}–${c.horaFim || ""}${prof ? ` · ${prof.nome}` : ""}${sala ? ` · ${sala.nome}` : ""}`}
           >
-            <div className="px-2 py-1">
+            <div className={cn(tight ? "px-1 py-0.5" : compact ? "px-1.5 py-1" : "px-2 py-1")}>
               <p
-                className="truncate text-[11px] font-bold leading-tight"
+                className={cn(
+                  "truncate font-bold leading-tight",
+                  tight ? "text-[10px]" : "text-[11px]",
+                )}
                 style={{ color: cor.text }}
               >
                 {c.atividade.nome}
               </p>
               {heightPx >= 36 ? (
                 <p
-                  className="font-mono text-[10px] opacity-80"
+                  className={cn("font-mono opacity-80", tight ? "text-[9px]" : "text-[10px]")}
                   style={{ color: cor.text }}
                 >
                   {c.horaInicio}
                 </p>
               ) : null}
-              {heightPx >= 60 && (prof || sala) ? (
+              {!tight && heightPx >= 60 && (prof || sala) ? (
                 <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
                   {prof?.nome.split(" ")[0] ?? ""}
-                  {prof && sala ? " · " : ""}
-                  {sala?.nome.split("·")[0].trim() ?? ""}
+                  {prof && sala && !compact ? " · " : ""}
+                  {compact ? "" : (sala?.nome.split("·")[0].trim() ?? "")}
                 </p>
               ) : null}
             </div>

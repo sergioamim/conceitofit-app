@@ -21,6 +21,7 @@ import {
   trackPerfilTabChange,
 } from "@/lib/shared/analytics";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { VincularAgregadorModal } from "@/components/shared/vincular-agregador-modal";
 
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { bloquearAcessoApi, desbloquearAcessoApi, excluirDadosPessoaisApi, excluirDadosSensiveisApi } from "@/lib/api/alunos";
@@ -45,6 +46,7 @@ import { ClienteTabAvaliacoes } from "./cliente-tab-avaliacoes";
 import { ClienteTabFidelidade } from "./cliente-tab-fidelidade";
 import { ClienteTabDocumentos } from "./cliente-tab-documentos";
 import { ClienteMesclarDialog } from "./cliente-mesclar-dialog";
+import { ExcluirCobrancaModal } from "@/components/shared/excluir-cobranca-modal";
 
 const ReceberPagamentoModal = nextDynamic(
   () => import("@/components/shared/receber-pagamento-modal").then((mod) => mod.ReceberPagamentoModal),
@@ -63,6 +65,8 @@ const motivoOptions = [
   { value: "OUTROS", label: "Outros" },
 ];
 
+type LgpdDialogTipo = "pessoais" | "sensiveis" | null;
+
 export default function ClienteDetalhePage() {
   const w = useClienteWorkspace();
   const drawerAcoesEnabled = usePerfilDrawerAcoesEnabled();
@@ -71,6 +75,15 @@ export default function ClienteDetalhePage() {
   const [acoesOpen, setAcoesOpen] = useState(false);
   const [cartoesOpen, setCartoesOpen] = useState(false);
   const [agregadorVinculos, setAgregadorVinculos] = useState<AgregadorVinculoResponse[]>([]);
+  const [vincularAgregadorOpen, setVincularAgregadorOpen] = useState(false);
+  const [bloquearAcessoOpen, setBloquearAcessoOpen] = useState(false);
+  const [bloquearAcessoJustificativa, setBloquearAcessoJustificativa] = useState("");
+  const [bloqueandoAcesso, setBloqueandoAcesso] = useState(false);
+  const [bloquearAcessoErro, setBloquearAcessoErro] = useState("");
+  const [lgpdDialogTipo, setLgpdDialogTipo] = useState<LgpdDialogTipo>(null);
+  const [lgpdJustificativa, setLgpdJustificativa] = useState("");
+  const [lgpdProcessando, setLgpdProcessando] = useState(false);
+  const [lgpdErro, setLgpdErro] = useState("");
 
   // Carrega vínculos ATIVOS de agregadores B2B (Wellhub/TotalPass/...) para
   // exibir no card "Plano ativo" como contrato alternativo — mesmo sem
@@ -161,6 +174,75 @@ export default function ClienteDetalhePage() {
       })
     : [];
 
+  function closeBloquearAcessoModal() {
+    setBloquearAcessoOpen(false);
+    setBloquearAcessoJustificativa("");
+    setBloquearAcessoErro("");
+  }
+
+  async function handleBloquearAcesso() {
+    const justificativa = bloquearAcessoJustificativa.trim();
+    if (!justificativa) {
+      setBloquearAcessoErro("Justificativa é obrigatória.");
+      return;
+    }
+    setBloqueandoAcesso(true);
+    setBloquearAcessoErro("");
+    try {
+      const result = await bloquearAcessoApi({
+        tenantId: w.tenantId ?? "",
+        id: aluno.id,
+        justificativa,
+      });
+      closeBloquearAcessoModal();
+      w.setLiberarAcessoInfo(result.message || "Acesso bloqueado com sucesso.");
+      await w.reload();
+    } catch (error) {
+      setBloquearAcessoErro(normalizeErrorMessage(error));
+    } finally {
+      setBloqueandoAcesso(false);
+    }
+  }
+
+  function openLgpdModal(tipo: Exclude<LgpdDialogTipo, null>) {
+    setLgpdDialogTipo(tipo);
+    setLgpdJustificativa("");
+    setLgpdErro("");
+  }
+
+  function closeLgpdModal() {
+    setLgpdDialogTipo(null);
+    setLgpdJustificativa("");
+    setLgpdErro("");
+  }
+
+  async function handleLgpdConfirm() {
+    const justificativa = lgpdJustificativa.trim();
+    if (!justificativa || !lgpdDialogTipo) {
+      setLgpdErro("Justificativa é obrigatória.");
+      return;
+    }
+    setLgpdProcessando(true);
+    setLgpdErro("");
+    try {
+      const result = lgpdDialogTipo === "pessoais"
+        ? await excluirDadosPessoaisApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa })
+        : await excluirDadosSensiveisApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
+      closeLgpdModal();
+      w.setLiberarAcessoInfo(
+        result.message
+          || (lgpdDialogTipo === "pessoais"
+            ? "Dados pessoais excluídos com sucesso (LGPD)."
+            : "Dados sensíveis excluídos com sucesso (LGPD).")
+      );
+      await w.reload();
+    } catch (error) {
+      setLgpdErro(normalizeErrorMessage(error));
+    } finally {
+      setLgpdProcessando(false);
+    }
+  }
+
   async function handleSugestaoAction(s: SugestaoAcao) {
     // Telemetria §7 PRD — cada clique em sugestão é rastreado por tipo +
     // prioridade. Atribuição de "renovações via drawer" é feita correlacionando
@@ -215,6 +297,17 @@ export default function ClienteDetalhePage() {
           }}
         />
       )}
+      {w.excluindoCobranca && (
+        <ExcluirCobrancaModal
+          pagamento={w.excluindoCobranca}
+          justificativa={w.excluirCobrancaJustificativa}
+          setJustificativa={w.setExcluirCobrancaJustificativa}
+          loading={w.excluindoCobrancaLoading}
+          error={w.excluirCobrancaErro}
+          onClose={w.closeExcluirCobranca}
+          onConfirm={w.handleExcluirCobranca}
+        />
+      )}
       <SuspenderClienteModal
         open={w.suspenderOpen}
         onClose={() => w.setSuspenderOpen(false)}
@@ -226,7 +319,35 @@ export default function ClienteDetalhePage() {
       <ClientePhotoModal open={w.photoModalOpen} onClose={() => w.setPhotoModalOpen(false)} aluno={aluno} onSaved={() => w.reload()} />
       <ClienteEditDrawer open={editDrawerOpen} aluno={aluno} onClose={() => setEditDrawerOpen(false)} onSaved={w.reload} />
       <ClienteMesclarDialog open={mesclarOpen} onClose={() => setMesclarOpen(false)} aluno={aluno} tenantId={w.tenantId ?? ""} onMerged={w.reload} />
-      <ClienteDialogs {...w} />
+      <ClienteDialogs
+        {...w}
+        bloquearAcessoOpen={bloquearAcessoOpen}
+        bloquearAcessoJustificativa={bloquearAcessoJustificativa}
+        setBloquearAcessoJustificativa={setBloquearAcessoJustificativa}
+        bloqueandoAcesso={bloqueandoAcesso}
+        bloquearAcessoErro={bloquearAcessoErro}
+        setBloquearAcessoErro={setBloquearAcessoErro}
+        closeBloquearAcessoModal={closeBloquearAcessoModal}
+        handleBloquearAcesso={handleBloquearAcesso}
+        lgpdDialogTipo={lgpdDialogTipo}
+        lgpdJustificativa={lgpdJustificativa}
+        setLgpdJustificativa={setLgpdJustificativa}
+        lgpdProcessando={lgpdProcessando}
+        lgpdErro={lgpdErro}
+        setLgpdErro={setLgpdErro}
+        closeLgpdModal={closeLgpdModal}
+        handleLgpdConfirm={handleLgpdConfirm}
+      />
+      <VincularAgregadorModal
+        open={vincularAgregadorOpen}
+        onOpenChange={setVincularAgregadorOpen}
+        alunoId={aluno.id}
+        tenantId={aluno.tenantId}
+        onSuccess={(vinculo) => {
+          setAgregadorVinculos((current) => [vinculo, ...current.filter((item) => item.id !== vinculo.id)]);
+          setVincularAgregadorOpen(false);
+        }}
+      />
       {drawerAcoesEnabled && (
         <ClienteAcoesDrawer
           open={acoesOpen}
@@ -283,6 +404,7 @@ export default function ClienteDetalhePage() {
           try { await w.handleReativar(); } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
         }}
         onCompletarCadastro={() => setEditDrawerOpen(true)}
+        onVincularAgregador={() => setVincularAgregadorOpen(true)}
         showCartoesAction={false}
         onLiberarAcesso={w.openLiberarAcesso}
         canDeleteCliente={w.canDeleteClient}
@@ -292,19 +414,11 @@ export default function ClienteDetalhePage() {
         onChangeFoto={() => w.setPhotoModalOpen(true)}
         onSyncFace={aluno.foto ? w.handleSyncFace : undefined}
         onMesclar={() => setMesclarOpen(true)}
-        onBloquearAcesso={async () => {
-          const justificativa = prompt("Justificativa para bloquear acesso:");
-          if (!justificativa?.trim()) return;
-          try {
-            await bloquearAcessoApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
-            w.setLiberarAcessoInfo("Acesso bloqueado com sucesso.");
-            await w.reload();
-          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
-        }}
+        onBloquearAcesso={() => setBloquearAcessoOpen(true)}
         onDesbloquearAcesso={async () => {
           try {
-            await desbloquearAcessoApi({ tenantId: w.tenantId ?? "", id: aluno.id });
-            w.setLiberarAcessoInfo("Acesso desbloqueado com sucesso.");
+            const result = await desbloquearAcessoApi({ tenantId: w.tenantId ?? "", id: aluno.id });
+            w.setLiberarAcessoInfo(result.message || "Acesso desbloqueado com sucesso.");
             await w.reload();
           } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
         }}
@@ -322,26 +436,8 @@ export default function ClienteDetalhePage() {
             : undefined
         }
         acoesCount={drawerAcoesEnabled ? sugestoes.length : undefined}
-        onExcluirDadosPessoais={async () => {
-          if (!confirm("Excluir dados pessoais deste cliente? Esta acao e IRREVERSIVEL. Nome, email, telefone e CPF serao anonimizados.")) return;
-          const justificativa = prompt("Justificativa (obrigatoria):");
-          if (!justificativa?.trim()) return;
-          try {
-            await excluirDadosPessoaisApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
-            w.setLiberarAcessoInfo("Dados pessoais excluidos com sucesso (LGPD).");
-            await w.reload();
-          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
-        }}
-        onExcluirDadosSensiveis={async () => {
-          if (!confirm("Excluir dados sensiveis (anamnese, observacoes medicas)? Esta acao e IRREVERSIVEL.")) return;
-          const justificativa = prompt("Justificativa (obrigatoria):");
-          if (!justificativa?.trim()) return;
-          try {
-            await excluirDadosSensiveisApi({ tenantId: w.tenantId ?? "", id: aluno.id, justificativa });
-            w.setLiberarAcessoInfo("Dados sensiveis excluidos com sucesso (LGPD).");
-            await w.reload();
-          } catch (e) { w.setActionError(normalizeErrorMessage(e)); }
-        }}
+        onExcluirDadosPessoais={() => openLgpdModal("pessoais")}
+        onExcluirDadosSensiveis={() => openLgpdModal("sensiveis")}
       />
 
       {/* Perfil v3 Wave 1 — Rail de sinais de saúde do cliente */}
@@ -522,7 +618,14 @@ export default function ClienteDetalhePage() {
                       <p className="text-sm font-bold text-gym-accent">{formatBRL(p.valorFinal)}</p>
                       <StatusBadge status={p.status} />
                       {isPagamentoEmAberto(p.status) && (
-                        <div className="mt-2"><Button variant="outline" size="sm" className="border-border" onClick={() => w.setRecebendo(p)}>Receber pagamento</Button></div>
+                        <div className="mt-2 flex flex-wrap justify-end gap-2">
+                          <Button variant="outline" size="sm" className="border-border" onClick={() => w.setRecebendo(p)}>
+                            Receber pagamento
+                          </Button>
+                          <Button variant="outline" size="sm" className="border-gym-danger/30 text-gym-danger hover:bg-gym-danger/5" onClick={() => w.openExcluirCobranca(p)}>
+                            Excluir cobrança
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -609,4 +712,3 @@ export default function ClienteDetalhePage() {
     </div>
   );
 }
-

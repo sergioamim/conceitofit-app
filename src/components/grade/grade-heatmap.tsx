@@ -167,7 +167,18 @@ export function GradeHeatmap({
   }, [horas, weekDates, cells]);
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr]">
+    <div className="space-y-4">
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-3",
+          sugestoes.length > 0 ? "md:grid-cols-3" : "md:grid-cols-2",
+        )}
+      >
+        <SidebarMetric pct={metricas.mediaPct} />
+        <TopLotadosCard items={topLotados} />
+        {sugestoes.length > 0 ? <SugestoesCard items={sugestoes} /> : null}
+      </div>
+
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="mb-4 flex items-baseline justify-between">
           <div>
@@ -191,7 +202,12 @@ export function GradeHeatmap({
           </div>
         </div>
 
-        <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))_44px] gap-0.5">
+        <div
+          className="grid gap-0.5"
+          style={{
+            gridTemplateColumns: `40px repeat(${weekDates.length}, minmax(0,1fr)) 44px`,
+          }}
+        >
           <div />
           {weekDates.map((wd) => {
             const isToday = wd.isoDate === todayIso;
@@ -232,81 +248,95 @@ export function GradeHeatmap({
           })}
         </div>
       </div>
+    </div>
+  );
+}
 
-      <div className="flex flex-col gap-3">
-        <SidebarMetric pct={metricas.mediaPct} />
+interface TopLotado {
+  dia: DiaSemana;
+  hora: string;
+  nome: string;
+  pct: number;
+  cor: string;
+}
 
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Horários mais cheios
-          </p>
-          {topLotados.length === 0 ? (
-            <p className="py-3 text-xs text-muted-foreground">
-              Sem registros de alta ocupação na semana.
-            </p>
-          ) : (
-            topLotados.map((r, i) => (
-              <div
-                key={`${r.dia}-${r.hora}-${i}`}
-                className={cn(
-                  "flex items-center gap-2.5 py-2 text-xs",
-                  i < topLotados.length - 1 && "border-b border-border",
-                )}
-              >
-                <span className="size-2 rounded-full" style={{ background: r.cor }} />
-                <span className="font-mono text-[11px] font-semibold">
-                  {DIA_SHORT[r.dia]} {r.hora}
-                </span>
-                <span className="flex-1 truncate text-muted-foreground">{r.nome}</span>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                    r.pct >= 1
-                      ? "bg-destructive/15 text-destructive"
-                      : "bg-gym-warning/15 text-gym-warning",
-                  )}
-                >
-                  {Math.round(r.pct * 100)}%
-                </span>
-              </div>
-            ))
-          )}
-        </div>
-
-        {sugestoes.length > 0 ? (
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Sugestões
-            </p>
-            {sugestoes.map((s, i) => (
-              <div
-                key={i}
-                className="mb-2 rounded-md border border-gym-accent/30 bg-gym-accent/10 p-2.5 text-[11px] leading-snug text-foreground last:mb-0"
-              >
-                {s}
-              </div>
-            ))}
-          </div>
-        ) : null}
+function SidebarMetric({ pct }: { pct: number }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Ocupação média
+      </p>
+      <p className="mt-0.5 text-2xl font-extrabold tracking-tight leading-none">
+        {Math.round(pct * 100)}%
+      </p>
+      <div className="mt-2 h-1.5 overflow-hidden rounded bg-secondary">
+        <div
+          className="h-full bg-gradient-to-r from-gym-teal to-gym-accent"
+          style={{ width: `${Math.min(pct * 100, 100)}%` }}
+        />
       </div>
     </div>
   );
 }
 
-function SidebarMetric({ pct }: { pct: number }) {
+function TopLotadosCard({ items }: { items: TopLotado[] }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-        Ocupação média
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Horários mais cheios
       </p>
-      <p className="mt-1 text-3xl font-extrabold tracking-tight">
-        {Math.round(pct * 100)}%
+      {items.length === 0 ? (
+        <p className="py-3 text-xs text-muted-foreground">
+          Sem registros de alta ocupação na semana.
+        </p>
+      ) : (
+        <div className="max-h-[140px] space-y-0 overflow-y-auto">
+          {items.map((r, i) => (
+            <div
+              key={`${r.dia}-${r.hora}-${i}`}
+              className={cn(
+                "flex items-center gap-2 py-1 text-xs",
+                i < items.length - 1 && "border-b border-border/60",
+              )}
+            >
+              <span className="size-2 shrink-0 rounded-full" style={{ background: r.cor }} />
+              <span className="font-mono text-[11px] font-semibold">
+                {DIA_SHORT[r.dia]} {r.hora}
+              </span>
+              <span className="flex-1 truncate text-muted-foreground">{r.nome}</span>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+                  r.pct >= 1
+                    ? "bg-destructive/15 text-destructive"
+                    : "bg-gym-warning/15 text-gym-warning",
+                )}
+              >
+                {Math.round(r.pct * 100)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SugestoesCard({ items }: { items: string[] }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-3">
+      <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Sugestões
       </p>
-      <div className="mt-3 h-1.5 overflow-hidden rounded bg-secondary">
-        <div
-          className="h-full bg-gradient-to-r from-gym-teal to-gym-accent"
-          style={{ width: `${Math.min(pct * 100, 100)}%` }}
-        />
+      <div className="max-h-[140px] space-y-1.5 overflow-y-auto">
+        {items.map((s, i) => (
+          <div
+            key={i}
+            className="rounded-md border border-gym-accent/30 bg-gym-accent/10 p-2 text-[11px] leading-snug text-foreground"
+          >
+            {s}
+          </div>
+        ))}
       </div>
     </div>
   );

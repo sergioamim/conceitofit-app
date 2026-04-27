@@ -28,6 +28,7 @@ export interface PlanoFormValues {
   atividades: string[];
   beneficios: string[];
   destaque: boolean;
+  permiteVendaOnline: boolean;
   ordem: string;
 }
 
@@ -59,6 +60,7 @@ export function getDefaultPlanoFormValues(): PlanoFormValues {
     atividades: [],
     beneficios: [],
     destaque: false,
+    permiteVendaOnline: true,
     ordem: "",
   };
 }
@@ -83,6 +85,7 @@ export function planoToFormValues(plano: Plano): PlanoFormValues {
     atividades: plano.atividades ?? [],
     beneficios: plano.beneficios ?? [],
     destaque: plano.destaque,
+    permiteVendaOnline: plano.permiteVendaOnline ?? true,
     ordem: plano.ordem ? String(plano.ordem) : "",
   };
 }
@@ -119,6 +122,7 @@ export function buildPlanoPayload(values: PlanoFormValues): Omit<Plano, "id" | "
     atividades: values.atividades,
     beneficios,
     destaque: values.destaque,
+    permiteVendaOnline: values.permiteVendaOnline,
     ordem: values.ordem ? Math.max(0, parseInt(values.ordem, 10)) : undefined,
   };
 }

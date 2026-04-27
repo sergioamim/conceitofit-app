@@ -20,6 +20,12 @@ export interface AbrirCaixaRequest {
   observacoes?: string | null;
 }
 
+export interface CaixaCatalogoResponse {
+  id: string;
+  nome: string;
+  descricao?: string | null;
+}
+
 export interface CaixaResponse {
   id: string;
   status: string;

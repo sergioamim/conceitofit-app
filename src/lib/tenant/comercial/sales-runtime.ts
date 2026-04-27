@@ -9,7 +9,7 @@ import {
   togglePlanoDestaqueApi,
 } from "@/lib/api/comercial-catalogo";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
-import { emitirNfsePagamentoApi, listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
+import { cancelarPagamentoApi, emitirNfsePagamentoApi, listPagamentosApi, receberPagamentoApi } from "@/lib/api/pagamentos";
 import { createVendaApi, listVendasApi, type ListVendasApiEnvelopeResult } from "@/lib/api/vendas";
 import { trackNfseEmitted, trackPagamentoReceived } from "@/lib/shared/analytics";
 import type {
@@ -68,6 +68,14 @@ export async function receberPagamentoService(input: {
   const result = await receberPagamentoApi(input);
   trackPagamentoReceived(input.tenantId, result.id, result.valorFinal);
   return result;
+}
+
+export async function cancelarPagamentoService(input: {
+  tenantId: string;
+  id: string;
+  data: Parameters<typeof cancelarPagamentoApi>[0]["data"];
+}): Promise<Pagamento> {
+  return cancelarPagamentoApi(input);
 }
 
 async function emitirNfsePagamentoService(input: {
@@ -159,15 +167,15 @@ export async function validarVoucherCodigoService(input: {
 export async function togglePlanoAtivoService(input: {
   tenantId: string;
   id: string;
-}): Promise<Plano> {
-  return togglePlanoAtivoApi(input);
+}): Promise<void> {
+  await togglePlanoAtivoApi(input);
 }
 
 export async function togglePlanoDestaqueService(input: {
   tenantId: string;
   id: string;
-}): Promise<Plano> {
-  return togglePlanoDestaqueApi(input);
+}): Promise<void> {
+  await togglePlanoDestaqueApi(input);
 }
 
 /**

@@ -125,6 +125,7 @@ async function installPlanosRecoveryMocks(page: Page) {
         cobraAnuidade: false,
         permiteRenovacaoAutomatica: true,
         permiteCobrancaRecorrente: true,
+        permiteVendaOnline: true,
         diaCobrancaPadrao: 5,
         contratoAssinatura: "DIGITAL",
         contratoEnviarAutomaticoEmail: true,

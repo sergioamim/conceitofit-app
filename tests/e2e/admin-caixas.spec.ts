@@ -129,6 +129,27 @@ test.describe("Admin /admin/caixas (CXO-203)", () => {
     await expect(page.getByText(/Diferenças nos fechamentos/i)).toBeVisible();
   });
 
+  test("admin da plataforma com acesso global entra mesmo sem role gerente local", async ({ page }) => {
+    await installBackofficeGlobalSession(page, {
+      session: { roles: ["USER"] },
+      shell: {
+        user: { roles: ["USER"] },
+        capabilities: { canAccessElevatedModules: true },
+      },
+    });
+    await stubCaixaApis(page);
+
+    await page.goto("/admin/caixas");
+
+    await expect(
+      page.getByRole("heading", { level: 1, name: /caixas operacionais/i }),
+    ).toBeVisible();
+    await expect(page.getByRole("tab", { name: /^Dashboard$/ })).toBeVisible();
+    await expect(
+      page.getByText(/Acesso restrito a perfis gerente ou administrativo/i),
+    ).toHaveCount(0);
+  });
+
   test("OPERADOR sem perfil gerente vê painel de acesso restrito", async ({
     page,
   }) => {

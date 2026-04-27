@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutGrid, Plus, Table2 } from "lucide-react";
 import {
   createAtividadeGradeApi,
@@ -36,6 +36,7 @@ import {
 } from "@/components/grade/grade-compositor";
 import { buildPrefillGrade, minToTime, timeToMin } from "@/components/grade/grade-prefill";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
 
 const DIA_LABEL: Record<DiaSemana, string> = {
   SEG: "Segunda",
@@ -64,6 +65,8 @@ const EMPTY_FUNCIONARIOS: readonly Funcionario[] = [];
 export function AtividadesGradeContent() {
   const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
+  const { toast } = useToast();
+  const [mounted, setMounted] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [occurrenceModalOpen, setOccurrenceModalOpen] = useState(false);
   const [editing, setEditing] = useState<AtividadeGrade | null>(null);
@@ -74,9 +77,14 @@ export function AtividadesGradeContent() {
   const [filtroDia, setFiltroDia] = useState<DiaSemana | typeof FILTER_ALL>(FILTER_ALL);
   const [apenasAtivas, setApenasAtivas] = useState(true);
   const [savingOccurrence, setSavingOccurrence] = useState(false);
-  const [error, setError] = useState("");
-  const [feedback, setFeedback] = useState("");
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+  const notifyError = useCallback((err: unknown, fallback: string) => toast({ title: "Algo deu errado", description: normalizeErrorMessage(err) || fallback, variant: "destructive", duration: 8000 }), [toast]);
+  const notifySuccess = useCallback((description: string) => toast({ description, duration: 4000 }), [toast]);
+  // Hydration guard: getActiveTenantIdFromSession() le localStorage, indisponivel no SSR.
+  // Mantemos tenantId vazio no primeiro render (= SSR) e sincronizamos apos mount.
+  useEffect(() => setMounted(true), []);
+  const tenantId = mounted
+    ? tenantContext.tenantId || getActiveTenantIdFromSession() || ""
+    : "";
 
   // Filter key to trigger refetch when API-level filters change
   const filterKey = `${filtroAtividade}|${apenasAtivas}`;
@@ -162,18 +170,31 @@ export function AtividadesGradeContent() {
       instrutor: data.funcionarioId ? funcionarioMap.get(data.funcionarioId)?.nome : undefined,
     };
 
-    if (id) await updateAtividadeGradeApi(id, payload);
-    else await createAtividadeGradeApi(payload);
+    try {
+      if (id) await updateAtividadeGradeApi(id, payload);
+      else await createAtividadeGradeApi(payload);
 
-    setModalOpen(false);
-    setEditing(null);
-    setPrefilledNew(null);
-    void load();
+      setModalOpen(false);
+      setEditing(null);
+      setPrefilledNew(null);
+      notifySuccess(id ? "Grade atualizada." : "Grade criada.");
+      void load();
+    } catch (saveError) {
+      notifyError(
+        saveError,
+        id ? "Falha ao atualizar a grade." : "Falha ao criar a grade.",
+      );
+    }
   }
 
   async function handleToggle(id: string) {
-    await toggleAtividadeGradeApi(id);
-    void load();
+    try {
+      const updated = await toggleAtividadeGradeApi(id);
+      notifySuccess(updated.ativo ? "Grade ativada." : "Grade inativada.");
+      void load();
+    } catch (toggleError) {
+      notifyError(toggleError, "Falha ao alterar status da grade.");
+    }
   }
 
   function handleDropNewAtividade({ atividadeId, dia, horaInicio }: GradeCompositorDropPayload) {
@@ -188,34 +209,40 @@ export function AtividadesGradeContent() {
     setModalOpen(true);
   }
 
-  async function handleMoveExisting({ gradeId, dia, horaInicio }: GradeCompositorMovePayload) {
+  async function handleMoveExisting({ gradeId, sourceDia, dia, horaInicio }: GradeCompositorMovePayload) {
     const g = grades.find((x) => x.id === gradeId);
     if (!g) return;
-    const fim = timeToMin(horaInicio) + g.duracaoMinutos;
+    // Preserva os demais dias do conjunto: troca origem→destino, ou só altera hora se mesmo dia.
+    const novosDias: DiaSemana[] = sourceDia === dia
+      ? g.diasSemana
+      : g.diasSemana.includes(dia)
+        ? g.diasSemana.filter((d) => d !== sourceDia)
+        : g.diasSemana.map((d) => (d === sourceDia ? dia : d));
+    const fim = minToTime(timeToMin(horaInicio) + g.duracaoMinutos);
     try {
-      await updateAtividadeGradeApi(gradeId, {
-        diasSemana: [dia],
-        horaInicio,
-        horaFim: minToTime(fim),
-      });
+      await updateAtividadeGradeApi(gradeId, { diasSemana: novosDias, horaInicio, horaFim: fim });
+      notifySuccess(sourceDia !== dia ? `Grade movida para ${dia} ${horaInicio} (mantendo os demais dias).` : `Grade movida para ${horaInicio}.`);
       void load();
     } catch (moveError) {
-      setError(normalizeErrorMessage(moveError) || "Falha ao mover item da grade.");
+      notifyError(moveError, "Falha ao mover item da grade.");
     }
   }
 
   function handleDelete(id: string) {
     confirm("Remover este item da grade?", async () => {
-      await deleteAtividadeGradeApi(id);
-      void load();
+      try {
+        await deleteAtividadeGradeApi(id);
+        notifySuccess("Grade removida.");
+        void load();
+      } catch (deleteError) {
+        notifyError(deleteError, "Falha ao remover a grade.");
+      }
     });
   }
 
   async function handleCreateOccurrence(data: AtividadeOcorrenciaForm) {
     if (!occurrenceGrade || !tenantId) return;
     setSavingOccurrence(true);
-    setError("");
-    setFeedback("");
     try {
       await criarOcorrenciaAtividadeGradeApi({
         tenantId,
@@ -233,10 +260,10 @@ export function AtividadesGradeContent() {
       });
       setOccurrenceModalOpen(false);
       setOccurrenceGrade(null);
-      setFeedback("Ocorrência criada e disponibilizada para reservas.");
+      notifySuccess("Ocorrência criada e disponibilizada para reservas.");
       void load();
     } catch (saveError) {
-      setError(normalizeErrorMessage(saveError) || "Falha ao criar ocorrência sob demanda.");
+      notifyError(saveError, "Falha ao criar ocorrência sob demanda.");
     } finally {
       setSavingOccurrence(false);
     }
@@ -323,16 +350,6 @@ export function AtividadesGradeContent() {
       </div>
 
       <PageError error={loadError} onRetry={load} />
-      {error ? (
-        <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
-        </div>
-      ) : null}
-      {feedback ? (
-        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
-          {feedback}
-        </div>
-      ) : null}
 
       {viewMode === "compositor" ? (
         <GradeCompositor
@@ -410,23 +427,23 @@ export function AtividadesGradeContent() {
           <thead>
             <tr className="border-b border-border bg-secondary">
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Atividade</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dias</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Horário / Tipo</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Capacidade</th>
+              <th className="w-44 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dias</th>
+              <th className="w-40 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Horário / Tipo</th>
+              <th className="w-28 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Capacidade</th>
               <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Local / Instrutor / Reserva</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
+              <th className="w-28 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
+              <th className="w-[14rem] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {loading ? (
+            {!mounted || loading ? (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                   Carregando grade de atividades...
                 </td>
               </tr>
             ) : null}
-            {!loading && filtered.map((g) => {
+            {mounted && !loading && filtered.map((g) => {
               const atividade = atividadeMap.get(g.atividadeId);
               return (
                 <tr key={g.id} className="transition-colors hover:bg-secondary/40">
@@ -448,7 +465,7 @@ export function AtividadesGradeContent() {
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {g.diasSemana.map((dia) => DIA_LABEL[dia]).join(", ")}
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-muted-foreground">
                     {g.definicaoHorario === "SOB_DEMANDA"
                       ? `Sob demanda · padrão ${g.horaInicio} - ${g.horaFim}`
                       : `${g.horaInicio} - ${g.horaFim}`}
@@ -467,8 +484,9 @@ export function AtividadesGradeContent() {
                       {g.ativo ? "Ativa" : "Inativa"}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 align-top">
                     <DataTableRowActions
+                      className="flex-nowrap"
                       actions={[
                         {
                           label: "Criar ocorrência",
@@ -476,8 +494,6 @@ export function AtividadesGradeContent() {
                           icon: Plus,
                           disabled: g.definicaoHorario !== "SOB_DEMANDA" || !g.ativo,
                           onClick: () => {
-                            setError("");
-                            setFeedback("");
                             setOccurrenceGrade(g);
                             setOccurrenceModalOpen(true);
                           },
@@ -506,7 +522,7 @@ export function AtividadesGradeContent() {
                 </tr>
               );
             })}
-            {!loading && filtered.length === 0 && (
+            {mounted && !loading && filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                   Nenhum item de grade encontrado

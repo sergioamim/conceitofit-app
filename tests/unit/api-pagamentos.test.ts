@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  cancelarPagamentoApi,
   emitirNfseEmLoteApi,
   emitirNfsePagamentoApi,
   listPagamentosApi,
@@ -76,6 +77,24 @@ describe("api/pagamentos", () => {
       expect(spy.mock.calls[0][0].body).toEqual({
         formaPagamentoId: "fp1",
         valorRecebido: 100,
+      });
+    });
+  });
+
+  describe("cancelarPagamentoApi", () => {
+    it("POST com justificativa para /{id}/cancelar", async () => {
+      const spy = vi.spyOn(http, "apiRequest").mockResolvedValue({} as never);
+      await cancelarPagamentoApi({
+        tenantId: "t1",
+        id: "p1",
+        data: { justificativa: "Cobrança em duplicidade" },
+      });
+      expect(spy.mock.calls[0][0].path).toBe(
+        "/api/v1/comercial/pagamentos/p1/cancelar",
+      );
+      expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].body).toEqual({
+        justificativa: "Cobrança em duplicidade",
       });
     });
   });

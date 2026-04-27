@@ -89,6 +89,20 @@ export async function receberPagamentoApi(input: {
   return normalizePagamento(response);
 }
 
+export async function cancelarPagamentoApi(input: {
+  tenantId: string;
+  id: string;
+  data: { justificativa: string };
+}): Promise<Pagamento> {
+  const response = await apiRequest<PagamentoApiResponse>({
+    path: `/api/v1/comercial/pagamentos/${input.id}/cancelar`,
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
+  return normalizePagamento(response);
+}
+
 export async function emitirNfsePagamentoApi(input: {
   tenantId: string;
   id: string;

@@ -72,6 +72,7 @@ interface PlanoApiRaw {
   parcelasMaxAnuidade?: unknown;
   permiteRenovacaoAutomatica?: unknown;
   permiteCobrancaRecorrente?: unknown;
+  permiteVendaOnline?: unknown;
   diaCobrancaPadrao?: unknown;
   contratoTemplateHtml?: string | null;
   contratoAssinatura?: Plano["contratoAssinatura"] | null;
@@ -190,6 +191,7 @@ function normalizePlano(raw: PlanoApiRaw, tenantId: string): Plano {
       : Math.max(1, Math.floor(toNum(raw.parcelasMaxAnuidade, 1))),
     permiteRenovacaoAutomatica: toBool(raw.permiteRenovacaoAutomatica, tipo !== "AVULSO"),
     permiteCobrancaRecorrente: toBool(raw.permiteCobrancaRecorrente),
+    permiteVendaOnline: toBool(raw.permiteVendaOnline, true),
     diaCobrancaPadrao: normalizeDiasCobrancaPublic(raw.diaCobrancaPadrao),
     contratoTemplateHtml: raw.contratoTemplateHtml?.trim() || undefined,
     contratoAssinatura: raw.contratoAssinatura ?? "AMBAS",

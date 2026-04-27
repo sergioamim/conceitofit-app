@@ -26,14 +26,30 @@ export function toMinutes(time: string) {
   return (hh || 0) * 60 + (mm || 0);
 }
 
-/** Posiciona cards sobrepostos em "tracks" (colunas) lado a lado dentro de um dia. */
+/**
+ * Posiciona cards sobrepostos em "tracks" (colunas) lado a lado dentro de um dia.
+ * `trackCount` é local ao cluster de overlap, não global ao dia — cards isolados
+ * mantêm largura total mesmo se outros horários do mesmo dia tiverem overlap.
+ */
 export function assignTracks(items: GradeCardItem[]): CardPlacement[] {
   if (items.length === 0) return [];
   const sorted = [...items].sort((a, b) => a.inicioMin - b.inicioMin || a.fimMin - b.fimMin);
-  const trackEnds: number[] = [];
-  const placement: { item: GradeCardItem; track: number }[] = [];
+  const out: CardPlacement[] = [];
+
+  let cluster: { item: GradeCardItem; track: number }[] = [];
+  let clusterEnd = 0;
+  let trackEnds: number[] = [];
+
+  function flush() {
+    const trackCount = trackEnds.length;
+    cluster.forEach(({ item, track }) => out.push({ item, track, trackCount }));
+    cluster = [];
+    trackEnds = [];
+    clusterEnd = 0;
+  }
 
   for (const item of sorted) {
+    if (cluster.length > 0 && item.inicioMin >= clusterEnd) flush();
     let track = trackEnds.findIndex((end) => end <= item.inicioMin);
     if (track === -1) {
       trackEnds.push(item.fimMin);
@@ -41,9 +57,9 @@ export function assignTracks(items: GradeCardItem[]): CardPlacement[] {
     } else {
       trackEnds[track] = item.fimMin;
     }
-    placement.push({ item, track });
+    cluster.push({ item, track });
+    if (item.fimMin > clusterEnd) clusterEnd = item.fimMin;
   }
-
-  const trackCount = trackEnds.length;
-  return placement.map((p) => ({ ...p, trackCount }));
+  flush();
+  return out;
 }

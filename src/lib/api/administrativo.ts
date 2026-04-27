@@ -56,7 +56,6 @@ type FuncionarioListApiResponse =
     };
 
 export interface AtividadeUpsertApiRequest {
-  tenantId: string;
   nome: string;
   descricao?: string;
   categoria: CategoriaAtividade;
@@ -128,7 +127,6 @@ function extractFuncionarioItems(response: FuncionarioListApiResponse): Funciona
 }
 
 export function buildAtividadeUpsertApiRequest(
-  tenantId: string,
   data: Pick<
     Atividade,
     "nome" | "descricao" | "categoria" | "icone" | "cor" | "permiteCheckin" | "checkinObrigatorio"
@@ -137,7 +135,6 @@ export function buildAtividadeUpsertApiRequest(
   const permiteCheckin = toBoolean(data.permiteCheckin, true);
 
   return {
-    tenantId,
     nome: limitString(cleanString(data.nome) ?? "", MAX_ATIVIDADE_NAME_LENGTH) ?? "",
     descricao: limitString(cleanString(data.descricao), MAX_ATIVIDADE_DESCRIPTION_LENGTH),
     categoria: data.categoria,
@@ -326,7 +323,7 @@ export async function createAtividadeApi(input: {
     path: "/api/v1/administrativo/atividades",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: buildAtividadeUpsertApiRequest(input.tenantId, input.data),
+    body: buildAtividadeUpsertApiRequest(input.data),
   });
 
   return normalizeAtividadeApiResponse(response, {
@@ -345,7 +342,7 @@ export async function updateAtividadeApi(input: {
     path: `/api/v1/administrativo/atividades/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
-    body: buildAtividadeUpsertApiRequest(input.tenantId, input.data),
+    body: buildAtividadeUpsertApiRequest(input.data),
   });
 
   return normalizeAtividadeApiResponse(response, {

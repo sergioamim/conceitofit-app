@@ -50,6 +50,7 @@ describe("ClienteHeader", () => {
     onSuspender: vi.fn(),
     onReativar: vi.fn(),
     onLiberarAcesso: vi.fn(),
+    onVincularAgregador: vi.fn(),
     onEdit: vi.fn(),
   };
 
@@ -63,11 +64,13 @@ describe("ClienteHeader", () => {
     // "Nova contratacao" foi renomeado pra "Venda" em 0be7df5 (2026-04-23),
     // parte do refactor que moveu "Nova Venda" do menu pro header/topbar.
     expect(screen.getByText("Venda")).toBeInTheDocument();
+    expect(screen.queryByText("Vincular agregador")).not.toBeInTheDocument();
 
     const buttons = screen.getAllByRole("button");
     const menuBtn = buttons.find(b => b.querySelector(".lucide-ellipsis-vertical"));
     if (menuBtn) fireEvent.click(menuBtn);
     expect(screen.getByText("Suspender")).toBeInTheDocument();
+    expect(screen.queryByText("Vincular agregador")).not.toBeInTheDocument();
   });
 
   it("renders reativar action when client is suspended", () => {
@@ -102,7 +105,7 @@ describe("ClienteHeader", () => {
     expect(defaultProps.onEdit).not.toHaveBeenCalled();
   });
 
-  it("renders plan info when provided", () => {
+  it("does not render contract summary in the top header even when a plan exists", () => {
     render(
       <ClienteHeader
         {...defaultProps}
@@ -110,8 +113,22 @@ describe("ClienteHeader", () => {
         planoAtivoInfo={{ id: "p1", nome: "Plano Black", valor: 100, periodo: "mensal" } as any}
       />
     );
-    // Nome e data ficam no mesmo span: "Plano Black — vigente ate 31/12/2024"
-    expect(screen.getByText(/Plano Black/)).toBeInTheDocument();
-    expect(screen.getByText(/31\/12\/2024/)).toBeInTheDocument();
+    expect(screen.queryByText(/Plano Black/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Contrato ativo/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sem contrato/i)).not.toBeInTheDocument();
+  });
+
+  it("calls onVincularAgregador from the overflow menu for inactive client", () => {
+    render(
+      <ClienteHeader
+        {...defaultProps}
+        aluno={{ ...mockAluno, status: "INATIVO" }}
+      />
+    );
+    const buttons = screen.getAllByRole("button");
+    const menuBtn = buttons.find(b => b.querySelector(".lucide-ellipsis-vertical"));
+    if (menuBtn) fireEvent.click(menuBtn);
+    fireEvent.click(screen.getByText("Vincular agregador"));
+    expect(defaultProps.onVincularAgregador).toHaveBeenCalled();
   });
 });

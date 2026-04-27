@@ -5,8 +5,11 @@ import { StorefrontPlanos } from "@/components/storefront/storefront-planos";
 import { StorefrontUnidades } from "@/components/storefront/storefront-unidades";
 import {
   getStorefrontOverview,
+  getStorefrontPlanos,
   getStorefrontSeo,
   type StorefrontOverviewResponse,
+  type StorefrontPlanoPublicoResponse,
+  type StorefrontPlanosResponse,
 } from "@/lib/public/storefront-api";
 import { logger } from "@/lib/shared/logger";
 import type { Metadata } from "next";
@@ -52,6 +55,44 @@ function overviewToUnidades(overview: StorefrontOverviewResponse): Tenant[] {
   })) as Tenant[];
 }
 
+function toPlano(plano: StorefrontPlanoPublicoResponse, tenantId: string): Plano {
+  return {
+    id: plano.id,
+    tenantId,
+    nome: plano.nome,
+    descricao: plano.descricao,
+    tipo: plano.tipo as Plano["tipo"],
+    duracaoDias: plano.duracaoDias,
+    valor: plano.valor,
+    valorMatricula: plano.valorMatricula,
+    cobraAnuidade: false,
+    permiteRenovacaoAutomatica: false,
+    permiteCobrancaRecorrente: false,
+    contratoAssinatura: "AMBAS",
+    contratoEnviarAutomaticoEmail: false,
+    beneficios: plano.beneficios,
+    destaque: plano.destaque,
+    permiteVendaOnline: true,
+    ativo: true,
+    ordem: plano.ordem,
+  };
+}
+
+function extractSingleUnitPlanos(planosResponse: StorefrontPlanosResponse): {
+  tenantId: string;
+  planos: Plano[];
+} | null {
+  if (planosResponse.unidades.length !== 1) {
+    return null;
+  }
+
+  const [unidade] = planosResponse.unidades;
+  return {
+    tenantId: unidade.tenantId,
+    planos: unidade.planos.map((plano) => toPlano(plano, unidade.tenantId)),
+  };
+}
+
 async function fetchStorefrontData(): Promise<StorefrontData> {
   const { resolveStorefrontHeaders } = await import("./resolve-storefront-headers");
   const { tenantId, tenantSlug, academiaSlug } = await resolveStorefrontHeaders();
@@ -62,13 +103,14 @@ async function fetchStorefrontData(): Promise<StorefrontData> {
 
   try {
     // Endpoint com slug no path: GET /api/v1/publico/storefront/{academiaSlug}
-    const overview = await getStorefrontOverview(academiaSlug);
+    const [overview, planosResponse] = await Promise.all([
+      getStorefrontOverview(academiaSlug),
+      getStorefrontPlanos(academiaSlug),
+    ]);
     const theme = overviewToTheme(overview, tenantId);
     const unidades = overviewToUnidades(overview);
-
-    // Planos vêm das unidades no overview (flatten)
-    const planos: Plano[] = [];
-    // Se o overview não traz planos, eles virão via componente separado
+    const singleUnitPlanos = extractSingleUnitPlanos(planosResponse);
+    const planos = singleUnitPlanos?.planos ?? [];
 
     return { tenantId, tenantSlug, academiaSlug, theme, unidades, planos };
   } catch (error) {

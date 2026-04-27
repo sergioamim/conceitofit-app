@@ -7,6 +7,7 @@ import {
   getCaixaAtivo,
   getDashboard,
   getDiferencas,
+  listCaixaCatalogos,
   listarCaixas,
 } from "@/lib/api/caixa";
 import { ApiRequestError } from "@/lib/api/http";
@@ -43,6 +44,18 @@ function makeApiError(
 describe("api/caixa", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  // -------------------------------------------------------------------------
+  // listCaixaCatalogos
+  // -------------------------------------------------------------------------
+  describe("listCaixaCatalogos", () => {
+    it("GET /api/caixas/catalogo", async () => {
+      const spy = mockApiRequest([]);
+      await listCaixaCatalogos();
+      expect(spy.mock.calls[0][0].path).toBe("/api/caixas/catalogo");
+      expect(spy.mock.calls[0][0].method).toBe("GET");
+    });
   });
 
   // -------------------------------------------------------------------------

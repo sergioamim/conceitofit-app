@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppTopbar } from "@/components/layout/app-topbar";
 
 const mockReplace = vi.fn();
@@ -63,6 +64,22 @@ vi.mock("@/components/layout/onboarding-status-badge", () => ({
 }));
 
 describe("AppTopbar", () => {
+  function renderTopbar(onOpenMenu?: () => void) {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <AppTopbar onOpenMenu={onOpenMenu} />
+      </QueryClientProvider>,
+    );
+  }
+
   beforeEach(() => {
     mockReplace.mockReset();
     mockRefresh.mockReset();
@@ -71,25 +88,25 @@ describe("AppTopbar", () => {
   });
 
   it("renders the topbar with tenant selector", () => {
-    render(<AppTopbar />);
+    renderTopbar();
     expect(screen.getByTestId("tenant-selector")).toBeInTheDocument();
   });
 
   it("renders mobile menu button", () => {
-    render(<AppTopbar />);
+    renderTopbar();
     expect(screen.getByLabelText("Abrir menu principal")).toBeInTheDocument();
   });
 
   it("calls onOpenMenu when mobile menu button is clicked", () => {
     const onOpenMenu = vi.fn();
-    render(<AppTopbar onOpenMenu={onOpenMenu} />);
+    renderTopbar(onOpenMenu);
     const menuBtn = screen.getByLabelText("Abrir menu principal");
     fireEvent.click(menuBtn);
     expect(onOpenMenu).toHaveBeenCalled();
   });
 
   it("atualiza o tenant e recarrega o dashboard após trocar a unidade ativa", async () => {
-    render(<AppTopbar />);
+    renderTopbar();
 
     fireEvent.click(screen.getByTestId("tenant-selector"));
 

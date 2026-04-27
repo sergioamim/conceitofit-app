@@ -152,7 +152,10 @@ export function GradeDayFocus({
   return (
     <div className="space-y-3">
       {/* Mini-strip da semana */}
-      <div className="grid grid-cols-7 gap-1.5">
+      <div
+        className="grid gap-1.5"
+        style={{ gridTemplateColumns: `repeat(${weekDates.length}, minmax(0,1fr))` }}
+      >
         {weekDates.map((w) => {
           const sel = w.dia === selectedDia;
           const dayCount = grades.filter(

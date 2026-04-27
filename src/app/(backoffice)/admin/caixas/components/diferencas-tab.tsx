@@ -96,20 +96,22 @@ export function DiferencasTab({ initialOperadorId = "" }: DiferencasTabProps) {
         });
         setItems(data);
       } catch (err) {
-        if (err instanceof ApiRequestError && err.status === 403) {
-          const message =
-            "Acesso restrito: somente perfis gerente ou administrativo podem consultar diferenças.";
-          setError(message);
-          toast({
-            title: "Sem permissão",
-            description: message,
-            variant: "destructive",
-          });
-        } else {
-          const message =
-            err instanceof Error ? err.message : "Falha ao carregar diferenças.";
-          setError(message);
+        if (err instanceof ApiRequestError) {
+          if (err.status === 403) {
+            const message =
+              "Acesso restrito: somente perfis gerente ou administrativo podem consultar diferenças.";
+            setError(message);
+            toast({
+              title: "Sem permissão",
+              description: message,
+              variant: "destructive",
+            });
+            return;
+          }
         }
+        const message =
+          err instanceof Error ? err.message : "Falha ao carregar diferenças.";
+        setError(message);
       } finally {
         setLoading(false);
       }

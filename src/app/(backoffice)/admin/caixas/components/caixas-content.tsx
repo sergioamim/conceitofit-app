@@ -9,13 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import { ListErrorState } from "@/components/shared/list-states";
 import { hasAdminAccess, hasGerenteAccess } from "@/lib/access-control";
-import { getRolesFromSession } from "@/lib/api/session";
+import {
+  getRolesFromSession,
+  hasGlobalBackofficeAccessFromSession,
+} from "@/lib/api/session";
 import { getDashboard, listarCaixas } from "@/lib/api/caixa";
 import { isCaixaApiError, mapCaixaError } from "@/lib/api/caixa-error-handler";
 import { ApiRequestError } from "@/lib/api/http";
 import { formatDateTime } from "@/lib/formatters";
 import type { CaixaResponse, DashboardDiarioResponse } from "@/lib/api/caixa.types";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
+import { useAuthAccess } from "@/lib/tenant/hooks/use-session-context";
 import { DashboardCard } from "./dashboard-card";
 import {
   ListaCaixasTable,
@@ -48,6 +52,7 @@ function todayIso(): string {
  */
 export function CaixasContent() {
   const { toast } = useToast();
+  const authAccess = useAuthAccess();
 
   const [tab, setTab] = useState<string>(TAB_DASHBOARD);
   const [dataDashboard, setDataDashboard] = useState<string>("");
@@ -72,10 +77,12 @@ export function CaixasContent() {
   useEffect(() => {
     setHydrated(true);
     setDataDashboard(todayIso());
-    const roles = getRolesFromSession();
-    setHasAccess(hasGerenteAccess(roles));
-    setIsAdmin(hasAdminAccess(roles));
-  }, []);
+    const roles = authAccess.roles.length > 0 ? authAccess.roles : getRolesFromSession();
+    const hasBackofficeAccess =
+      authAccess.canAccessElevatedModules || hasGlobalBackofficeAccessFromSession();
+    setHasAccess(hasBackofficeAccess || hasGerenteAccess(roles));
+    setIsAdmin(hasBackofficeAccess || hasAdminAccess(roles));
+  }, [authAccess.canAccessElevatedModules, authAccess.roles]);
 
   const fetchDashboard = useCallback(
     async (data: string) => {
@@ -94,15 +101,17 @@ export function CaixasContent() {
             description: presentation.mensagem,
             variant: "destructive",
           });
-        } else if (err instanceof ApiRequestError && err.status === 403) {
-          setDashboardError(
-            "Sem permissão para visualizar o dashboard de caixas (requer perfil gerente).",
-          );
-        } else {
-          const message =
-            err instanceof Error ? err.message : "Falha ao carregar dashboard.";
-          setDashboardError(message);
+        } else if (err instanceof ApiRequestError) {
+          if (err.status === 403) {
+            setDashboardError(
+              "Sem permissão para visualizar o dashboard de caixas (requer perfil gerente).",
+            );
+            return;
+          }
         }
+        const message =
+          err instanceof Error ? err.message : "Falha ao carregar dashboard.";
+        setDashboardError(message);
       } finally {
         setDashboardLoading(false);
       }

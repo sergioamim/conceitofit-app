@@ -604,6 +604,7 @@ function mkPlanoComContrato(overrides: Partial<Plano> = {}): Plano {
     contratoAssinatura: "DIGITAL",
     contratoEnviarAutomaticoEmail: false,
     destaque: false,
+    permiteVendaOnline: true,
     ativo: true,
     ...overrides,
   };

@@ -15,7 +15,6 @@ import { motion } from "framer-motion";
 import { useClientesWorkspace } from "./use-clientes-workspace";
 import { ClientesFilterBar } from "./clientes-filter-bar";
 import { ClientesTable } from "./clientes-table";
-import { ClienteResumoDialog } from "./cliente-resumo-dialog";
 
 const EXPORT_COLUMNS: ExportColumn<import("@/lib/types").Aluno>[] = [
   { label: "Nome", accessor: "nome" },
@@ -64,7 +63,6 @@ function ClientesPageContent() {
 
   return (
     <div className="space-y-8 pb-10">
-      {ws.ConfirmDialog}
       {ws.wizard.isOpen ? (
         <NovoClienteWizard
           open
@@ -173,25 +171,9 @@ function ClientesPageContent() {
           hasNext={ws.isSearchFiltered ? false : ws.hasNextPage}
           onPrevious={() => ws.setParams({ page: Math.max(0, ws.page - 1) })}
           onNext={() => ws.setParams({ page: ws.page + 1 })}
-          onClienteClick={(aluno) => {
-            ws.setClienteResumo(aluno);
-            ws.resumoDialog.open();
-          }}
           router={ws.router}
         />
       </div>
-
-      <ClienteResumoDialog
-        isOpen={ws.resumoDialog.isOpen}
-        onOpenChange={ws.resumoDialog.onOpenChange}
-        clienteResumo={ws.clienteResumo}
-        clienteResumoPlano={ws.clienteResumoPlano}
-        clienteResumoBaseHref={ws.clienteResumoBaseHref}
-        liberandoSuspensao={ws.liberandoSuspensao}
-        onLiberarSuspensao={ws.handleLiberarSuspensao}
-        onVerPerfil={ws.handleVerPerfil}
-        onClose={ws.resumoDialog.close}
-      />
     </div>
   );
 }

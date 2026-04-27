@@ -32,6 +32,7 @@ const basePlano: Plano = {
   atividades: [],
   beneficios: ["Musculação", "Cardio", "Vestiário"],
   destaque: false,
+  permiteVendaOnline: true,
   ativo: true,
 };
 

@@ -28,7 +28,7 @@ describe("api/administrativo", () => {
 
   describe("buildAtividadeUpsertApiRequest", () => {
     it("limita nome/descricao/icone/cor", () => {
-      const req = buildAtividadeUpsertApiRequest("t1", {
+      const req = buildAtividadeUpsertApiRequest({
         nome: "x".repeat(200),
         descricao: "y".repeat(1000),
         categoria: "MUSCULACAO",
@@ -44,7 +44,7 @@ describe("api/administrativo", () => {
     });
 
     it("checkinObrigatorio false quando permiteCheckin false", () => {
-      const req = buildAtividadeUpsertApiRequest("t1", {
+      const req = buildAtividadeUpsertApiRequest({
         nome: "A",
         categoria: "MUSCULACAO",
         permiteCheckin: false,
@@ -55,7 +55,7 @@ describe("api/administrativo", () => {
     });
 
     it("limpa strings vazias", () => {
-      const req = buildAtividadeUpsertApiRequest("t1", {
+      const req = buildAtividadeUpsertApiRequest({
         nome: "A",
         descricao: "  ",
         icone: "",
@@ -212,6 +212,7 @@ describe("api/administrativo", () => {
         } as never,
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
 
     it("updateAtividadeApi PUT", async () => {
@@ -233,6 +234,7 @@ describe("api/administrativo", () => {
       expect(spy.mock.calls[0][0].path).toBe(
         "/api/v1/administrativo/atividades/a1",
       );
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
 
     it("toggleAtividadeApi PATCH", async () => {

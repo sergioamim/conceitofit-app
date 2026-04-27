@@ -9,6 +9,9 @@ import type {
 
 vi.mock("@/lib/api/caixa", () => ({
   getCaixaAtivo: vi.fn().mockResolvedValue(null),
+  listCaixaCatalogos: vi.fn().mockResolvedValue([
+    { id: "cat1", nome: "Caixa Principal", descricao: null },
+  ]),
   abrirCaixa: vi.fn(),
   fecharCaixa: vi.fn(),
   criarSangria: vi.fn(),

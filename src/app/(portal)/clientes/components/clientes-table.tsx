@@ -45,7 +45,6 @@ interface ClientesTableProps {
   hasNext: boolean;
   onPrevious: () => void;
   onNext: () => void;
-  onClienteClick: (aluno: Aluno) => void;
   router: AppRouterInstance;
 }
 
@@ -61,7 +60,6 @@ export function ClientesTable({
   hasNext,
   onPrevious,
   onNext,
-  onClienteClick,
   router,
 }: ClientesTableProps) {
   const todayMonthDay = useSyncExternalStore(
@@ -94,16 +92,9 @@ export function ClientesTable({
               <ClienteThumbnail nome={aluno.nome} foto={(aluno as { fotoThumbnail?: string }).fotoThumbnail ?? aluno.foto} size="sm" />
               <div>
                 <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    className="cursor-pointer text-left text-sm font-medium hover:underline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClienteClick(aluno);
-                    }}
-                  >
+                  <span className="text-sm font-medium">
                     {aluno.nome}
-                  </button>
+                  </span>
                   {birthday ? (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-gym-accent/15 px-1.5 py-0.5 text-[10px] font-semibold text-gym-accent" title="Aniversariante do dia!">
                       <Cake className="size-3" />

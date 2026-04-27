@@ -188,7 +188,7 @@ export async function getStorefrontThemeBySlug(
 }
 
 /** GET /{academiaSlug}/planos — planos agrupados por unidade */
-async function getStorefrontPlanos(
+export async function getStorefrontPlanos(
   academiaSlug: string,
 ): Promise<StorefrontPlanosResponse> {
   return serverFetch<StorefrontPlanosResponse>(

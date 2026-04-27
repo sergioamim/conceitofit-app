@@ -175,6 +175,7 @@ function normalizePlanoEmbedded(input: Partial<Plano> | null | undefined, tenant
     parcelasMaxAnuidade: input.parcelasMaxAnuidade,
     permiteRenovacaoAutomatica: input.permiteRenovacaoAutomatica ?? true,
     permiteCobrancaRecorrente: input.permiteCobrancaRecorrente ?? false,
+    permiteVendaOnline: input.permiteVendaOnline ?? true,
     diaCobrancaPadrao: input.diaCobrancaPadrao,
     contratoTemplateHtml: input.contratoTemplateHtml,
     contratoAssinatura: input.contratoAssinatura ?? "AMBAS",

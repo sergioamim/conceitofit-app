@@ -19,6 +19,7 @@ export const planoFormSchema = z.object({
   atividades: z.array(z.string()).default([]),
   beneficios: z.array(z.object({ value: z.string() })).default([]),
   destaque: z.boolean().default(false),
+  permiteVendaOnline: z.boolean().default(true),
   ordem: z.string().optional().default(""),
 });
 

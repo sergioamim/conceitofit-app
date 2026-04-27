@@ -28,7 +28,7 @@ describe("api/comercial-catalogo", () => {
 
   describe("buildPlanoUpsertApiRequest", () => {
     it("limita nome e descricao", () => {
-      const req = buildPlanoUpsertApiRequest("t1", {
+      const req = buildPlanoUpsertApiRequest({
         nome: "x".repeat(200),
         descricao: "y".repeat(1000),
         tipo: "MENSAL",
@@ -43,7 +43,7 @@ describe("api/comercial-catalogo", () => {
     });
 
     it("duracaoDias mínimo 1", () => {
-      const req = buildPlanoUpsertApiRequest("t1", {
+      const req = buildPlanoUpsertApiRequest({
         nome: "N",
         tipo: "MENSAL",
         duracaoDias: 0,
@@ -56,7 +56,7 @@ describe("api/comercial-catalogo", () => {
     });
 
     it("valor mínimo 0.01", () => {
-      const req = buildPlanoUpsertApiRequest("t1", {
+      const req = buildPlanoUpsertApiRequest({
         nome: "N",
         tipo: "MENSAL",
         duracaoDias: 30,
@@ -69,7 +69,7 @@ describe("api/comercial-catalogo", () => {
     });
 
     it("deduplica atividades", () => {
-      const req = buildPlanoUpsertApiRequest("t1", {
+      const req = buildPlanoUpsertApiRequest({
         nome: "N",
         tipo: "MENSAL",
         duracaoDias: 30,
@@ -82,7 +82,7 @@ describe("api/comercial-catalogo", () => {
     });
 
     it("beneficios vazios → undefined", () => {
-      const req = buildPlanoUpsertApiRequest("t1", {
+      const req = buildPlanoUpsertApiRequest({
         nome: "N",
         tipo: "MENSAL",
         duracaoDias: 30,
@@ -94,8 +94,21 @@ describe("api/comercial-catalogo", () => {
       expect(req.beneficios).toBeUndefined();
     });
 
+    it("permiteVendaOnline default → true", () => {
+      const req = buildPlanoUpsertApiRequest({
+        nome: "N",
+        tipo: "MENSAL",
+        duracaoDias: 30,
+        valor: 100,
+        valorMatricula: 0,
+        atividades: [],
+        beneficios: [],
+      } as never);
+      expect(req.permiteVendaOnline).toBe(true);
+    });
+
     it("ordem null → undefined", () => {
-      const req = buildPlanoUpsertApiRequest("t1", {
+      const req = buildPlanoUpsertApiRequest({
         nome: "N",
         tipo: "MENSAL",
         duracaoDias: 30,
@@ -119,6 +132,7 @@ describe("api/comercial-catalogo", () => {
       expect(result.contratoAssinatura).toBe("AMBAS");
       expect(result.atividades).toEqual([]);
       expect(result.beneficios).toEqual([]);
+      expect(result.permiteVendaOnline).toBe(true);
       expect(result.ativo).toBe(true);
     });
 
@@ -170,6 +184,29 @@ describe("api/comercial-catalogo", () => {
     it("tipo MENSAL → permiteRenovacaoAutomatica default true", () => {
       const result = normalizePlanoApiResponse({ tipo: "MENSAL" as never });
       expect(result.permiteRenovacaoAutomatica).toBe(true);
+    });
+
+    it("tolera resposta undefined usando fallback", () => {
+      const result = normalizePlanoApiResponse(undefined, {
+        id: "p1",
+        tenantId: "t1",
+        nome: "Fallback",
+        tipo: "MENSAL",
+        duracaoDias: 30,
+        valor: 99,
+        valorMatricula: 0,
+        cobraAnuidade: false,
+        permiteRenovacaoAutomatica: true,
+        permiteCobrancaRecorrente: false,
+        contratoAssinatura: "AMBAS",
+        contratoEnviarAutomaticoEmail: false,
+        destaque: false,
+        permiteVendaOnline: true,
+        ativo: true,
+      } as never);
+      expect(result.nome).toBe("Fallback");
+      expect(result.tenantId).toBe("t1");
+      expect(result.permiteVendaOnline).toBe(true);
     });
   });
 
@@ -353,13 +390,15 @@ describe("api/comercial-catalogo", () => {
         } as never,
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].body).toMatchObject({ permiteVendaOnline: true });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
 
     it("updatePlanoApi PUT", async () => {
       const spy = vi
         .spyOn(http, "apiRequest")
-        .mockResolvedValue({ id: "p1" } as never);
-      await updatePlanoApi({
+        .mockResolvedValue(undefined as never);
+      await expect(updatePlanoApi({
         tenantId: "t1",
         id: "p1",
         data: {
@@ -372,16 +411,18 @@ describe("api/comercial-catalogo", () => {
           beneficios: [],
           ativo: true,
         } as never,
-      });
+      })).resolves.toBeUndefined();
       expect(spy.mock.calls[0][0].method).toBe("PUT");
       expect(spy.mock.calls[0][0].path).toBe("/api/v1/comercial/planos/p1");
+      expect(spy.mock.calls[0][0].body).toMatchObject({ permiteVendaOnline: true });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
 
     it("togglePlanoAtivoApi PATCH /toggle-ativo", async () => {
       const spy = vi
         .spyOn(http, "apiRequest")
-        .mockResolvedValue({ id: "p1" } as never);
-      await togglePlanoAtivoApi({ tenantId: "t1", id: "p1" });
+        .mockResolvedValue(undefined as never);
+      await expect(togglePlanoAtivoApi({ tenantId: "t1", id: "p1" })).resolves.toBeUndefined();
       expect(spy.mock.calls[0][0].path).toBe(
         "/api/v1/comercial/planos/p1/toggle-ativo",
       );
@@ -390,8 +431,8 @@ describe("api/comercial-catalogo", () => {
     it("togglePlanoDestaqueApi PATCH /toggle-destaque", async () => {
       const spy = vi
         .spyOn(http, "apiRequest")
-        .mockResolvedValue({ id: "p1" } as never);
-      await togglePlanoDestaqueApi({ tenantId: "t1", id: "p1" });
+        .mockResolvedValue(undefined as never);
+      await expect(togglePlanoDestaqueApi({ tenantId: "t1", id: "p1" })).resolves.toBeUndefined();
       expect(spy.mock.calls[0][0].path).toBe(
         "/api/v1/comercial/planos/p1/toggle-destaque",
       );

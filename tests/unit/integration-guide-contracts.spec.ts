@@ -247,6 +247,7 @@ test.describe("integration guide contracts", () => {
         valorMatricula: 15,
         destaque: true,
         ativo: true,
+        permiteVendaOnline: true,
         permiteRenovacaoAutomatica: true,
         permiteCobrancaRecorrente: false,
         contratoAssinatura: "AMBAS",
@@ -298,6 +299,7 @@ test.describe("integration guide contracts", () => {
           atividades: ["atividade-1"],
           beneficios: ["Spa"],
           destaque: true,
+          permiteVendaOnline: true,
           ordem: 4,
         },
       });
@@ -306,7 +308,6 @@ test.describe("integration guide contracts", () => {
       expect(calls[0].method).toBe("POST");
       expect(calls[0].url).toContain("/api/v1/comercial/planos");
       expect(JSON.parse(calls[0].body ?? "{}")).toEqual({
-        tenantId: "tenant-guide",
         nome: "Mensal Premium",
         descricao: "Plano principal",
         tipo: "MENSAL",
@@ -316,6 +317,7 @@ test.describe("integration guide contracts", () => {
         atividadeIds: ["atividade-1"],
         beneficios: ["Spa"],
         destaque: true,
+        permiteVendaOnline: true,
         ordem: 4,
       });
     } finally {
@@ -372,7 +374,6 @@ test.describe("integration guide contracts", () => {
       expect(calls[0].method).toBe("POST");
       expect(calls[0].url).toContain("/api/v1/administrativo/atividades");
       expect(JSON.parse(calls[0].body ?? "{}")).toEqual({
-        tenantId: "tenant-guide",
         nome: "Yoga",
         descricao: "Alongamento e mobilidade",
         categoria: "COLETIVA",

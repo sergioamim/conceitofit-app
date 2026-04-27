@@ -159,6 +159,7 @@ const planoFit: Plano = {
   contratoAssinatura: "AMBAS",
   contratoEnviarAutomaticoEmail: false,
   destaque: false,
+  permiteVendaOnline: true,
   ativo: true,
 } as unknown as Plano;
 

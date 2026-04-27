@@ -18,6 +18,7 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useGrade } from "@/lib/query/use-grade";
 import { useAulasSessoes } from "@/lib/query/use-aulas";
 import { Button } from "@/components/ui/button";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getModalidadeCor } from "@/lib/grade/modalidade-cor";
 import { GradeWeekCard, type GradeCardItem } from "./grade-week-card";
@@ -39,7 +40,7 @@ const DIA_FULL: Record<DiaSemana, string> = {
   DOM: "Domingo",
 };
 
-const PX_HORA = 56;
+const PX_HORA = 64;
 const HORA_INI_DEFAULT = 6;
 const HORA_FIM_DEFAULT = 22;
 
@@ -206,8 +207,14 @@ export function GradeContent() {
     const date = addDays(weekStart, idx);
     return { dia, date, isoDate: toIsoDate(date), horarioDia: horarioMap.get(dia) };
   });
+  // Esconde dias sem nenhuma aula (com filtros aplicados) para liberar espaço.
+  const activeWeekDays = weekDays.filter((d) => cardsByDay[d.dia].length > 0);
+  const dayCount = activeWeekDays.length;
+  const gridCols = `64px repeat(${dayCount}, minmax(0,1fr))`;
+  const gridMinWidth = Math.max(960, 64 + dayCount * 192);
 
   return (
+    <TooltipProvider delayDuration={150}>
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <Header />
@@ -294,7 +301,7 @@ export function GradeContent() {
           grades={[...grades]}
           atividades={[...atividades]}
           sessoes={[...sessoes]}
-          weekDates={weekDays.map((w) => ({ dia: w.dia, isoDate: w.isoDate }))}
+          weekDates={activeWeekDays.map((w) => ({ dia: w.dia, isoDate: w.isoDate }))}
           todayIso={todayIso}
         />
       ) : null}
@@ -306,9 +313,9 @@ export function GradeContent() {
           salas={[...salas]}
           funcionarios={[...funcionarios]}
           sessoes={[...sessoes]}
-          weekDates={weekDays}
+          weekDates={activeWeekDays}
           selectedDia={
-            selectedDia ?? (weekDays.find((w) => w.isoDate === todayIso)?.dia ?? "SEG")
+            selectedDia ?? (activeWeekDays.find((w) => w.isoDate === todayIso)?.dia ?? activeWeekDays[0]?.dia ?? "SEG")
           }
           onSelectDia={setSelectedDia}
           todayIso={todayIso}
@@ -323,7 +330,7 @@ export function GradeContent() {
           salas={[...salas]}
           funcionarios={[...funcionarios]}
           sessoes={[...sessoes]}
-          weekDates={weekDays}
+          weekDates={activeWeekDays}
           todayIso={todayIso}
         />
       ) : null}
@@ -350,10 +357,13 @@ export function GradeContent() {
         </div>
       ) : viewMode === "timeline" ? (
         <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <div className="min-w-[1120px]">
-            <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(7,minmax(0,1fr))] border-b border-border bg-card">
+          <div style={{ minWidth: gridMinWidth }}>
+            <div
+              className="sticky top-0 z-10 grid border-b border-border bg-card"
+              style={{ gridTemplateColumns: gridCols }}
+            >
               <div />
-              {weekDays.map((d) => {
+              {activeWeekDays.map((d) => {
                 const isToday = d.isoDate === todayIso;
                 return (
                   <div
@@ -402,7 +412,7 @@ export function GradeContent() {
               })}
             </div>
 
-            <div className="grid grid-cols-[64px_repeat(7,minmax(0,1fr))]">
+            <div className="grid" style={{ gridTemplateColumns: gridCols }}>
               <div className="border-r border-border bg-card" style={{ height: totalH }}>
                 {horas.map((h) => (
                   <div
@@ -415,7 +425,7 @@ export function GradeContent() {
                 ))}
               </div>
 
-              {weekDays.map((d) => {
+              {activeWeekDays.map((d) => {
                 const isToday = d.isoDate === todayIso;
                 const placements = assignTracks(cardsByDay[d.dia]);
                 const nowMinutes = isToday
@@ -483,6 +493,7 @@ export function GradeContent() {
         sobDemandaCount={sobDemandaCount}
       />
     </div>
+    </TooltipProvider>
   );
 }
 

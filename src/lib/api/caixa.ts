@@ -15,6 +15,7 @@
 import type {
   AbrirCaixaRequest,
   AjusteAdminRequest,
+  CaixaCatalogoResponse,
   CaixaAjusteResponse,
   CaixaResponse,
   DashboardDiarioResponse,
@@ -118,6 +119,14 @@ async function withCaixaErrorMapping<T>(op: () => Promise<T>): Promise<T> {
 // ---------------------------------------------------------------------------
 // Endpoints
 // ---------------------------------------------------------------------------
+
+/** `GET /api/caixas/catalogo` → 200 `CaixaCatalogoResponse[]`. */
+export async function listCaixaCatalogos(): Promise<CaixaCatalogoResponse[]> {
+  return apiRequest<CaixaCatalogoResponse[]>({
+    path: "/api/caixas/catalogo",
+    method: "GET",
+  });
+}
 
 /** `POST /api/caixas/abrir` → 201 `CaixaResponse`. */
 export async function abrirCaixa(

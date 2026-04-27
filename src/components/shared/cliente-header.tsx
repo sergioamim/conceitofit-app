@@ -10,11 +10,11 @@ import {
   Camera,
   CreditCard,
   KeyRound,
+  Link2,
   Lock,
   Merge,
   MessageCircle,
   MoreVertical,
-  Pencil,
   ScanFace,
   Shield,
   ShieldOff,
@@ -24,8 +24,6 @@ import {
   Unlock,
   UserX,
 } from "lucide-react";
-import { formatDate } from "@/lib/formatters";
-import { Badge } from "@/components/ui/badge";
 import { FotoAvisoBadge } from "@/components/shared/foto-aviso-badge";
 import { cn } from "@/lib/utils";
 import { getHaloRingClass, type HaloStatus } from "@/lib/domain/status-helpers";
@@ -37,7 +35,6 @@ import {
 export function ClienteHeader({
   aluno,
   planoAtivo,
-  planoAtivoInfo,
   suspenso,
   onCartoes,
   onNovaVenda,
@@ -48,9 +45,8 @@ export function ClienteHeader({
   onExcluir,
   sticky = true,
   showCartoesAction = true,
-  onEdit,
   onChangeFoto,
-  onCompletarCadastro,
+  onVincularAgregador,
   onMigrarUnidadeBase,
   onSyncFace,
   onBloquearAcesso,
@@ -80,6 +76,7 @@ export function ClienteHeader({
   onEdit?: () => void;
   onChangeFoto?: () => void;
   onCompletarCadastro?: () => void;
+  onVincularAgregador?: () => void;
   onMigrarUnidadeBase?: () => void;
   onSyncFace?: () => void;
   onBloquearAcesso?: () => void;
@@ -115,6 +112,7 @@ export function ClienteHeader({
   const whatsappUrl = aluno.telefone
     ? `https://wa.me/55${aluno.telefone.replace(/\D/g, "")}`
     : null;
+  const podeVincularAgregador = aluno.status === "INATIVO" && Boolean(onVincularAgregador);
 
   return (
     <div
@@ -168,16 +166,6 @@ export function ClienteHeader({
             <h1 className="font-display text-2xl font-bold tracking-tight">
               {aluno.nome}
             </h1>
-            {/* Badge de contrato */}
-            {planoAtivo ? (
-              <Badge variant="secondary" className="bg-gym-teal/15 text-gym-teal border-gym-teal/30 text-[11px]">
-                Contrato ativo
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-muted-foreground text-[11px]">
-                Sem contrato
-              </Badge>
-            )}
           </div>
           {/* ID do cliente */}
           <p className="mt-0.5 text-xs text-muted-foreground font-mono">
@@ -187,11 +175,6 @@ export function ClienteHeader({
             <span>
               Status: <StatusBadge status={aluno.status} />
             </span>
-            {planoAtivoInfo && planoAtivo && (
-              <span>
-                {planoAtivoInfo.nome} — vigente ate {formatDate(planoAtivo.dataFim)}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -230,7 +213,11 @@ export function ClienteHeader({
           </Button>
         )}
         {onLiberarAcesso && (
-          <Button variant="outline" className="h-9 border-amber-500/40 text-amber-300" onClick={onLiberarAcesso}>
+          <Button
+            variant="outline"
+            className="h-9 border-gym-teal/40 text-gym-teal hover:bg-gym-teal/10 hover:text-gym-teal"
+            onClick={onLiberarAcesso}
+          >
             <KeyRound className="mr-2 size-4" />
             Liberar acesso
           </Button>
@@ -280,6 +267,11 @@ export function ClienteHeader({
               {/* Sincronizar face */}
               {onSyncFace ? (
                 <MenuButton icon={ScanFace} label="Sincronizar face" onClick={() => { setMenuOpen(false); onSyncFace(); }} />
+              ) : null}
+
+              {/* Vincular agregador */}
+              {podeVincularAgregador && onVincularAgregador ? (
+                <MenuButton icon={Link2} label="Vincular agregador" onClick={() => { setMenuOpen(false); onVincularAgregador(); }} />
               ) : null}
 
               {/* Migrar unidade-base */}

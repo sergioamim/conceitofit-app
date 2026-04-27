@@ -2,12 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { logger } from "@/lib/shared/logger";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import { useUpdateCliente } from "@/lib/query/use-clientes";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { Download } from "lucide-react";
 import type { Aluno } from "@/lib/types";
@@ -17,7 +14,6 @@ import { useClientesData } from "./use-clientes-data";
 const subscribeNoop = () => () => {};
 
 export function useClientesWorkspace() {
-  const { confirm, ConfirmDialog } = useConfirmDialog();
   const router = useRouter();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const {
@@ -28,11 +24,8 @@ export function useClientesWorkspace() {
   const [buscaInput, setBuscaInput] = useState(q);
   const busca = q;
   const wizard = useDialogState();
-  const resumoDialog = useDialogState();
-  const [clienteResumo, setClienteResumo] = useState<Aluno | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<"cadastro" | "nome">("cadastro");
-  const updateMutation = useUpdateCliente(tenantId);
   const currentMonthYear = useSyncExternalStore(
     subscribeNoop,
     () => getBusinessTodayIso().slice(0, 7),
@@ -105,21 +98,6 @@ export function useClientesWorkspace() {
     return { novos, renovados: 0, naoRenovados: 0, evadidos };
   }, [currentMonthYear, data.alunos]);
 
-  // Resumo dialog derived state
-  const clienteResumoPlano = useMemo(() => {
-    if (!clienteResumo) return null;
-    const ea = clienteResumo.estadoAtual;
-    if (!ea?.descricaoContratoAtual && !ea?.dataFimContratoAtual) return null;
-    return {
-      nome: ea?.descricaoContratoAtual ?? "Plano ativo",
-      dataFim: ea?.dataFimContratoAtual,
-    };
-  }, [clienteResumo]);
-
-  const clienteResumoBaseHref = useMemo(() => {
-    return clienteResumo ? `/clientes/${clienteResumo.id}` : "";
-  }, [clienteResumo]);
-
   // Bulk CSV export
   const exportCsv = useCallback(() => {
     const toExport = selectedIds
@@ -149,32 +127,6 @@ export function useClientesWorkspace() {
     [exportCsv],
   );
 
-  // Actions
-  const handleLiberarSuspensao = useCallback(() => {
-    if (!clienteResumo || updateMutation.isPending) return;
-    confirm(`Confirmar liberação da suspensão de ${clienteResumo.nome}?`, async () => {
-      try {
-        await updateMutation.mutateAsync({
-          tenantId: clienteResumo.tenantId,
-          id: clienteResumo.id,
-          data: { status: "ATIVO", suspensao: undefined },
-        });
-        setClienteResumo((prev) =>
-          prev ? { ...prev, status: "ATIVO", suspensao: undefined } : prev,
-        );
-      } catch (error) {
-        logger.error("Falha ao liberar suspensão", { module: "clientes", error });
-        window.alert("Não foi possível liberar a suspensão no momento.");
-      }
-    });
-  }, [clienteResumo, confirm, updateMutation]);
-
-  const handleVerPerfil = useCallback(() => {
-    if (!clienteResumoBaseHref) return;
-    resumoDialog.close();
-    router.push(clienteResumoBaseHref);
-  }, [clienteResumoBaseHref, resumoDialog, router]);
-
   return {
     // Data
     ...data,
@@ -202,17 +154,7 @@ export function useClientesWorkspace() {
 
     // Dialogs
     wizard,
-    resumoDialog,
-    clienteResumo,
-    setClienteResumo,
-    clienteResumoPlano,
-    clienteResumoBaseHref,
-    liberandoSuspensao: updateMutation.isPending,
-    ConfirmDialog,
 
-    // Actions
-    handleLiberarSuspensao,
-    handleVerPerfil,
     router,
   };
 }

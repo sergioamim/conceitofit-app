@@ -6,8 +6,11 @@ import { StorefrontPlanos } from "@/components/storefront/storefront-planos";
 import { StorefrontUnidades } from "@/components/storefront/storefront-unidades";
 import {
   getStorefrontOverview,
+  getStorefrontPlanos,
   getStorefrontSeo,
   type StorefrontOverviewResponse,
+  type StorefrontPlanoPublicoResponse,
+  type StorefrontPlanosResponse,
 } from "@/lib/public/storefront-api";
 import { logger } from "@/lib/shared/logger";
 import type { Metadata } from "next";
@@ -48,6 +51,44 @@ function overviewToUnidades(overview: StorefrontOverviewResponse): Tenant[] {
   })) as Tenant[];
 }
 
+function toPlano(plano: StorefrontPlanoPublicoResponse, tenantId: string): Plano {
+  return {
+    id: plano.id,
+    tenantId,
+    nome: plano.nome,
+    descricao: plano.descricao,
+    tipo: plano.tipo as Plano["tipo"],
+    duracaoDias: plano.duracaoDias,
+    valor: plano.valor,
+    valorMatricula: plano.valorMatricula,
+    cobraAnuidade: false,
+    permiteRenovacaoAutomatica: false,
+    permiteCobrancaRecorrente: false,
+    contratoAssinatura: "AMBAS",
+    contratoEnviarAutomaticoEmail: false,
+    beneficios: plano.beneficios,
+    destaque: plano.destaque,
+    permiteVendaOnline: true,
+    ativo: true,
+    ordem: plano.ordem,
+  };
+}
+
+function extractSingleUnitPlanos(planosResponse: StorefrontPlanosResponse): {
+  tenantId: string;
+  planos: Plano[];
+} | null {
+  if (planosResponse.unidades.length !== 1) {
+    return null;
+  }
+
+  const [unidade] = planosResponse.unidades;
+  return {
+    tenantId: unidade.tenantId,
+    planos: unidade.planos.map((plano) => toPlano(plano, unidade.tenantId)),
+  };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { academiaSlug } = await params;
   let title = `${academiaSlug} — Conheça nossos planos`;
@@ -80,8 +121,12 @@ export default async function AcademiaStorefrontPage({ params }: PageProps) {
   const { academiaSlug } = await params;
 
   let overview: StorefrontOverviewResponse;
+  let planosResponse: StorefrontPlanosResponse;
   try {
-    overview = await getStorefrontOverview(academiaSlug);
+    [overview, planosResponse] = await Promise.all([
+      getStorefrontOverview(academiaSlug),
+      getStorefrontPlanos(academiaSlug),
+    ]);
   } catch (error) {
     logger.warn("[Storefront] Overview fetch failed", { error, academiaSlug });
     return notFound();
@@ -89,8 +134,12 @@ export default async function AcademiaStorefrontPage({ params }: PageProps) {
 
   const theme = overviewToTheme(overview, overview.academiaId);
   const unidades = overviewToUnidades(overview);
-  const planos: Plano[] = [];
-  const singleUnit = unidades.length === 1 ? unidades[0] : null;
+  const singleUnitPlanos = extractSingleUnitPlanos(planosResponse);
+  const planos = singleUnitPlanos?.planos ?? [];
+  const singleUnit =
+    unidades.length === 1 && singleUnitPlanos
+      ? unidades.find((unidade) => unidade.id === singleUnitPlanos.tenantId) ?? unidades[0]
+      : null;
 
   return (
     <main>

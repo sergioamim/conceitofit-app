@@ -268,6 +268,10 @@ export function PlanoForm({
                   <input type="checkbox" {...register("destaque")} />
                   Exibir plano como destaque
                 </label>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <input type="checkbox" {...register("permiteVendaOnline")} />
+                  Permitir venda online na storefront
+                </label>
                 <div className="space-y-1.5 md:max-w-60">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ordem</label>
                   <Input type="number" {...register("ordem")} className="border-border bg-secondary" />

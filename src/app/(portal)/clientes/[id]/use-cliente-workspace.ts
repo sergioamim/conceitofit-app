@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
 import {
+  cancelarPagamentoService,
   createCartaoClienteService,
   deleteCartaoClienteService,
   excluirAlunoService,
@@ -152,6 +153,10 @@ export function useClienteWorkspace() {
   const [tab, setTab] = useState<ClienteTabKey>(requestedTab ?? "resumo");
   const [suspenderOpen, setSuspenderOpen] = useState(false);
   const [recebendo, setRecebendo] = useState<Pagamento | null>(null);
+  const [excluindoCobranca, setExcluindoCobranca] = useState<Pagamento | null>(null);
+  const [excluirCobrancaJustificativa, setExcluirCobrancaJustificativa] = useState("");
+  const [excluindoCobrancaLoading, setExcluindoCobrancaLoading] = useState(false);
+  const [excluirCobrancaErro, setExcluirCobrancaErro] = useState("");
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
   const [liberarAcessoOpen, setLiberarAcessoOpen] = useState(false);
   const [liberarAcessoJustificativa, setLiberarAcessoJustificativa] = useState("");
@@ -646,6 +651,46 @@ export function useClienteWorkspace() {
     await reload();
   }
 
+  function openExcluirCobranca(pagamento: Pagamento) {
+    setActionError(null);
+    setLiberarAcessoInfo(null);
+    setExcluirCobrancaErro("");
+    setExcluirCobrancaJustificativa("");
+    setExcluindoCobranca(pagamento);
+  }
+
+  function closeExcluirCobranca() {
+    setExcluindoCobranca(null);
+    setExcluirCobrancaJustificativa("");
+    setExcluirCobrancaErro("");
+  }
+
+  async function handleExcluirCobranca() {
+    if (!aluno || !excluindoCobranca) return;
+    const justificativa = excluirCobrancaJustificativa.trim();
+    if (!justificativa) {
+      setExcluirCobrancaErro("Justificativa é obrigatória.");
+      return;
+    }
+    setActionError(null);
+    setExcluindoCobrancaLoading(true);
+    setExcluirCobrancaErro("");
+    try {
+      await cancelarPagamentoService({
+        tenantId: aluno.tenantId,
+        id: excluindoCobranca.id,
+        data: { justificativa },
+      });
+      closeExcluirCobranca();
+      setLiberarAcessoInfo("Cobrança excluída com sucesso.");
+      await reload();
+    } catch (error) {
+      setExcluirCobrancaErro(normalizeErrorMessage(error));
+    } finally {
+      setExcluindoCobrancaLoading(false);
+    }
+  }
+
   async function handleSuspender(payload: NonNullable<Aluno["suspensao"]>) {
     if (!aluno) return;
     setActionError(null);
@@ -900,6 +945,12 @@ export function useClienteWorkspace() {
     setSuspenderOpen,
     recebendo,
     setRecebendo,
+    excluindoCobranca,
+    setExcluindoCobranca,
+    excluirCobrancaJustificativa,
+    setExcluirCobrancaJustificativa,
+    excluindoCobrancaLoading,
+    excluirCobrancaErro,
     photoModalOpen,
     setPhotoModalOpen,
 
@@ -952,6 +1003,7 @@ export function useClienteWorkspace() {
     handleExcluir,
     handleMigracao,
     handleReceberPagamento,
+    handleExcluirCobranca,
     handleSuspender,
     handleReativar,
     handleCreateCartao,
@@ -959,6 +1011,8 @@ export function useClienteWorkspace() {
     handleReloadCartoes,
     handleSetDefaultCartao,
     getConvenioForPagamento,
+    openExcluirCobranca,
+    closeExcluirCobranca,
     openLiberarAcesso,
     openExcluir,
     openMigracao,

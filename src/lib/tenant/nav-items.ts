@@ -26,7 +26,6 @@ import {
   Palette,
   QrCode,
   Settings,
-  Shield,
   ShieldAlert,
   ShieldCheck,
   ShoppingCart,
@@ -48,6 +47,7 @@ export type NavItem = {
   icon: LucideIcon;
   description?: string;
   exact?: boolean;
+  section?: string;
 };
 
 export type NavGroup = {
@@ -89,24 +89,24 @@ export const operationGroup: NavGroup = {
   label: "Operação",
   icon: Layers,
   items: [
-    { href: "/atendimento/inbox", label: "Atendimento", icon: MessageSquare, description: "Inbox WhatsApp" },
+    { href: "/atendimento/inbox", label: "Atendimento", icon: MessageSquare, description: "Inbox WhatsApp", section: "Operação diária" },
     { href: "/clientes", label: "Clientes", icon: Users, description: "Base de alunos" },
     { href: "/planos", label: "Planos", icon: CreditCard, description: "Catálogo de mensalidades" },
     { href: "/matriculas", label: "Contratos", icon: ClipboardList },
-    { href: "/administrativo/convenios", label: "Convênios", icon: Settings },
+    { href: "/administrativo/convenios", label: "Convênios", icon: Settings, section: "Catálogo" },
     { href: "/administrativo/produtos", label: "Produtos", icon: Settings },
     { href: "/administrativo/servicos", label: "Serviços", icon: Settings },
-    { href: "/grade", label: "Grade de Aulas", icon: CalendarDays },
-    { href: "/administrativo/atividades-grade", label: "Grade (admin)", icon: Settings },
-    { href: "/reservas", label: "Reservas", icon: CalendarDays },
-    { href: "/atividades", label: "Atividades", icon: Activity },
-    { href: "/treinos", label: "Treinos", icon: Dumbbell, exact: true },
+    { href: "/grade", label: "Grade de Aulas", icon: CalendarDays, description: "Agenda semanal das aulas", section: "Aulas" },
+    { href: "/reservas", label: "Reservas", icon: CalendarDays, description: "Gestão das reservas de aula" },
+    { href: "/administrativo/atividades-grade", label: "Configurar Grade", icon: Settings, description: "Cadastro de horários, capacidade e regras" },
+    { href: "/atividades", label: "Atividades", icon: Activity, description: "Modalidades e categorias" },
+    { href: "/administrativo/salas", label: "Salas", icon: Settings, description: "Locais usados na grade" },
+    { href: "/administrativo/horarios", label: "Horário de Funcionamento", icon: Settings, description: "Abertura da unidade por dia" },
+    { href: "/treinos", label: "Treinos", icon: Dumbbell, exact: true, section: "Treinos" },
     { href: "/treinos/atribuidos", label: "Treinos Atribuídos", icon: ClipboardList },
     { href: "/treinos/exercicios", label: "Exercícios", icon: Dumbbell },
     { href: "/treinos/grupos-musculares", label: "Grupos Musculares", icon: ListTree },
-    { href: "/administrativo/salas", label: "Salas", icon: Settings },
-    { href: "/administrativo/horarios", label: "Horários", icon: Settings },
-    { href: "/administrativo/catraca-status", label: "Integração Catraca", icon: Settings },
+    { href: "/administrativo/catraca-status", label: "Integração Catraca", icon: Settings, section: "Acesso físico" },
     { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
   ],
 };

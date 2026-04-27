@@ -25,6 +25,7 @@ type PlanoApiResponse = {
   beneficios?: string[] | null;
   ativo?: unknown;
   destaque?: unknown;
+  permiteVendaOnline?: unknown;
   ordem?: unknown;
 };
 
@@ -40,7 +41,6 @@ type PlanoListApiResponse =
     };
 
 export interface PlanoUpsertApiRequest {
-  tenantId: string;
   nome: string;
   descricao?: string;
   tipo: TipoPlano;
@@ -50,6 +50,7 @@ export interface PlanoUpsertApiRequest {
   atividadeIds?: string[];
   beneficios?: string[];
   destaque?: boolean;
+  permiteVendaOnline?: boolean;
   ordem?: number;
 }
 
@@ -130,7 +131,6 @@ function extractPlanoAtividadeIds(input: {
 }
 
 export function buildPlanoUpsertApiRequest(
-  tenantId: string,
   data: Pick<
     Plano,
     | "nome"
@@ -142,6 +142,7 @@ export function buildPlanoUpsertApiRequest(
     | "atividades"
     | "beneficios"
     | "destaque"
+    | "permiteVendaOnline"
     | "ordem"
   >
 ): PlanoUpsertApiRequest {
@@ -157,7 +158,6 @@ export function buildPlanoUpsertApiRequest(
     .filter((beneficio): beneficio is string => Boolean(beneficio));
 
   return {
-    tenantId,
     nome: limitString(cleanString(data.nome) ?? "", MAX_PLANO_NAME_LENGTH) ?? "",
     descricao: limitString(cleanString(data.descricao), MAX_PLANO_DESCRIPTION_LENGTH),
     tipo: data.tipo,
@@ -167,58 +167,67 @@ export function buildPlanoUpsertApiRequest(
     atividadeIds: atividadeIds.length > 0 ? atividadeIds : undefined,
     beneficios: beneficios.length > 0 ? beneficios : undefined,
     destaque: Boolean(data.destaque),
+    permiteVendaOnline: data.permiteVendaOnline ?? true,
     ordem: data.ordem == null ? undefined : Math.max(0, Math.floor(toNumber(data.ordem, 0))),
   };
 }
 
-export function normalizePlanoApiResponse(input: PlanoApiResponse, fallback?: Partial<Plano>): Plano {
-  const tipo = input.tipo ?? fallback?.tipo ?? "MENSAL";
+export function normalizePlanoApiResponse(
+  input?: PlanoApiResponse | null,
+  fallback?: Partial<Plano>
+): Plano {
+  const source = input ?? {};
+  const tipo = source.tipo ?? fallback?.tipo ?? "MENSAL";
 
   return {
-    id: cleanString(input.id) ?? fallback?.id ?? "",
-    tenantId: cleanString(input.tenantId) ?? fallback?.tenantId ?? "",
-    nome: cleanString(input.nome) ?? fallback?.nome ?? "",
-    descricao: cleanString(input.descricao) ?? fallback?.descricao,
+    id: cleanString(source.id) ?? fallback?.id ?? "",
+    tenantId: cleanString(source.tenantId) ?? fallback?.tenantId ?? "",
+    nome: cleanString(source.nome) ?? fallback?.nome ?? "",
+    descricao: cleanString(source.descricao) ?? fallback?.descricao,
     tipo,
-    duracaoDias: Math.max(1, Math.floor(toNumber(input.duracaoDias, fallback?.duracaoDias ?? 1))),
-    valor: toNumber(input.valor, fallback?.valor ?? 0),
-    valorMatricula: toNumber(input.valorMatricula, fallback?.valorMatricula ?? 0),
-    cobraAnuidade: toBoolean(input.cobraAnuidade, fallback?.cobraAnuidade ?? false),
+    duracaoDias: Math.max(1, Math.floor(toNumber(source.duracaoDias, fallback?.duracaoDias ?? 1))),
+    valor: toNumber(source.valor, fallback?.valor ?? 0),
+    valorMatricula: toNumber(source.valorMatricula, fallback?.valorMatricula ?? 0),
+    cobraAnuidade: toBoolean(source.cobraAnuidade, fallback?.cobraAnuidade ?? false),
     valorAnuidade:
-      input.valorAnuidade == null && fallback?.valorAnuidade == null
+      source.valorAnuidade == null && fallback?.valorAnuidade == null
         ? undefined
-        : toNumber(input.valorAnuidade, fallback?.valorAnuidade ?? 0),
+        : toNumber(source.valorAnuidade, fallback?.valorAnuidade ?? 0),
     parcelasMaxAnuidade:
-      input.parcelasMaxAnuidade == null && fallback?.parcelasMaxAnuidade == null
+      source.parcelasMaxAnuidade == null && fallback?.parcelasMaxAnuidade == null
         ? undefined
-        : Math.max(1, Math.floor(toNumber(input.parcelasMaxAnuidade, fallback?.parcelasMaxAnuidade ?? 1))),
+        : Math.max(1, Math.floor(toNumber(source.parcelasMaxAnuidade, fallback?.parcelasMaxAnuidade ?? 1))),
     permiteRenovacaoAutomatica: toBoolean(
-      input.permiteRenovacaoAutomatica,
+      source.permiteRenovacaoAutomatica,
       fallback?.permiteRenovacaoAutomatica ?? tipo !== "AVULSO"
     ),
     permiteCobrancaRecorrente: toBoolean(
-      input.permiteCobrancaRecorrente,
+      source.permiteCobrancaRecorrente,
       fallback?.permiteCobrancaRecorrente ?? false
     ),
-    diaCobrancaPadrao: normalizeDiasCobranca(input.diaCobrancaPadrao, fallback?.diaCobrancaPadrao),
-    contratoTemplateHtml: cleanString(input.contratoTemplateHtml) ?? fallback?.contratoTemplateHtml,
-    contratoAssinatura: input.contratoAssinatura ?? fallback?.contratoAssinatura ?? "AMBAS",
+    diaCobrancaPadrao: normalizeDiasCobranca(source.diaCobrancaPadrao, fallback?.diaCobrancaPadrao),
+    contratoTemplateHtml: cleanString(source.contratoTemplateHtml) ?? fallback?.contratoTemplateHtml,
+    contratoAssinatura: source.contratoAssinatura ?? fallback?.contratoAssinatura ?? "AMBAS",
     contratoEnviarAutomaticoEmail: toBoolean(
-      input.contratoEnviarAutomaticoEmail,
+      source.contratoEnviarAutomaticoEmail,
       fallback?.contratoEnviarAutomaticoEmail ?? false
     ),
-    atividades: extractPlanoAtividadeIds(input),
-    beneficios: Array.isArray(input.beneficios)
-      ? input.beneficios
+    atividades: extractPlanoAtividadeIds(source),
+    beneficios: Array.isArray(source.beneficios)
+      ? source.beneficios
           .map((beneficio) => cleanString(beneficio))
           .filter((beneficio): beneficio is string => Boolean(beneficio))
       : toArray(fallback?.beneficios),
-    destaque: toBoolean(input.destaque, fallback?.destaque ?? false),
-    ativo: toBoolean(input.ativo, fallback?.ativo ?? true),
+    destaque: toBoolean(source.destaque, fallback?.destaque ?? false),
+    permiteVendaOnline: toBoolean(
+      source.permiteVendaOnline,
+      fallback?.permiteVendaOnline ?? true
+    ),
+    ativo: toBoolean(source.ativo, fallback?.ativo ?? true),
     ordem:
-      input.ordem == null && fallback?.ordem == null
+      source.ordem == null && fallback?.ordem == null
         ? undefined
-        : Math.max(0, Math.floor(toNumber(input.ordem, fallback?.ordem ?? 0))),
+        : Math.max(0, Math.floor(toNumber(source.ordem, fallback?.ordem ?? 0))),
   };
 }
 
@@ -361,7 +370,7 @@ export async function createPlanoApi(input: {
     path: "/api/v1/comercial/planos",
     method: "POST",
     query: { tenantId: input.tenantId },
-    body: buildPlanoUpsertApiRequest(input.tenantId, input.data),
+    body: buildPlanoUpsertApiRequest(input.data),
   });
 
   return normalizePlanoApiResponse(response, {
@@ -375,50 +384,34 @@ export async function updatePlanoApi(input: {
   tenantId: string;
   id: string;
   data: Omit<Plano, "id" | "tenantId" | "ativo"> & Pick<Plano, "ativo">;
-}): Promise<Plano> {
-  const response = await apiRequest<PlanoApiResponse>({
+}): Promise<void> {
+  await apiRequest<void>({
     path: `/api/v1/comercial/planos/${input.id}`,
     method: "PUT",
     query: { tenantId: input.tenantId },
-    body: buildPlanoUpsertApiRequest(input.tenantId, input.data),
-  });
-
-  return normalizePlanoApiResponse(response, {
-    id: input.id,
-    tenantId: input.tenantId,
-    ...input.data,
+    body: buildPlanoUpsertApiRequest(input.data),
   });
 }
 
 export async function togglePlanoAtivoApi(input: {
   tenantId: string;
   id: string;
-}): Promise<Plano> {
-  const response = await apiRequest<PlanoApiResponse>({
+}): Promise<void> {
+  await apiRequest<void>({
     path: `/api/v1/comercial/planos/${input.id}/toggle-ativo`,
     method: "PATCH",
     query: { tenantId: input.tenantId },
-  });
-
-  return normalizePlanoApiResponse(response, {
-    id: input.id,
-    tenantId: input.tenantId,
   });
 }
 
 export async function togglePlanoDestaqueApi(input: {
   tenantId: string;
   id: string;
-}): Promise<Plano> {
-  const response = await apiRequest<PlanoApiResponse>({
+}): Promise<void> {
+  await apiRequest<void>({
     path: `/api/v1/comercial/planos/${input.id}/toggle-destaque`,
     method: "PATCH",
     query: { tenantId: input.tenantId },
-  });
-
-  return normalizePlanoApiResponse(response, {
-    id: input.id,
-    tenantId: input.tenantId,
   });
 }
 

@@ -16,16 +16,16 @@ describe("api/reservas", () => {
   });
 
   describe("listAulasAgendaApi", () => {
-    it("GET /agenda/aulas/sessoes", async () => {
+    it("GET /administrativo/atividades-sessoes", async () => {
       const spy = vi.spyOn(http, "apiRequest").mockResolvedValue([
         {
           id: "s1",
           atividadeGradeId: "g1",
-          data: "2026-04-10",
-          horaInicio: "10:00",
-          horaFim: "11:00",
-          capacidade: 20,
-          vagasOcupadas: 5,
+          dataSessao: "2026-04-10",
+          inicioEm: "2026-04-10T10:00:00",
+          fimEm: "2026-04-10T11:00:00",
+          capacidadeTotal: 20,
+          reservasConfirmadas: 5,
           diaSemana: "SEG",
         },
       ] as never);
@@ -35,7 +35,7 @@ describe("api/reservas", () => {
         dateTo: "2026-04-20",
       });
       expect(spy.mock.calls[0][0].path).toBe(
-        "/api/v1/agenda/aulas/sessoes",
+        "/api/v1/administrativo/atividades-sessoes",
       );
       expect(result).toHaveLength(1);
       expect(result[0].vagasOcupadas).toBe(5);
@@ -47,8 +47,8 @@ describe("api/reservas", () => {
           {
             id: "s1",
             atividadeGradeId: "g1",
-            data: "2026-04-10",
-            capacidade: 10,
+            dataSessao: "2026-04-10",
+            capacidadeTotal: 10,
           },
         ],
       } as never);
@@ -65,9 +65,9 @@ describe("api/reservas", () => {
         {
           id: "s1",
           atividadeGradeId: "g1",
-          data: "2026-04-10",
-          capacidade: 10,
-          vagasOcupadas: 3,
+          dataSessao: "2026-04-10",
+          capacidadeTotal: 10,
+          reservasConfirmadas: 3,
         },
       ] as never);
       const result = await listAulasAgendaApi({

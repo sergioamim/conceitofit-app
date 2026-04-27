@@ -249,26 +249,106 @@ function normalizeOcupacao(input: AulaOcupacaoApiResponse, tenantId: string, ses
   };
 }
 
+/**
+ * Shape do AdministrativoAulasController#listarSessoes (backend).
+ * Diferente do AulaSessao do front — precisa adapter.
+ */
+type AtividadeSessaoBackend = {
+  id?: string | null;
+  tenantId?: string | null;
+  atividadeGradeId?: string | null;
+  atividadeId?: string | null;
+  atividade?: string | null;
+  atividadeNome?: string | null;
+  dataSessao?: string | null;
+  data?: string | null;
+  inicioEm?: string | null;
+  horaInicio?: string | null;
+  fimEm?: string | null;
+  horaFim?: string | null;
+  salaId?: string | null;
+  sala?: string | null;
+  salaNome?: string | null;
+  professorPrincipalId?: string | null;
+  professor?: string | null;
+  instrutorNome?: string | null;
+  capacidadeTotal?: unknown;
+  capacidade?: unknown;
+  capacidadeAgregadores?: unknown;
+  vagasDisponiveis?: unknown;
+  reservasConfirmadas?: unknown;
+  vagasOcupadas?: unknown;
+  filaEsperaTotal?: unknown;
+  waitlistTotal?: unknown;
+  status?: string | null;
+  cancelada?: unknown;
+  motivoCancelamento?: string | null;
+  origemOcorrencia?: string | null;
+  origemTipo?: string | null;
+  geradaAutomaticamente?: unknown;
+  observacao?: string | null;
+  diaSemana?: DiaSemana | null;
+};
+
+function adaptSessaoBackend(b: AtividadeSessaoBackend): AulaSessaoApiResponse {
+  const inicioEm = cleanString(b.inicioEm);
+  const fimEm = cleanString(b.fimEm);
+  const horaInicio = inicioEm?.split("T")[1]?.slice(0, 5) ?? cleanString(b.horaInicio);
+  const horaFim = fimEm?.split("T")[1]?.slice(0, 5) ?? cleanString(b.horaFim);
+  const adapted: AulaSessaoApiResponse = {
+    id: b.id ?? undefined,
+    tenantId: b.tenantId ?? undefined,
+    atividadeGradeId: b.atividadeGradeId ?? undefined,
+    atividadeId: b.atividadeId ?? undefined,
+    atividadeNome: cleanString(b.atividade) ?? cleanString(b.atividadeNome),
+    data: cleanString(b.dataSessao) ?? cleanString(b.data),
+    diaSemana: b.diaSemana ?? undefined,
+    horaInicio,
+    horaFim,
+    capacidade:
+      b.capacidadeTotal == null ? toNumber(b.capacidade, 0) : toNumber(b.capacidadeTotal, 0),
+    vagasOcupadas:
+      b.reservasConfirmadas == null
+        ? toNumber(b.vagasOcupadas, 0)
+        : toNumber(b.reservasConfirmadas, 0),
+    vagasDisponiveis:
+      b.vagasDisponiveis == null ? undefined : toNumber(b.vagasDisponiveis, 0),
+    waitlistTotal:
+      b.filaEsperaTotal == null
+        ? toNumber(b.waitlistTotal, 0)
+        : toNumber(b.filaEsperaTotal, 0),
+    salaNome: cleanString(b.sala) ?? cleanString(b.salaNome),
+    instrutorNome: cleanString(b.professor) ?? cleanString(b.instrutorNome),
+    origemTipo:
+      b.origemOcorrencia === "OCORRENCIA_AVULSA"
+        ? "OCORRENCIA_AVULSA"
+        : (b.origemTipo as AulaSessao["origemTipo"] | null) ?? "GRADE_RECORRENTE",
+  };
+  return adapted;
+}
+
 export async function listAulasAgendaApi(input: {
   tenantId: string;
   dateFrom: string;
   dateTo: string;
   atividadeGradeId?: string;
+  /** @deprecated não tem efeito — backend não suporta. Mantido pra retrocompat. */
   apenasPortal?: boolean;
 }): Promise<AulaSessao[]> {
-  const response = await apiRequest<ListPayload<AulaSessaoApiResponse>>({
-    path: "/api/v1/agenda/aulas/sessoes",
+  const response = await apiRequest<ListPayload<AtividadeSessaoBackend>>({
+    path: "/api/v1/administrativo/atividades-sessoes",
     query: {
       tenantId: input.tenantId,
-      dateFrom: input.dateFrom,
-      dateTo: input.dateTo,
+      dataInicio: input.dateFrom,
+      dataFim: input.dateTo,
       atividadeGradeId: input.atividadeGradeId,
-      apenasPortal: input.apenasPortal,
     },
   });
 
   return sortSessoesAula(
-    extractItems(response).map((item) => normalizeSessao(item, { tenantId: input.tenantId }))
+    extractItems(response).map((item) =>
+      normalizeSessao(adaptSessaoBackend(item), { tenantId: input.tenantId }),
+    ),
   );
 }
 

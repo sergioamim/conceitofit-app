@@ -124,6 +124,16 @@ function NavLink({ item, active, collapsed }: { item: NavItem; active: boolean; 
   );
 }
 
+function SidebarSectionLabel({ label }: { label: string }) {
+  return (
+    <div className="px-3 pt-3 pb-1">
+      <div className="border-t border-sidebar-border/60 pt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground/55">
+        {label}
+      </div>
+    </div>
+  );
+}
+
 function SidebarGroup({ group, collapsed, pathname }: { group: NavGroup; collapsed: boolean; pathname: string }) {
   const hasActiveItem = group.items.some((item) => isSidebarItemActive(pathname, item, group.items));
   const [isOpen, setIsOpen] = useState(false);
@@ -155,14 +165,22 @@ function SidebarGroup({ group, collapsed, pathname }: { group: NavGroup; collaps
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden flex flex-col gap-1 px-2"
           >
-            {group.items.map((item) => (
-              <NavLink
-                key={item.href}
-                item={item}
-                active={isSidebarItemActive(pathname, item, group.items)}
-                collapsed={collapsed}
-              />
-            ))}
+            {group.items.map((item, index) => {
+              const previousSection = index > 0 ? group.items[index - 1]?.section : undefined;
+              const shouldRenderSection =
+                !collapsed && Boolean(item.section) && item.section !== previousSection;
+
+              return (
+                <div key={item.href}>
+                  {shouldRenderSection ? <SidebarSectionLabel label={item.section!} /> : null}
+                  <NavLink
+                    item={item}
+                    active={isSidebarItemActive(pathname, item, group.items)}
+                    collapsed={collapsed}
+                  />
+                </div>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>

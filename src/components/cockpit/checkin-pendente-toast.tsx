@@ -120,18 +120,20 @@ function formatAgregador(agregador: string): string {
  * "expirado". Re-renderiza a cada 30s pra o texto ficar live.
  */
 function useExpiraEmLabel(validoAte: string | null): string {
-  const [, force] = useState(0);
+  const [nowMs, setNowMs] = useState<number | null>(null);
 
   useEffect(() => {
     if (!validoAte) return;
-    const timer = setInterval(() => force((v) => v + 1), 30_000);
+    const updateNow = () => setNowMs(Date.now());
+    updateNow();
+    const timer = setInterval(updateNow, 30_000);
     return () => clearInterval(timer);
   }, [validoAte]);
 
   if (!validoAte) return "expira em breve";
   const venceMs = Date.parse(validoAte);
-  if (Number.isNaN(venceMs)) return "expira em breve";
-  const diffMin = Math.round((venceMs - Date.now()) / 60_000);
+  if (Number.isNaN(venceMs) || nowMs == null) return "expira em breve";
+  const diffMin = Math.round((venceMs - nowMs) / 60_000);
   if (diffMin <= 0) return "expirado";
   if (diffMin === 1) return "expira em 1 min";
   if (diffMin <= 60) return `expira em ${diffMin} min`;

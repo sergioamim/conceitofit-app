@@ -78,6 +78,7 @@ export interface Plano {
   atividades?: UUID[];
   beneficios?: string[];
   destaque: boolean;
+  permiteVendaOnline: boolean;
   ativo: boolean;
   ordem?: number;
 }

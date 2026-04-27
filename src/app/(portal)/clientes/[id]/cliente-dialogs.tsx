@@ -43,7 +43,24 @@ type ClienteDialogsProps = Pick<
   | "handleMigracao"
   | "baseTenantNomeAtual"
   | "opcoesMigracao"
->;
+> & {
+  bloquearAcessoOpen: boolean;
+  bloquearAcessoJustificativa: string;
+  setBloquearAcessoJustificativa: (value: string) => void;
+  bloqueandoAcesso: boolean;
+  bloquearAcessoErro: string;
+  setBloquearAcessoErro: (value: string) => void;
+  closeBloquearAcessoModal: () => void;
+  handleBloquearAcesso: () => void | Promise<void>;
+  lgpdDialogTipo: "pessoais" | "sensiveis" | null;
+  lgpdJustificativa: string;
+  setLgpdJustificativa: (value: string) => void;
+  lgpdProcessando: boolean;
+  lgpdErro: string;
+  setLgpdErro: (value: string) => void;
+  closeLgpdModal: () => void;
+  handleLgpdConfirm: () => void | Promise<void>;
+};
 
 export function ClienteDialogs(props: ClienteDialogsProps) {
   const {
@@ -83,10 +100,70 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
     handleMigracao,
     baseTenantNomeAtual,
     opcoesMigracao,
+    bloquearAcessoOpen,
+    bloquearAcessoJustificativa,
+    setBloquearAcessoJustificativa,
+    bloqueandoAcesso,
+    bloquearAcessoErro,
+    setBloquearAcessoErro,
+    closeBloquearAcessoModal,
+    handleBloquearAcesso,
+    lgpdDialogTipo,
+    lgpdJustificativa,
+    setLgpdJustificativa,
+    lgpdProcessando,
+    lgpdErro,
+    setLgpdErro,
+    closeLgpdModal,
+    handleLgpdConfirm,
   } = props;
 
   return (
     <>
+      <Dialog open={bloquearAcessoOpen} onOpenChange={(next) => { if (!next) closeBloquearAcessoModal(); }}>
+        <DialogContent className="border-border bg-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              Bloquear acesso
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Registre a justificativa para bloquear o acesso operacional deste cliente.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Justificativa *
+              </label>
+              <textarea
+                value={bloquearAcessoJustificativa}
+                onChange={(event) => {
+                  setBloquearAcessoJustificativa(event.target.value);
+                  if (bloquearAcessoErro) setBloquearAcessoErro("");
+                }}
+                rows={4}
+                maxLength={500}
+                className="min-h-24 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                placeholder="Explique o motivo do bloqueio..."
+              />
+            </div>
+            {bloquearAcessoErro ? <p className="text-xs text-gym-danger">{bloquearAcessoErro}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeBloquearAcessoModal} disabled={bloqueandoAcesso}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleBloquearAcesso()}
+              disabled={bloqueandoAcesso || !bloquearAcessoJustificativa.trim()}
+            >
+              {bloqueandoAcesso ? "Bloqueando..." : "Bloquear acesso"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Liberar Acesso Dialog */}
       <Dialog
         open={liberarAcessoOpen}
@@ -143,6 +220,56 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
               disabled={liberandoAcesso || !liberarAcessoJustificativa.trim()}
             >
               {liberandoAcesso ? "Enviando..." : "Enviar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={lgpdDialogTipo !== null} onOpenChange={(next) => { if (!next) closeLgpdModal(); }}>
+        <DialogContent className="border-border bg-card sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg font-bold">
+              {lgpdDialogTipo === "pessoais" ? "Excluir dados pessoais" : "Excluir dados sensíveis"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {lgpdDialogTipo === "pessoais"
+                ? "Esta ação é irreversível e anonimiza nome, email, telefone e CPF do cliente."
+                : "Esta ação é irreversível e remove anamnese e observações médicas do cliente."}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Justificativa *
+              </label>
+              <textarea
+                value={lgpdJustificativa}
+                onChange={(event) => {
+                  setLgpdJustificativa(event.target.value);
+                  if (lgpdErro) setLgpdErro("");
+                }}
+                rows={4}
+                maxLength={500}
+                className="min-h-24 w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                placeholder="Descreva a justificativa para auditoria..."
+              />
+            </div>
+            {lgpdErro ? <p className="text-xs text-gym-danger">{lgpdErro}</p> : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeLgpdModal} disabled={lgpdProcessando}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleLgpdConfirm()}
+              disabled={lgpdProcessando || !lgpdJustificativa.trim()}
+            >
+              {lgpdProcessando
+                ? "Processando..."
+                : lgpdDialogTipo === "pessoais"
+                  ? "Excluir dados pessoais"
+                  : "Excluir dados sensíveis"}
             </Button>
           </DialogFooter>
         </DialogContent>
