@@ -23,6 +23,7 @@ import {
   getNetworkSlugFromSession,
   getOperationalScopeDefaultTenantId,
   getSessionClaimsFromToken,
+  getSessionModeFromSession,
   getUserIdFromSession,
   getUserKindFromSession,
   rememberBackofficeReturnSession,
@@ -72,6 +73,7 @@ interface LoginApiResponse {
   broadAccess?: boolean;
   operationalAccess?: OperationalAccessApiResponse;
   forcePasswordChange?: boolean;
+  sessionMode?: string;
   sandboxMode?: boolean;
   sandboxRedeId?: string;
   sandboxUnidadeId?: string;
@@ -220,10 +222,17 @@ function normalizeSession(
         : options?.preserveTenantContext
           ? getForcePasswordChangeRequiredFromSession()
           : false,
-    sandboxMode: response.sandboxMode ?? false,
-    sandboxRedeId: response.sandboxRedeId,
-    sandboxUnidadeId: response.sandboxUnidadeId,
-    sandboxExpiresAt: response.sandboxExpiresAt,
+    sessionMode:
+      response.sessionMode ??
+      tokenClaims.sessionMode ??
+      (options?.preserveTenantContext ? getSessionModeFromSession() : undefined),
+    sandboxMode:
+      typeof response.sandboxMode === "boolean"
+        ? response.sandboxMode
+        : tokenClaims.sandboxMode ?? false,
+    sandboxRedeId: response.sandboxRedeId ?? tokenClaims.sandboxRedeId,
+    sandboxUnidadeId: response.sandboxUnidadeId ?? tokenClaims.sandboxUnidadeId,
+    sandboxExpiresAt: response.sandboxExpiresAt ?? tokenClaims.sandboxExpiresAt,
   };
 }
 

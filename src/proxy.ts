@@ -32,6 +32,15 @@ interface CacheEntry {
   resolvedAt: number;
 }
 
+interface StorefrontResolvePayload {
+  tenantId?: string;
+  tenantIds?: string[];
+  academiaId?: string;
+  academiaSlug?: string;
+  slug?: string;
+  nome?: string;
+}
+
 const resolveCache = new Map<string, CacheEntry | null>();
 
 function getCached(subdomain: string): CacheEntry | null | undefined {
@@ -71,6 +80,39 @@ function resolveBackendBase(request: NextRequest): string {
   return BACKEND_BASE;
 }
 
+export function normalizeStorefrontResolvePayload(
+  subdomain: string,
+  data: StorefrontResolvePayload
+): Omit<CacheEntry, "resolvedAt"> | null {
+  const tenantId = typeof data.tenantId === "string" && data.tenantId.trim()
+    ? data.tenantId.trim()
+    : Array.isArray(data.tenantIds) && typeof data.tenantIds[0] === "string" && data.tenantIds[0].trim()
+      ? data.tenantIds[0].trim()
+      : undefined;
+
+  if (!tenantId) {
+    return null;
+  }
+
+  const academiaSlug = typeof data.academiaSlug === "string" && data.academiaSlug.trim()
+    ? data.academiaSlug.trim()
+    : typeof data.slug === "string" && data.slug.trim()
+      ? data.slug.trim()
+      : subdomain;
+
+  const tenantSlug = typeof data.slug === "string" && data.slug.trim()
+    ? data.slug.trim()
+    : typeof data.nome === "string" && data.nome.trim()
+      ? data.nome.trim()
+      : academiaSlug;
+
+  return {
+    tenantId,
+    tenantSlug,
+    academiaSlug,
+  };
+}
+
 async function resolveTenant(
   subdomain: string,
   request: NextRequest,
@@ -90,22 +132,16 @@ async function resolveTenant(
       return null;
     }
 
-    const data = (await res.json()) as {
-      tenantId?: string;
-      academiaId?: string;
-      academiaSlug?: string;
-      slug?: string;
-    };
+    const data = (await res.json()) as StorefrontResolvePayload;
+    const normalized = normalizeStorefrontResolvePayload(subdomain, data);
 
-    if (!data.tenantId) {
+    if (!normalized) {
       if (!isTestEnv) resolveCache.set(subdomain, null);
       return null;
     }
 
     const entry: CacheEntry = {
-      tenantId: data.tenantId,
-      tenantSlug: data.slug ?? subdomain,
-      academiaSlug: data.academiaSlug ?? data.slug ?? subdomain,
+      ...normalized,
       resolvedAt: Date.now(),
     };
     if (!isTestEnv) resolveCache.set(subdomain, entry);

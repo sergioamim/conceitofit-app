@@ -6,6 +6,7 @@ interface SandboxTokenResponse {
   refreshToken?: string;
   type?: string;
   expiresIn?: number;
+  sessionMode?: string;
   userKind?: string;
   redeId?: string;
   activeTenantId?: string;
@@ -50,6 +51,7 @@ function toAuthSession(response: SandboxTokenResponse): AuthSession {
     refreshToken: response.refreshToken,
     type: response.type ?? "Bearer",
     expiresIn: response.expiresIn,
+    sessionMode: response.sessionMode,
     userKind: response.userKind,
     networkId: response.redeId,
     activeTenantId: response.activeTenantId,

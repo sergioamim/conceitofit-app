@@ -10,6 +10,7 @@ import {
 import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
 import {
   clearAuthSession,
+  getSessionModeFromSession,
   hasBackofficeReturnSession,
   rememberBackofficeReturnSession,
   restoreBackofficeReturnSession,
@@ -284,6 +285,48 @@ test.describe("auth por rede", () => {
       expect(hasBackofficeReturnSession()).toBeTruthy();
       const restored = restoreBackofficeReturnSession();
       expect(restored?.originalSession.userId).toBe("user-admin");
+    } finally {
+      restore();
+    }
+  });
+
+  test("adminEntrarComoUnidadeApi expõe o sessionMode operacional antes da rotação completa dos cookies", async () => {
+    seedTestSession({
+      token: buildJwt({
+        sub: "user-admin",
+        scope: "GLOBAL",
+        session_mode: "BACKOFFICE_ADMIN",
+      }),
+      refreshToken: "refresh-admin",
+      userId: "user-admin",
+      activeTenantId: "tenant-admin",
+      sessionMode: "BACKOFFICE_ADMIN",
+      availableScopes: ["GLOBAL"],
+    });
+    const { restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: buildJwt({
+            sub: "user-admin",
+            scope: "GLOBAL",
+            tenant_id: "tenant-centro",
+            session_mode: "BACKOFFICE_TO_OPERATIONAL",
+          }),
+          refreshToken: "refresh-admin-unidade",
+          userId: "user-admin",
+          activeTenantId: "tenant-centro",
+        },
+      },
+    ]);
+
+    try {
+      const session = await adminEntrarComoUnidadeApi({
+        academiaId: "academia-norte",
+        tenantId: "tenant-centro",
+      });
+
+      expect(session.sessionMode).toBe("BACKOFFICE_TO_OPERATIONAL");
+      expect(getSessionModeFromSession()).toBe("BACKOFFICE_TO_OPERATIONAL");
     } finally {
       restore();
     }

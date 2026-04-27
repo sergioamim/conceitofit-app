@@ -23,6 +23,7 @@ export interface AuthSession {
   availableScopes?: AuthSessionScope[];
   broadAccess?: boolean;
   forcePasswordChangeRequired?: boolean;
+  sessionMode?: string;
   sandboxMode?: boolean;
   sandboxRedeId?: string;
   sandboxUnidadeId?: string;
@@ -105,10 +106,19 @@ const BACKOFFICE_REAUTH_REQUIRED_KEY = "academia-backoffice-reauth-required";
 const ACTIVE_TENANT_COOKIE_KEY = "academia-active-tenant-id";
 const SESSION_CLAIMS_COOKIE_KEY = "fc_session_claims";
 const OPERATIONAL_TENANT_SCOPE_KEY = "academia-operational-tenant-scope";
+const VOLATILE_AUTH_STATE_KEY = "academia-volatile-auth-state";
 export const CONTEXT_STORAGE_KEY = "academia-api-context-id";
 export const AUTH_SESSION_UPDATED_EVENT = "academia-session-updated";
 export const AUTH_SESSION_CLEARED_EVENT = "academia-session-cleared";
 export const IMPERSONATION_SESSION_UPDATED_EVENT = "academia-impersonation-updated";
+
+interface VolatileAuthState {
+  sessionMode?: string;
+  sandboxMode?: boolean;
+  sandboxRedeId?: string;
+  sandboxUnidadeId?: string;
+  sandboxExpiresAt?: string;
+}
 
 function isBrowser(): boolean {
   // Em ambientes de teste (ex: playwright unit config) `window` pode existir
@@ -171,6 +181,58 @@ function syncSessionClaimsActiveTenantId(tenantId?: string): void {
  */
 function clearServerSessionCookies(): void {
   expireCookie(ACTIVE_TENANT_COOKIE_KEY);
+}
+
+function normalizeSessionMode(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toUpperCase();
+  return normalized || undefined;
+}
+
+function getVolatileAuthState(): VolatileAuthState | null {
+  if (!isBrowser()) return null;
+  const raw = window.sessionStorage?.getItem(VOLATILE_AUTH_STATE_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<VolatileAuthState>;
+    return {
+      sessionMode: normalizeSessionMode(parsed.sessionMode),
+      sandboxMode: parsed.sandboxMode === true,
+      sandboxRedeId: normalizeClaimString(parsed.sandboxRedeId),
+      sandboxUnidadeId: normalizeClaimString(parsed.sandboxUnidadeId),
+      sandboxExpiresAt: normalizeClaimString(parsed.sandboxExpiresAt),
+    };
+  } catch {
+    window.sessionStorage?.removeItem(VOLATILE_AUTH_STATE_KEY);
+    return null;
+  }
+}
+
+function syncVolatileAuthState(session?: AuthSession | null): void {
+  if (!isBrowser()) return;
+
+  const sessionMode = normalizeSessionMode(session?.sessionMode);
+  const sandboxMode = session?.sandboxMode === true;
+  const sandboxRedeId = normalizeClaimString(session?.sandboxRedeId);
+  const sandboxUnidadeId = normalizeClaimString(session?.sandboxUnidadeId);
+  const sandboxExpiresAt = normalizeClaimString(session?.sandboxExpiresAt);
+
+  if (!sessionMode && !sandboxMode && !sandboxRedeId && !sandboxUnidadeId && !sandboxExpiresAt) {
+    window.sessionStorage?.removeItem(VOLATILE_AUTH_STATE_KEY);
+    return;
+  }
+
+  window.sessionStorage?.setItem(
+    VOLATILE_AUTH_STATE_KEY,
+    JSON.stringify({
+      sessionMode,
+      sandboxMode,
+      sandboxRedeId,
+      sandboxUnidadeId,
+      sandboxExpiresAt,
+    } satisfies VolatileAuthState)
+  );
 }
 
 export function getAccessToken(): string | undefined {
@@ -284,6 +346,7 @@ export function getAuthSessionSnapshot(): AuthSession | null {
       : [],
     broadAccess: claims?.broadAccess,
     forcePasswordChangeRequired: claims?.forcePasswordChangeRequired,
+    sessionMode: getSessionModeFromSession(),
     sandboxMode: getSandboxModeFromSession(),
     sandboxRedeId: getSandboxRedeIdFromSession(),
     sandboxUnidadeId: getSandboxUnidadeIdFromSession(),
@@ -452,14 +515,19 @@ export function hasGlobalBackofficeAccessFromSession(): boolean {
 }
 
 export function getSessionModeFromSession(): string | undefined {
+  const volatileMode = getVolatileAuthState()?.sessionMode;
+  if (volatileMode) {
+    return volatileMode;
+  }
+
   const claimsMode =
     typeof getClaims()?.sessionMode === "string"
-      ? getClaims()?.sessionMode?.trim().toUpperCase()
+      ? normalizeSessionMode(getClaims()?.sessionMode)
       : undefined;
   if (claimsMode) {
     return claimsMode;
   }
-  return getSessionClaimsFromToken(getAccessToken()).sessionMode?.trim().toUpperCase();
+  return normalizeSessionMode(getSessionClaimsFromToken(getAccessToken()).sessionMode);
 }
 
 function canReturnToBackofficeFromSession(session: AuthSession | null | undefined): boolean {
@@ -520,19 +588,32 @@ export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaim
 }
 
 export function getSandboxModeFromSession(): boolean {
+  const volatileState = getVolatileAuthState();
+  if (volatileState?.sandboxMode === true) {
+    return true;
+  }
+  if (getClaims()?.sandboxMode === true) {
+    return true;
+  }
   return getSessionClaimsFromToken(getAccessToken()).sandboxMode === true;
 }
 
 export function getSandboxRedeIdFromSession(): string | undefined {
-  return getSessionClaimsFromToken(getAccessToken()).sandboxRedeId;
+  return getVolatileAuthState()?.sandboxRedeId
+    ?? normalizeClaimString(getClaims()?.sandboxRedeId)
+    ?? getSessionClaimsFromToken(getAccessToken()).sandboxRedeId;
 }
 
 export function getSandboxUnidadeIdFromSession(): string | undefined {
-  return getSessionClaimsFromToken(getAccessToken()).sandboxUnidadeId;
+  return getVolatileAuthState()?.sandboxUnidadeId
+    ?? normalizeClaimString(getClaims()?.sandboxUnidadeId)
+    ?? getSessionClaimsFromToken(getAccessToken()).sandboxUnidadeId;
 }
 
 export function getSandboxExpiresAtFromSession(): string | undefined {
-  return getSessionClaimsFromToken(getAccessToken()).sandboxExpiresAt;
+  return getVolatileAuthState()?.sandboxExpiresAt
+    ?? normalizeClaimString(getClaims()?.sandboxExpiresAt)
+    ?? getSessionClaimsFromToken(getAccessToken()).sandboxExpiresAt;
 }
 
 export function getRolesFromSession(): string[] {
@@ -761,7 +842,8 @@ export function clearImpersonationSession(): void {
  */
 export function saveAuthSession(_session: AuthSession): void {
   // Tokens e claims vêm do backend via cookies HttpOnly.
-  // Não gravamos nada localmente — apenas notificamos que a sessão mudou.
+  // Persistimos apenas hints voláteis não sensíveis para o handoff imediato.
+  syncVolatileAuthState(_session);
   notifyAuthSessionUpdated();
 }
 
@@ -801,6 +883,7 @@ export function clearAuthSession(): void {
   clearBackofficeReturnSession();
   clearBackofficeRecoverySession();
   clearOperationalTenantScope();
+  syncVolatileAuthState(null);
   // Task 458: Expira cookies de sessão que o frontend pode limpar.
   // Tokens e claims são gerenciados pelo backend (Set-Cookie).
   if (isBrowser()) {

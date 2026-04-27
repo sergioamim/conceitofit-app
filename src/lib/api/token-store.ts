@@ -56,6 +56,10 @@ interface SessionClaims {
   forcePasswordChangeRequired?: boolean;
   sessionMode?: string;
   contextOrigin?: string;
+  sandboxMode?: boolean;
+  sandboxRedeId?: string;
+  sandboxUnidadeId?: string;
+  sandboxExpiresAt?: string;
 }
 
 function readSessionClaims(): SessionClaims | null {

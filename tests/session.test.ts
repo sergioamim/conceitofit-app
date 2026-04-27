@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   clearAuthSession,
   getAccessToken,
@@ -7,6 +7,8 @@ import {
   getBackofficeRecoverySession,
   getDisplayNameFromSession,
   getForcePasswordChangeRequiredFromSession,
+  getSandboxModeFromSession,
+  getSessionModeFromSession,
   hasRestorableBackofficeReturnSession,
   hasActiveSession,
   rememberBackofficeReturnSession,
@@ -85,6 +87,21 @@ describe("session storage (cookie-based — Task 458)", () => {
     mockSessionActive("true");
     mockSessionClaims({ activeTenantId: "tenant-42" });
     expect(getActiveTenantIdFromSession()).toBe("tenant-42");
+  });
+
+  it("prioriza o handoff volátil quando os claims ainda refletem o backoffice anterior", () => {
+    mockSessionActive("true");
+    mockSessionClaims({ sessionMode: "BACKOFFICE_ADMIN", sandboxMode: false });
+
+    saveAuthSession(
+      makeSession({
+        sessionMode: "BACKOFFICE_TO_OPERATIONAL",
+        sandboxMode: true,
+      })
+    );
+
+    expect(getSessionModeFromSession()).toBe("BACKOFFICE_TO_OPERATIONAL");
+    expect(getSandboxModeFromSession()).toBe(true);
   });
 
   it("sincroniza o cookie de claims quando a unidade ativa muda no frontend", () => {
