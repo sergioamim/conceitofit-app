@@ -140,6 +140,10 @@ type AssignTemplateInput = {
   quantidadePrevista?: number;
   frequenciaSemanal?: number;
   totalSemanas?: number;
+  /** Wave C.2: campos individualizados da atribuição. */
+  objetivoIndividual?: string;
+  restricoes?: string;
+  notasProfessor?: string;
 };
 
 type SaveGrupoMuscularInput = {
@@ -325,6 +329,9 @@ function mapTreinoApiToDomain(item: TreinoApiResponse): Treino {
     funcionarioId: trimString(item.professorId),
     funcionarioNome: trimString(item.professorNome),
     observacoes: trimString(item.observacoes),
+    objetivoIndividual: trimString(item.objetivoIndividual),
+    restricoes: trimString(item.restricoes),
+    notasProfessor: trimString(item.notasProfessor),
     status: item.status ?? undefined,
     tipoTreino: item.tipoTreino ?? undefined,
     treinoBaseId: trimString(item.treinoBaseId),
@@ -663,6 +670,9 @@ export async function assignTreinoTemplate(input: AssignTemplateInput): Promise<
         metaSessoesSemana: input.metaSessoesSemana,
         frequenciaSemanal,
         totalSemanas,
+        objetivoIndividual: input.objetivoIndividual,
+        restricoes: input.restricoes,
+        notasProfessor: input.notasProfessor,
       },
     })
   );

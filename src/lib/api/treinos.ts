@@ -24,6 +24,12 @@ export interface TreinoApiResponse {
   nome: string;
   objetivo?: string | null;
   observacoes?: string | null;
+  /** Wave C.2: meta específica do aluno. */
+  objetivoIndividual?: string | null;
+  /** Wave C.2: restrições/lesões. */
+  restricoes?: string | null;
+  /** Wave C.2: notas livres do professor. */
+  notasProfessor?: string | null;
   frequenciaPlanejada?: number | null;
   quantidadePrevista?: number | null;
   dataInicio?: string | null;
@@ -200,14 +206,13 @@ type CreateTreinoApiInput = {
   observacoes?: string;
   divisao?: string;
   metaSessoesSemana?: number;
-  frequenciaPlanejada?: number;
-  quantidadePrevista?: number;
+  frequenciaSemanal?: number;
+  totalSemanas?: number;
   dataInicio?: string;
   dataFim?: string;
   status?: TreinoStatusApi;
   tipoTreino?: TreinoTipoApi;
   treinoBaseId?: string;
-  templateNome?: string;
   ativo?: boolean;
   itens?: Array<{
     exercicioId: string;
@@ -233,14 +238,13 @@ export type UpdateTreinoApiInput = {
   observacoes?: string | null;
   divisao?: string | null;
   metaSessoesSemana?: number | null;
-  frequenciaPlanejada?: number | null;
-  quantidadePrevista?: number | null;
+  frequenciaSemanal?: number | null;
+  totalSemanas?: number | null;
   dataInicio?: string | null;
   dataFim?: string | null;
   status?: TreinoStatusApi | null;
   tipoTreino?: TreinoTipoApi | null;
   treinoBaseId?: string | null;
-  templateNome?: string | null;
   ativo?: boolean | null;
   itens?: Array<{
     exercicioId: string;
@@ -605,17 +609,6 @@ export async function toggleExercicioApi(input: {
   });
 }
 
-async function deleteExercicioApi(input: {
-  tenantId?: string;
-  id: string;
-}): Promise<void> {
-  await apiRequest<void>({
-    path: `/api/v1/exercicios/${input.id}`,
-    method: "DELETE",
-    query: { tenantId: input.tenantId },
-  });
-}
-
 type GrupoMuscularListApiResponse =
   | GrupoMuscularApiResponse[]
   | {
@@ -708,6 +701,10 @@ export async function assignTreinoTemplateApi(input: {
     metaSessoesSemana?: number;
     frequenciaSemanal?: number;
     totalSemanas?: number;
+    /** Wave C.2: campos individualizados da atribuição. */
+    objetivoIndividual?: string;
+    restricoes?: string;
+    notasProfessor?: string;
   };
 }): Promise<TreinoApiResponse> {
   const paths = [

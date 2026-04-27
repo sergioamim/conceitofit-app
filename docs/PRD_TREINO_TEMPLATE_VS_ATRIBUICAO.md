@@ -1,6 +1,6 @@
 # PRD — Template vs Atribuição vs Customização (Wave C)
 
-**Status:** Wave C.1 entregue (2026-04-27) · Wave C.2 backlog
+**Status:** Wave C.1 + C.2 entregues (2026-04-27)
 **Origem:** sessão 2026-04-27 — diretriz do PO sobre separação conceitual
 
 ## Modelo conceitual
@@ -37,14 +37,22 @@
 ### Por que não tocou o backend
 Adicionar 3 colunas em `treino_atribuicao` (ou usar JSONB) é mudança de domínio + migration coordenada. O markdown estruturado entrega valor imediato e migra naturalmente para a Wave C.2 quando os campos virarem primeiro-classe.
 
-## Wave C.2 — Backend (backlog)
+## Wave C.2 — Backend (entregue 2026-04-27)
 
-| Item | Esforço |
-|---|---|
-| Migration: 3 colunas em `treino_atribuicao` (ou JSONB `metadados`) | M |
-| `AtribuirTemplateRequest` + DTOs aceitam novos campos | M |
-| Migrar leitura: parser markdown → primitivos | S |
-| Editor V3 instance mode: card "Personalização do aluno" com os 3 campos (lê do treino atribuído, edita via PATCH) | M |
+### Mudanças
+1. **Migration `V100__treinos_atribuicao_campos_individuais.sql`** — adiciona 3 colunas TEXT nullable em `treinos`: `objetivo_individual`, `restricoes`, `notas_professor`. Idempotente (`ADD COLUMN IF NOT EXISTS`).
+2. **TreinoEntity** — 3 campos novos com `@Column` mapeado para snake_case.
+3. **AtribuirTemplateRequest DTO** — 3 campos novos opcionais.
+4. **CloneTreinoCommand record + toCloneCommand mapper** — 3 campos novos no fim do record.
+5. **criarTreinoCustomizadoAPartirTemplate** — grava os 3 campos no clone (exclusivos da atribuição, não herdam do template).
+6. **TreinoResponse record + toTreinoResponse** — 3 campos novos no fim do record (sempre `null` em template, valores reais em atribuição).
+7. **Outros consumers** — `TreinoController.toCloneCommand` (clone manual), `TreinoAtribuicaoLoteService.criarLote` (atribuição em lote) e `TreinoTemplateService` ajustados; clone simples e lote passam `null` (não coletam campos individualizados).
+8. **Frontend** — `TreinoApiResponse`, `Treino` interface, `assignTreinoTemplateApi` data, `mapTreinoApiToDomain` e `assignTreinoTemplate` workspace estendidos. `handleAssignTemplate` envia primitivos diretos (não mais markdown).
+9. **Compatibilidade** — `buildAssignmentState` lê dos campos primitivos quando presentes; faz fallback no parser markdown apenas se os 3 vierem null (preserva atribuições antigas pré-V100).
+
+### Pendente (futuras waves)
+- Editor V3 instance mode: card "Personalização do aluno" mostrando/editando os 3 campos da atribuição via PATCH.
+- Backfill SQL opcional: parsear `observacoes` legado em produção e popular as 3 colunas (parseamento markdown em PostgreSQL é frágil; deixar pro próximo "save" naturalmente migrar via UI).
 
 ## Decisões pendentes
 - **Onde armazenar observações de instance**: `Treino.observacoes` (do treino atribuído) ou `TreinoInstanciaCustomizada` (do overlay)? Recomendação: `Treino.observacoes` — instância é apenas overlay sobre exercícios; contexto pessoal pertence ao treino atribuído.

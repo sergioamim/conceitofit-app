@@ -137,6 +137,12 @@ export interface Treino {
   funcionarioNome?: string;
   vencimento?: LocalDate; // compat de UI; mapeia para dataFim
   observacoes?: string;
+  /** Wave C.2: meta específica do aluno (ex.: perder 5kg em 8 semanas). */
+  objetivoIndividual?: string;
+  /** Wave C.2: restrições/lesões a respeitar. */
+  restricoes?: string;
+  /** Wave C.2: orientações livres do professor. */
+  notasProfessor?: string;
   status?: "RASCUNHO" | "ATIVO" | "ARQUIVADO" | "CANCELADO";
   tipoTreino?: "PRE_MONTADO" | "CUSTOMIZADO";
   treinoBaseId?: UUID;

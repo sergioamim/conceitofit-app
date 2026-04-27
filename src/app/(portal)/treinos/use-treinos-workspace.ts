@@ -6,10 +6,7 @@ import { DEFAULT_ACTIVE_TENANT_LABEL, useAuthAccess, useTenantContext } from "@/
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
 import { resolveTreinoV2Permissions } from "@/lib/tenant/treinos/v2-domain";
-import {
-  parseAssignmentNotes,
-  serializeAssignmentNotes,
-} from "@/lib/tenant/treinos/assignment-notes";
+import { parseAssignmentNotes } from "@/lib/tenant/treinos/assignment-notes";
 import {
   assignTreinoTemplate,
   getTreinoWorkspace,
@@ -70,7 +67,20 @@ function sortTemplatesByRecency(items: TreinoTemplateResumo[]): TreinoTemplateRe
 }
 
 function buildAssignmentState(template: Treino): AssignmentState {
-  const notes = parseAssignmentNotes(template.observacoes);
+  // Wave C.2: prioriza campos primitivos do backend; faz fallback no parser
+  // markdown apenas se nenhum dos 3 vier preenchido (compat com observações
+  // legado da Wave C.1 antes da migration V100).
+  const hasPrimitive =
+    Boolean(template.objetivoIndividual) ||
+    Boolean(template.restricoes) ||
+    Boolean(template.notasProfessor);
+  const notes = hasPrimitive
+    ? {
+        objetivoIndividual: template.objetivoIndividual ?? "",
+        restricoes: template.restricoes ?? "",
+        notasProfessor: template.notasProfessor ?? "",
+      }
+    : parseAssignmentNotes(template.observacoes);
   return {
     templateId: template.id,
     alunoId: "",
@@ -289,11 +299,9 @@ export function useTreinosWorkspace() {
 
     setAssigning(true);
     try {
-      const observacoesPayload = serializeAssignmentNotes({
-        objetivoIndividual: assignmentForm.objetivoIndividual,
-        restricoes: assignmentForm.restricoes,
-        notasProfessor: assignmentForm.notasProfessor,
-      });
+      // Wave C.2: campos individualizados vão como primitivos no payload.
+      // Backend (V100) tem colunas dedicadas; observacoes fica reservado
+      // pra anotações genéricas (não é mais markdown estruturado).
       const assigned = await assignTreinoTemplate({
         tenantId,
         templateId: assignmentTemplate.id,
@@ -303,7 +311,10 @@ export function useTreinosWorkspace() {
         alunoNome: aluno.nome,
         dataInicio: assignmentForm.dataInicio,
         dataFim: assignmentForm.dataFim,
-        observacoes: observacoesPayload,
+        observacoes: undefined,
+        objetivoIndividual: assignmentForm.objetivoIndividual.trim() || undefined,
+        restricoes: assignmentForm.restricoes.trim() || undefined,
+        notasProfessor: assignmentForm.notasProfessor.trim() || undefined,
         metaSessoesSemana: assignmentForm.metaSessoesSemana,
         frequenciaPlanejada: assignmentForm.frequenciaPlanejada,
         quantidadePrevista: assignmentForm.quantidadePrevista,
