@@ -54,6 +54,7 @@ interface FormaPagamentoApiResponse {
   tenantId: string;
   nome: string;
   tipo: TipoFormaPagamento;
+  parcelasMax?: number | null;
   ativo?: boolean | null;
 }
 
@@ -312,10 +313,16 @@ export async function getPublicJourneyContextServer(
       return a.destaque ? -1 : 1;
     });
 
-  const formasPagamento = formasRaw
-    .filter((f) => f.ativo !== false)
-    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
-    .map((f) => f.tipo);
+  const formasPagamentoOnline = formasRaw
+    .filter((f) => f.ativo !== false && (f.tipo === "PIX" || f.tipo === "CARTAO_CREDITO"))
+    .sort((a, b) => {
+      if (a.tipo === b.tipo) return 0;
+      if (a.tipo === "PIX") return -1;
+      if (b.tipo === "PIX") return 1;
+      return a.nome.localeCompare(b.nome, "pt-BR");
+    });
+  const cartaoCreditoParcelasMax =
+    formasPagamentoOnline.find((f) => f.tipo === "CARTAO_CREDITO")?.parcelasMax ?? 1;
 
   return {
     tenant,
@@ -324,6 +331,7 @@ export async function getPublicJourneyContextServer(
     appName: getTenantAppName(academia),
     theme: resolveTenantTheme(academia),
     planos,
-    formasPagamento,
+    formasPagamento: formasPagamentoOnline.map((f) => f.tipo),
+    cartaoCreditoParcelasMax,
   };
 }

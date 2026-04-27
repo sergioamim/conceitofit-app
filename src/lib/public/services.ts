@@ -82,11 +82,8 @@ export type PublicCheckoutInput = {
   pagamento: {
     formaPagamento: TipoFormaPagamento;
     parcelas?: number;
-    observacoes?: string;
   };
-  aceitarContratoAgora: boolean;
   aceitarTermos: boolean;
-  renovacaoAutomatica: boolean;
   leadId?: string;
 };
 
@@ -108,6 +105,7 @@ export type PublicTenantContext = {
   theme: TenantThemeColors;
   planos: Plano[];
   formasPagamento: TipoFormaPagamento[];
+  cartaoCreditoParcelasMax: number;
 };
 
 export type PublicCheckoutSummary = {
@@ -225,6 +223,16 @@ export function getPublicPlanQuote(plano: Plano, parcelasAnuidade = 1): PublicPl
     items,
     total: result.total,
   };
+}
+
+export function resolvePublicPlanInstallmentLimit(
+  plano: Plano,
+  cartaoCreditoParcelasMax = 12,
+): number {
+  if (plano.tipo === "MENSAL" || plano.permiteCobrancaRecorrente) {
+    return 1;
+  }
+  return Math.max(1, cartaoCreditoParcelasMax);
 }
 
 function resolvePublicPaymentStatus(formaPagamento: TipoFormaPagamento): "PAGO" | "PENDENTE" {
@@ -516,6 +524,16 @@ export async function getPublicJourneyContext(tenantRef?: string | null): Promis
       }
       return left.destaque ? -1 : 1;
     });
+  const formasPagamentoOnline = formasPagamento
+    .filter((item) => item.ativo && (item.tipo === "PIX" || item.tipo === "CARTAO_CREDITO"))
+    .sort((left, right) => {
+      if (left.tipo === right.tipo) return 0;
+      if (left.tipo === "PIX") return -1;
+      if (right.tipo === "PIX") return 1;
+      return left.nome.localeCompare(right.nome, "pt-BR");
+    });
+  const cartaoCreditoParcelasMax =
+    formasPagamentoOnline.find((item) => item.tipo === "CARTAO_CREDITO")?.parcelasMax ?? 1;
 
   return {
     tenant,
@@ -524,10 +542,8 @@ export async function getPublicJourneyContext(tenantRef?: string | null): Promis
     appName: getTenantAppName(academia),
     theme: resolveTenantTheme(academia),
     planos: normalizedPlanos,
-    formasPagamento: formasPagamento
-      .filter((item) => item.ativo)
-      .sort((left, right) => left.nome.localeCompare(right.nome, "pt-BR"))
-      .map((item) => item.tipo),
+    formasPagamento: formasPagamentoOnline.map((item) => item.tipo),
+    cartaoCreditoParcelasMax,
   };
 }
 
@@ -615,20 +631,7 @@ export async function startPublicCheckout(input: PublicCheckoutInput): Promise<P
     meioPagamento: meioPagamentoMap[input.pagamento.formaPagamento] ?? "OUTRO",
   });
 
-  // 3. Se o usuário pediu assinatura imediata, apenas dispara o OTP.
-  // A assinatura real depende do código recebido pelo candidato.
-  if (
-    input.aceitarContratoAgora &&
-    adesao.contratoStatus === "PENDENTE"
-  ) {
-    try {
-      await enviarOtpContrato(adesao.id, adesaoToken);
-    } catch (error) {
-      logger.warn("[PublicServices/Checkout] OTP dispatch failed, continuing checkout", { error });
-    }
-  }
-
-  // 4. Converter para PublicCheckoutSummary (compatibilidade)
+  // 3. A assinatura do contrato segue assíncrona na etapa de pendências.
   return convertAdesaoToCheckoutSummary(adesao, context, plano, adesaoToken, input.pagamento.formaPagamento);
 }
 

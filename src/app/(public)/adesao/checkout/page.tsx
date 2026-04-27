@@ -3,24 +3,26 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePublicTenants } from "@/lib/query/use-public-tenants";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { ThermalReceipt, type ThermalReceiptItem } from "@/components/shared/thermal-receipt";
 import { PublicJourneyShell } from "@/components/public/public-journey-shell";
 import {
   buildPublicContractPreview,
   buildPublicJourneyHref,
   getPublicPlanQuote,
+  resolvePublicPlanInstallmentLimit,
   startPublicCheckout,
   type PublicCheckoutInput,
 } from "@/lib/public/services";
 import { publicCheckoutFormSchema } from "@/lib/forms/public-journey-schemas";
 import { usePublicJourney } from "@/lib/public/use-public-journey";
 import { sanitizeHtml } from "@/lib/sanitize";
-import { formatCurrency } from "@/lib/shared/formatters";
+import { formatBRL, formatCurrency } from "@/lib/shared/formatters";
+import { cn } from "@/lib/utils";
 import type { TipoFormaPagamento } from "@/lib/types";
 import { SuspenseFallback } from "@/components/shared/suspense-fallback";
 
@@ -28,11 +30,27 @@ type CheckoutFormValues = {
   planId: string;
   formaPagamento: TipoFormaPagamento;
   parcelas: string;
-  observacoes: string;
-  renovacaoAutomatica: boolean;
-  aceitarContratoAgora: boolean;
   aceitarTermos: boolean;
 };
+
+const PAYMENT_METHOD_LABEL: Record<TipoFormaPagamento, string> = {
+  DINHEIRO: "Dinheiro",
+  PIX: "PIX",
+  CARTAO_CREDITO: "Crédito",
+  CARTAO_DEBITO: "Débito",
+  BOLETO: "Boleto",
+  RECORRENTE: "Recorrente",
+};
+
+function toThermalMetodo(
+  value: TipoFormaPagamento,
+): "DINHEIRO" | "CREDITO" | "DEBITO" | "PIX" | "RECORRENTE" {
+  if (value === "CARTAO_CREDITO") return "CREDITO";
+  if (value === "CARTAO_DEBITO") return "DEBITO";
+  if (value === "RECORRENTE") return "RECORRENTE";
+  if (value === "DINHEIRO") return "DINHEIRO";
+  return "PIX";
+}
 
 function PublicJourneyFallback() {
   return (
@@ -46,15 +64,12 @@ function CheckoutPublicoPageContent() {
   const { data: tenantOptions = [] } = usePublicTenants();
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  const { register, control, handleSubmit, reset, setValue, getValues, formState: { errors } } = useForm<CheckoutFormValues>({
+  const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm<CheckoutFormValues>({
     resolver: zodResolver(publicCheckoutFormSchema),
     defaultValues: {
       planId: "",
       formaPagamento: "PIX",
       parcelas: "1",
-      observacoes: "",
-      renovacaoAutomatica: false,
-      aceitarContratoAgora: true,
       aceitarTermos: false,
     },
   });
@@ -67,17 +82,31 @@ function CheckoutPublicoPageContent() {
       planId: defaultPlanId,
       formaPagamento: defaultForma,
       parcelas: "1",
-      observacoes: "",
-      renovacaoAutomatica: Boolean(context.planos.find((plan) => plan.id === defaultPlanId)?.permiteRenovacaoAutomatica),
-      aceitarContratoAgora: true,
       aceitarTermos: false,
     });
   }, [context, draft.planId, planId, reset]);
 
   const selectedPlanId = useWatch({ control, name: "planId" });
   const formaPagamento = useWatch({ control, name: "formaPagamento" });
+  const parcelas = useWatch({ control, name: "parcelas" });
+  const parcelasSelecionadas = Math.max(1, Number.parseInt(parcelas || "1", 10) || 1);
   const selectedPlan = context?.planos.find((plan) => plan.id === selectedPlanId) ?? context?.planos[0] ?? null;
+  const cartaoCreditoParcelasMax = context?.cartaoCreditoParcelasMax ?? 1;
+  const parcelasMaximasCartao = selectedPlan
+    ? resolvePublicPlanInstallmentLimit(selectedPlan, cartaoCreditoParcelasMax)
+    : 1;
   const quote = selectedPlan ? getPublicPlanQuote(selectedPlan) : null;
+  const receiptItems = useMemo<ThermalReceiptItem[]>(
+    () =>
+      quote?.items.map((item, index) => ({
+        id: `${selectedPlan?.id ?? "plan"}-${index}`,
+        nome: item.descricao,
+        qtd: 1,
+        valorUnit: item.valor,
+        valorTotal: item.valor,
+      })) ?? [],
+    [quote?.items, selectedPlan?.id],
+  );
   const contractPreviewRaw =
     context && selectedPlan && draft.signup
       ? buildPublicContractPreview({
@@ -92,6 +121,29 @@ function CheckoutPublicoPageContent() {
     () => (contractPreviewRaw ? sanitizeHtml(contractPreviewRaw) : undefined),
     [contractPreviewRaw],
   );
+  const receiptHeader = useMemo(() => {
+    const endereco = context?.tenant.endereco;
+    return {
+      academiaNome: context?.academia.nome ?? context?.tenant.nome ?? "Conceito Fit",
+      cnpj: context?.tenant.documento ?? context?.academia.documento,
+      endereco: endereco
+        ? [endereco.logradouro, endereco.numero, endereco.cidade].filter(Boolean).join(", ")
+        : undefined,
+    };
+  }, [context?.academia.documento, context?.academia.nome, context?.tenant.documento, context?.tenant.endereco, context?.tenant.nome]);
+
+  useEffect(() => {
+    if (formaPagamento !== "CARTAO_CREDITO") {
+      if (parcelasSelecionadas !== 1) {
+        setValue("parcelas", "1", { shouldValidate: true });
+      }
+      return;
+    }
+
+    if (parcelasSelecionadas > parcelasMaximasCartao) {
+      setValue("parcelas", String(parcelasMaximasCartao), { shouldValidate: true });
+    }
+  }, [formaPagamento, parcelasMaximasCartao, parcelasSelecionadas, setValue]);
 
   if (loading) {
     return (
@@ -146,7 +198,7 @@ function CheckoutPublicoPageContent() {
       }
       const payload: PublicCheckoutInput = {
         tenantRef: resolvedTenantRef,
-        planId: values.planId,
+        planId: selectedPlan?.id ?? values.planId,
         signup,
         pagamento: {
           formaPagamento: values.formaPagamento,
@@ -154,24 +206,21 @@ function CheckoutPublicoPageContent() {
             values.formaPagamento === "CARTAO_CREDITO"
               ? Math.max(1, Number.parseInt(values.parcelas, 10) || 1)
               : undefined,
-          observacoes: values.observacoes.trim() || undefined,
         },
-        aceitarContratoAgora: values.aceitarContratoAgora,
         aceitarTermos: values.aceitarTermos,
-        renovacaoAutomatica: values.renovacaoAutomatica,
         leadId: draft.trialLeadId,
       };
 
       const checkout = await startPublicCheckout(payload);
       persistDraft({
         tenantRef: resolvedTenantRef,
-        planId: values.planId,
+        planId: selectedPlan?.id ?? values.planId,
         checkout,
       });
       router.replace(
         buildPublicJourneyHref("/adesao/pendencias", {
           tenantRef: resolvedTenantRef,
-          planId: values.planId,
+          planId: selectedPlan?.id ?? values.planId,
           checkoutId: checkout.checkoutId,
         })
       );
@@ -187,170 +236,230 @@ function CheckoutPublicoPageContent() {
       context={context}
       tenants={tenantOptions.length > 0 ? tenantOptions : [context.tenant]}
       currentStep="CHECKOUT"
-      title="Pagamento, contrato e confirmação"
-      description="O checkout resolve matrícula, venda e pendências iniciais do contrato em uma única passagem."
+      title="Carrinho e fechamento da adesão"
+      description="Depois do cadastro, o cliente só confirma pagamento e aceite para fechar a contratação online do plano selecionado."
       actions={
         <Button asChild variant="outline" className="border-border bg-transparent">
-          <Link href={buildPublicJourneyHref("/adesao/cadastro", { tenantRef: resolvedTenantRef, planId: selectedPlanId })}>
+          <Link href={buildPublicJourneyHref("/adesao/cadastro", { tenantRef: resolvedTenantRef, planId: selectedPlan?.id ?? selectedPlanId })}>
             Revisar cadastro
           </Link>
         </Button>
       }
     >
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <Card className="border-border/70 bg-card/70 backdrop-blur">
-          <CardHeader>
-            <CardTitle>Resumo da contratação</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {selectedPlan && quote ? (
-              <>
-                <div className="rounded-2xl border border-border/70 bg-secondary/25 p-4">
-                  <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">{selectedPlan.tipo}</p>
-                  <h3 className="mt-2 font-display text-3xl font-bold">{selectedPlan.nome}</h3>
-                  <p className="mt-4 font-display text-4xl font-bold text-gym-accent">{formatCurrency(quote.total)}</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Cliente: <span className="font-semibold text-foreground">{draft.signup.nome}</span>
-                  </p>
+      <div className="grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
+        <div className="space-y-6">
+          <Card className="border-border/70 bg-card/70 backdrop-blur">
+            <CardHeader>
+              <CardTitle>Itens da venda</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {selectedPlan ? (
+                <div className="rounded-xl border border-border bg-secondary/30 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Plano selecionado
+                      </p>
+                      <h3 className="mt-1 font-display text-2xl font-bold">{selectedPlan.nome}</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {selectedPlan.tipo} • {selectedPlan.duracaoDias} dias
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Total inicial
+                      </p>
+                      <p className="mt-1 font-mono text-2xl font-bold text-gym-accent">
+                        {formatBRL(quote?.total ?? 0)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-lg border border-border bg-background/30 px-3 py-2 text-xs text-muted-foreground">
+                    Nesta etapa pública o carrinho fecha apenas o plano selecionado. Serviços e produtos continuam fora desse fluxo.
+                  </div>
                 </div>
-                <div className="space-y-3">
-                  {quote.items.map((item) => (
-                    <div key={item.id} className="flex items-start justify-between gap-3 rounded-xl border border-border/70 bg-secondary/20 px-3 py-2">
+              ) : (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                  Nenhum plano selecionado para este checkout.
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {quote?.items.map((item) => (
+                  <div key={item.id} className="rounded-lg border border-border bg-secondary/30 p-3">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
                         <p className="text-sm font-medium">{item.descricao}</p>
-                        {item.detalhes ? <p className="text-xs text-muted-foreground">{item.detalhes}</p> : null}
+                        {item.detalhes ? (
+                          <p className="mt-1 text-[11px] text-muted-foreground">{item.detalhes}</p>
+                        ) : null}
                       </div>
-                      <p className="text-sm font-semibold">{formatCurrency(item.valor)}</p>
+                      <p className="text-sm font-semibold">{formatBRL(item.valor)}</p>
                     </div>
-                  ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Cliente</span>
+                  <span className="font-semibold">{draft.signup.nome}</span>
                 </div>
-              </>
-            ) : null}
-          </CardContent>
-        </Card>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Contato</span>
+                  <span className="font-medium">{draft.signup.email}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="overflow-hidden rounded-xl border border-border">
+            <ThermalReceipt
+              variant="carrinho"
+              items={receiptItems}
+              subtotal={quote?.total ?? 0}
+              total={quote?.total ?? 0}
+              metodoPagamento={toThermalMetodo(formaPagamento ?? "PIX")}
+              parcelamento={
+                formaPagamento === "CARTAO_CREDITO" && parcelasSelecionadas > 1
+                  ? {
+                      n: parcelasSelecionadas,
+                      valorParcela: (quote?.total ?? 0) / parcelasSelecionadas,
+                    }
+                  : undefined
+              }
+              cabecalho={receiptHeader}
+            />
+          </div>
+        </div>
 
         <Card className="border-border/70 bg-card/70 backdrop-blur">
           <CardHeader>
-            <CardTitle>Fechamento digital</CardTitle>
+            <CardTitle>Pagamento e fechamento</CardTitle>
           </CardHeader>
           <CardContent>
             <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label htmlFor="checkout-plan" className="text-sm font-medium">Plano</label>
-                  <Controller
-                    control={control}
-                    name="planId"
-                    render={({ field }) => (
-                      <select
-                        id="checkout-plan"
-                        value={field.value}
-                        onChange={(event) => {
-                          const nextPlanId = event.target.value;
-                          const nextPlan = context.planos.find((plan) => plan.id === nextPlanId);
-                          const currentValues = getValues();
-                          field.onChange(nextPlanId);
-                          setValue("parcelas", "1");
-                          setValue(
-                            "formaPagamento",
-                            !nextPlan?.permiteCobrancaRecorrente && currentValues.formaPagamento === "RECORRENTE"
-                              ? (context.formasPagamento[0] ?? "PIX")
-                              : currentValues.formaPagamento
-                          );
-                          setValue("renovacaoAutomatica", Boolean(nextPlan?.permiteRenovacaoAutomatica));
-                        }}
-                        className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                      >
-                        {context.planos.map((plan) => (
-                          <option key={plan.id} value={plan.id}>
-                            {plan.nome}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  />
-                  {errors.planId ? <p className="text-xs text-rose-300">{errors.planId.message}</p> : null}
+              <input type="hidden" {...register("planId")} />
+              <div
+                className="flex items-center justify-between border-b border-border pb-4"
+                data-testid="public-checkout-total"
+              >
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Total
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cobrança inicial do plano selecionado
+                  </p>
                 </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="checkout-payment" className="text-sm font-medium">Forma de pagamento</label>
-                  <Controller
-                    control={control}
-                    name="formaPagamento"
-                    render={({ field }) => (
-                      <select
-                        id="checkout-payment"
-                        value={field.value}
-                        onChange={(event) => field.onChange(event.target.value as TipoFormaPagamento)}
-                        className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                      >
-                        {context.formasPagamento.map((paymentType) => (
-                          <option key={paymentType} value={paymentType}>
-                            {paymentType.replaceAll("_", " ")}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  />
-                  {errors.formaPagamento ? <p className="text-xs text-rose-300">{errors.formaPagamento.message}</p> : null}
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="checkout-installments" className="text-sm font-medium">Parcelas</label>
-                  <Input
-                    id="checkout-installments"
-                    type="number"
-                    min={1}
-                    {...register("parcelas")}
-                    disabled={formaPagamento !== "CARTAO_CREDITO"}
-                    className="border-border bg-secondary"
-                  />
-                  {errors.parcelas ? <p className="text-xs text-rose-300">{errors.parcelas.message}</p> : null}
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="checkout-observacoes" className="text-sm font-medium">Observações do pagamento</label>
-                  <Input
-                    id="checkout-observacoes"
-                    {...register("observacoes")}
-                    className="border-border bg-secondary"
-                    placeholder="Opcional"
-                  />
-                </div>
+                <span className="font-mono text-[32px] font-bold leading-none text-gym-accent">
+                  {formatCurrency(quote?.total ?? 0)}
+                </span>
               </div>
 
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-secondary/20 p-4 text-sm">
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    {...register("renovacaoAutomatica")}
-                    disabled={!selectedPlan?.permiteRenovacaoAutomatica}
-                    className="mt-1"
-                  />
-                  <span>
-                    Ativar renovação automática
-                    <span className="block text-muted-foreground">
-                      Mantém o contrato pronto para continuidade quando o plano permitir.
-                    </span>
-                  </span>
-                </label>
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    {...register("aceitarContratoAgora")}
-                    disabled={selectedPlan?.contratoAssinatura === "PRESENCIAL" || !contractPreview}
-                    className="mt-1"
-                  />
-                  <span>
-                    Assinar contrato agora
-                    <span className="block text-muted-foreground">
-                      Se não assinar agora, o fluxo segue para a área de pendências.
-                    </span>
-                  </span>
-                </label>
+              <fieldset className="space-y-2">
+                <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Forma de pagamento
+                </legend>
+                <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Forma de pagamento">
+                  {context.formasPagamento.map((paymentType) => {
+                    const checked = formaPagamento === paymentType;
+                    return (
+                      <label
+                        key={paymentType}
+                        className={cn(
+                          "flex cursor-pointer items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm",
+                          checked ? "border-gym-accent ring-1 ring-gym-accent" : "",
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          value={paymentType}
+                          checked={checked}
+                          onChange={() =>
+                            setValue("formaPagamento", paymentType, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            })
+                          }
+                          className="sr-only"
+                        />
+                        <span>{PAYMENT_METHOD_LABEL[paymentType] ?? paymentType.replaceAll("_", " ")}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {errors.formaPagamento ? <p className="text-xs text-rose-300">{errors.formaPagamento.message}</p> : null}
+              </fieldset>
+
+              {formaPagamento === "CARTAO_CREDITO" ? (
+                <fieldset className="space-y-2">
+                  <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Parcelas
+                  </legend>
+                  <div className={cn("grid gap-1.5", parcelasMaximasCartao > 6 ? "grid-cols-6" : "grid-cols-3 sm:grid-cols-6")}>
+                    {Array.from({ length: parcelasMaximasCartao }, (_, index) => index + 1).map((installment) => {
+                      const checked = parcelasSelecionadas === installment;
+                      return (
+                        <button
+                          key={installment}
+                          type="button"
+                          className={cn(
+                            "rounded-md border border-border bg-secondary px-2 py-1.5 text-xs font-mono transition-colors",
+                            checked
+                              ? "border-gym-accent bg-gym-accent/10 text-gym-accent"
+                              : "hover:bg-secondary/70",
+                          )}
+                          onClick={() =>
+                            setValue("parcelas", String(installment), {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            })
+                          }
+                        >
+                          {installment}×
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {parcelasMaximasCartao === 1
+                      ? "Este plano fecha em uma parcela no online."
+                      : `O parcelamento online deste plano vai até ${parcelasMaximasCartao}x.`}
+                  </p>
+                  {errors.parcelas ? <p className="text-xs text-rose-300">{errors.parcelas.message}</p> : null}
+                </fieldset>
+              ) : null}
+
+              <div id="termos-contratacao" className="space-y-3 rounded-2xl border border-border/70 bg-secondary/20 p-4 text-sm">
+                <div className="space-y-2 rounded-xl border border-border/70 bg-background/20 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Regras desta contratação
+                  </p>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li>Pagamento online disponível apenas por PIX ou cartão de crédito.</li>
+                    <li>
+                      {selectedPlan?.permiteCobrancaRecorrente || selectedPlan?.permiteRenovacaoAutomatica
+                        ? "Este plano já é vendido com renovação automática."
+                        : "Este plano não usa renovação automática na contratação online."}
+                    </li>
+                    <li>
+                      {parcelasMaximasCartao === 1
+                        ? "Mensal e recorrente fecham à vista no online."
+                        : `O parcelamento do cartão respeita o limite deste plano, até ${parcelasMaximasCartao}x.`}
+                    </li>
+                    <li>
+                      Se houver contrato digital, a assinatura acontece depois do pagamento, na etapa de pendências.
+                    </li>
+                    <li>Registramos data e hora do aceite, IP de origem e navegador da contratação.</li>
+                  </ul>
+                </div>
                 <label className="flex items-start gap-3">
                   <input type="checkbox" {...register("aceitarTermos")} className="mt-1" />
                   <span>
-                    Aceito os termos da adesão e da cobrança
+                    Aceito os <Link href="#termos-contratacao" className="underline underline-offset-4">termos da adesão e da cobrança</Link>
                     <span className="block text-muted-foreground">
-                      Obrigatório para gerar venda, matrícula e contrato.
+                      Obrigatório para gerar a adesão, seguir para pagamento e concluir eventuais pendências de contrato.
                     </span>
                   </span>
                 </label>
@@ -367,7 +476,7 @@ function CheckoutPublicoPageContent() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-dashed border-border/80 px-4 py-4 text-sm text-muted-foreground">
-                  Este plano não exige contrato digital no checkout.
+                  Este plano não exige contrato digital no checkout. O aceite acima cobre os termos da adesão e da cobrança online.
                 </div>
               )}
 

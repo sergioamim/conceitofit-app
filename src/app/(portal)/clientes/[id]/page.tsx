@@ -392,6 +392,7 @@ export default function ClienteDetalhePage() {
         planoAtivo={w.planoAtivo ? { dataFim: w.planoAtivo.dataFim } : null}
         planoAtivoInfo={w.planoAtivoInfo ?? null}
         suspenso={w.suspenso}
+        sticky={false}
         onCartoes={() => {
           setCartoesOpen(true);
           if (aluno.tenantId) {

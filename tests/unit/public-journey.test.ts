@@ -5,6 +5,7 @@ import {
   getPublicJourneyContext,
   getPublicPlanQuote,
   requestPublicCheckoutContractOtp,
+  resolvePublicPlanInstallmentLimit,
   resolvePublicNextAction,
   signPublicCheckoutContract,
   startPublicCheckout,
@@ -142,6 +143,15 @@ function installPublicJourneyFetchMock() {
             emitirAutomaticamente: false,
             ativo: true,
           },
+          {
+            id: "fp-debito",
+            tenantId: "tn-mananciais-s1",
+            nome: "Cartão de débito",
+            tipo: "CARTAO_DEBITO",
+            parcelasMax: 1,
+            emitirAutomaticamente: false,
+            ativo: true,
+          },
         ]),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
@@ -250,6 +260,21 @@ function installPublicCheckoutFetchMock() {
             tenantId: "tn-mananciais-s1",
             nome: "PIX",
             tipo: "PIX",
+            ativo: true,
+          },
+          {
+            id: "fp-credito",
+            tenantId: "tn-mananciais-s1",
+            nome: "Cartão de crédito",
+            tipo: "CARTAO_CREDITO",
+            parcelasMax: 6,
+            ativo: true,
+          },
+          {
+            id: "fp-boleto",
+            tenantId: "tn-mananciais-s1",
+            nome: "Boleto",
+            tipo: "BOLETO",
             ativo: true,
           },
         ]),
@@ -455,7 +480,60 @@ describe("public journey helpers", () => {
     }
   });
 
-  test("startPublicCheckout preserva token público e não tenta assinatura automática com OTP fictício", async () => {
+  test("getPublicJourneyContext expõe apenas PIX e crédito no checkout online", async () => {
+    const { restore } = installPublicJourneyFetchMock();
+    try {
+      const context = await getPublicJourneyContext("mananciais-s1");
+      expect(context.formasPagamento).toEqual(["PIX", "CARTAO_CREDITO"]);
+      expect(context.cartaoCreditoParcelasMax).toBe(6);
+    } finally {
+      restore();
+    }
+  });
+
+  test("resolvePublicPlanInstallmentLimit força 1x para mensal e recorrente", async () => {
+    expect(
+      resolvePublicPlanInstallmentLimit({
+        id: "plano-mensal",
+        tenantId: "tenant-1",
+        nome: "Mensal",
+        tipo: "MENSAL",
+        duracaoDias: 30,
+        valor: 100,
+        valorMatricula: 0,
+        cobraAnuidade: false,
+        permiteRenovacaoAutomatica: false,
+        permiteCobrancaRecorrente: false,
+        contratoAssinatura: "AMBAS",
+        contratoEnviarAutomaticoEmail: false,
+        destaque: false,
+        permiteVendaOnline: true,
+        ativo: true,
+      }, 12)
+    ).toBe(1);
+
+    expect(
+      resolvePublicPlanInstallmentLimit({
+        id: "plano-recorrente",
+        tenantId: "tenant-1",
+        nome: "Recorrente",
+        tipo: "ANUAL",
+        duracaoDias: 365,
+        valor: 1200,
+        valorMatricula: 0,
+        cobraAnuidade: false,
+        permiteRenovacaoAutomatica: true,
+        permiteCobrancaRecorrente: true,
+        contratoAssinatura: "AMBAS",
+        contratoEnviarAutomaticoEmail: false,
+        destaque: false,
+        permiteVendaOnline: true,
+        ativo: true,
+      }, 12)
+    ).toBe(1);
+  });
+
+  test("startPublicCheckout preserva token público e deixa a assinatura para pendências", async () => {
     const { restore, calls } = installPublicCheckoutFetchMock();
     try {
       const checkout = await startPublicCheckout({
@@ -472,15 +550,13 @@ describe("public journey helpers", () => {
         pagamento: {
           formaPagamento: "PIX",
         },
-        aceitarContratoAgora: true,
         aceitarTermos: true,
-        renovacaoAutomatica: false,
       });
 
       expect(checkout.checkoutId).toBe("chk-001");
       expect(checkout.adesaoToken).toBe("token-publico-001");
       expect(checkout.formaPagamento).toBe("PIX");
-      expect(calls).toContain("POST /api/v1/publico/adesao/chk-001/contrato/otp");
+      expect(calls).not.toContain("POST /api/v1/publico/adesao/chk-001/contrato/otp");
       expect(calls).not.toContain("POST /api/v1/publico/adesao/chk-001/contrato/assinaturas");
     } finally {
       restore();

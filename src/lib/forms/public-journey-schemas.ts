@@ -42,9 +42,6 @@ export const publicCheckoutFormSchema = z.object({
   planId: requiredTrimmedString("Selecione um plano para concluir a adesão."),
   formaPagamento: requiredTrimmedString("Selecione a forma de pagamento."),
   parcelas: z.string().default("1"),
-  observacoes: optionalTrimmedString().default(""),
-  renovacaoAutomatica: z.boolean(),
-  aceitarContratoAgora: z.boolean(),
   aceitarTermos: z.boolean(),
 }).superRefine((values, ctx) => {
   if (!values.aceitarTermos) {
