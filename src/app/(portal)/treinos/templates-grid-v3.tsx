@@ -11,6 +11,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  CheckCircle2,
   FileStack,
   MoreVertical,
   Search,
@@ -40,6 +41,26 @@ const OBJETIVO_PILLS: Array<{ value: string | null; label: string }> = [
   { value: "CONDICIONAMENTO", label: "Condicionamento" },
   { value: "REABILITACAO", label: "Reabilitação" },
 ];
+
+/** Cores fixas por perfil (foco) — pill colorida no card (Wave A/B). */
+const PERFIL_PILL: Record<string, { label: string; className: string }> = {
+  HIPERTROFIA: {
+    label: "Hipertrofia",
+    className: "bg-violet-500/10 text-violet-300 border-violet-500/30",
+  },
+  EMAGRECIMENTO: {
+    label: "Emagrecimento",
+    className: "bg-rose-500/10 text-rose-300 border-rose-500/30",
+  },
+  CONDICIONAMENTO: {
+    label: "Condicionamento",
+    className: "bg-cyan-500/10 text-cyan-300 border-cyan-500/30",
+  },
+  REABILITACAO: {
+    label: "Reabilitação",
+    className: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+  },
+};
 
 /**
  * Paleta de chips de grupos musculares. Mapeamento determinístico
@@ -227,14 +248,19 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
                       <h3 className="text-[15px] font-bold leading-tight text-foreground transition-colors group-hover:text-gym-accent">
                         <span className="line-clamp-2 break-words">{displayName}</span>
                       </h3>
-                      {/* Meta line — objetivo · perfil · 3x/sem · Nsem */}
+                      {/* Meta line — freq · sem · sessões · exercícios · categoria */}
                       <p className="mt-1 text-[12px] text-muted-foreground">
                         {[
-                          template.perfilIndicacao,
                           template.frequenciaSemanal
                             ? `${template.frequenciaSemanal}x/sem`
                             : null,
                           template.totalSemanas ? `${template.totalSemanas}sem` : null,
+                          template.totalSessoes
+                            ? `${template.totalSessoes} ${template.totalSessoes === 1 ? "sessão" : "sessões"}`
+                            : null,
+                          template.totalExercicios
+                            ? `${template.totalExercicios} ${template.totalExercicios === 1 ? "exerc." : "exerc."}`
+                            : null,
                           template.categoria,
                         ]
                           .filter(Boolean)
@@ -289,9 +315,24 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
                     </div>
                   ) : null}
 
-                  {/* Governance discreto: status só quando ≠ PUBLICADO; pendências em amber */}
-                  {(templateStatus !== "PUBLICADO" || template.pendenciasAbertas > 0) ? (
+                  {/* Pill de Foco (perfilIndicacao) + governance: status, pendências, versão */}
+                  {(template.perfilIndicacao || templateStatus !== "PUBLICADO" || template.pendenciasAbertas > 0) ? (
                     <div className="flex flex-wrap items-center gap-1.5">
+                      {(() => {
+                        const perfilKey = (template.perfilIndicacao ?? "").toUpperCase();
+                        const pill = PERFIL_PILL[perfilKey];
+                        if (!pill) return null;
+                        return (
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+                              pill.className,
+                            )}
+                          >
+                            {pill.label}
+                          </span>
+                        );
+                      })()}
                       {templateStatus !== "PUBLICADO" ? (
                         <Badge
                           variant={resolveTemplateStatusBadgeVariant(templateStatus)}
@@ -330,12 +371,25 @@ export function TemplatesGridV3({ workspace }: { workspace: Workspace }) {
                     ) : null}
                   </div>
 
-                  {/* Ações secundárias — Atribuir + overflow (Editar acessado via clique no card) */}
-                  {(canAssign || canArchive) ? (
+                  {/* Ações secundárias — Publicar (RASCUNHO) + Atribuir + overflow */}
+                  {(canAssign || canArchive || templateStatus === "RASCUNHO") ? (
                     <div
                       className="-mb-1 flex items-center justify-end gap-0.5"
                       onClick={(event) => event.stopPropagation()}
                     >
+                      {templateStatus === "RASCUNHO" && canOperate ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] text-emerald-300 hover:text-emerald-200"
+                          onClick={() => void workspace.handlePublishTemplate(template)}
+                          disabled={actionLoading || workspace.publishing}
+                          title="Publicar template"
+                        >
+                          <CheckCircle2 className="mr-1 size-3" />
+                          Publicar
+                        </Button>
+                      ) : null}
                       {canAssign ? (
                         <Button
                           variant="ghost"

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TreinoForm } from "@/components/shared/treino-modal";
 import { useToast } from "@/components/ui/use-toast";
 import { DEFAULT_ACTIVE_TENANT_LABEL, useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
@@ -16,7 +15,7 @@ import {
   type TreinoTemplateResumo,
   type TreinoTemplateTotais,
 } from "@/lib/tenant/treinos/workspace";
-import type { Aluno, Exercicio, Treino, TreinoItem } from "@/lib/types";
+import type { Aluno, Exercicio, Treino } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const PAGE_SIZE = 12;
@@ -63,60 +62,6 @@ function sortTemplatesByRecency(items: TreinoTemplateResumo[]): TreinoTemplateRe
   });
 }
 
-function buildTreinoItems(itens: TreinoForm["itens"], exercicios: Exercicio[]): TreinoItem[] {
-  return itens.map((item, index) => {
-    const exercicio = exercicios.find((candidate) => candidate.id === item.exercicioId);
-    return {
-      id: item.id ?? "",
-      treinoId: "",
-      exercicioId: item.exercicioId,
-      exercicioNome: exercicio?.nome,
-      grupoMuscularId: exercicio?.grupoMuscularId,
-      grupoMuscularNome: exercicio?.grupoMuscularNome ?? exercicio?.grupoMuscular,
-      ordem: item.ordem ?? index + 1,
-      series: item.series,
-      repeticoesMin: item.repeticoesMin,
-      repeticoesMax: item.repeticoesMax,
-      intervaloSegundos: item.intervaloSegundos,
-      tempoExecucaoSegundos: item.tempoExecucaoSegundos,
-      cargaSugerida: item.cargaSugerida,
-      observacao: item.observacao,
-      diasSemana: item.diasSemana,
-    };
-  });
-}
-
-function buildTemplateForm(template: Treino): TreinoForm {
-  return {
-    nome: template.nome ?? getTemplateDisplayName(template),
-    templateNome: template.templateNome ?? template.nome ?? getTemplateDisplayName(template),
-    objetivo: template.objetivo,
-    divisao: template.divisao,
-    metaSessoesSemana: template.metaSessoesSemana,
-    frequenciaPlanejada: template.frequenciaPlanejada,
-    quantidadePrevista: template.quantidadePrevista,
-    dataInicio: template.dataInicio ?? getBusinessTodayIso(),
-    dataFim: template.dataFim ?? template.vencimento ?? addDaysToIsoDate(getBusinessTodayIso(), 30),
-    observacoes: template.observacoes,
-    ativo: template.ativo !== false,
-    tipoTreino: "PRE_MONTADO",
-    itens:
-      template.itens?.map((item, index) => ({
-        id: item.id,
-        exercicioId: item.exercicioId,
-        ordem: item.ordem ?? index + 1,
-        series: item.series,
-        repeticoesMin: item.repeticoesMin,
-        repeticoesMax: item.repeticoesMax,
-        intervaloSegundos: item.intervaloSegundos,
-        tempoExecucaoSegundos: item.tempoExecucaoSegundos,
-        cargaSugerida: item.cargaSugerida,
-        observacao: item.observacao,
-        diasSemana: item.diasSemana,
-      })) ?? [],
-  };
-}
-
 function buildAssignmentState(template: Treino): AssignmentState {
   return {
     templateId: template.id,
@@ -146,8 +91,6 @@ export function useTreinosWorkspace() {
   const [page, setPage] = useState(0);
   const [reviewOnly, setReviewOnly] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
-  const [editingTemplate, setEditingTemplate] = useState<Treino | null>(null);
   const [archiveTemplate, setArchiveTemplate] = useState<Treino | null>(null);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [assignmentTemplate, setAssignmentTemplate] = useState<Treino | null>(null);
@@ -157,12 +100,9 @@ export function useTreinosWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [actionTemplateId, setActionTemplateId] = useState<string | null>(null);
-
-  const editingTemplateForm = useMemo(
-    () => (editingTemplate ? buildTemplateForm(editingTemplate) : null),
-    [editingTemplate],
-  );
 
   const permissions = useMemo(
     () =>
@@ -248,60 +188,35 @@ export function useTreinosWorkspace() {
     void loadData();
   }, [loadData, tenantId, tenantResolved]);
 
-  async function handleCreateTemplate(data: TreinoForm) {
-    if (!tenantId) return;
-    await saveTreinoWorkspace({
-      tenantId,
-      nome: data.nome,
-      templateNome: data.templateNome ?? data.nome,
-      objetivo: data.objetivo,
-      divisao: data.divisao,
-      metaSessoesSemana: data.metaSessoesSemana,
-      frequenciaPlanejada: data.frequenciaPlanejada,
-      quantidadePrevista: data.quantidadePrevista,
-      dataInicio: data.dataInicio,
-      dataFim: data.dataFim,
-      observacoes: data.observacoes,
-      ativo: data.ativo,
-      status: "RASCUNHO",
-      tipoTreino: "PRE_MONTADO",
-      itens: buildTreinoItems(data.itens, exercicios),
-    });
-    setCreateTemplateOpen(false);
-    setPage(0);
-    await loadData();
-    toast({
-      title: "Treino padrão criado",
-      description: data.templateNome ?? data.nome,
-    });
-  }
+  async function createTemplateDraft(): Promise<Treino | null> {
+    if (!tenantId || creatingTemplate) return null;
 
-  async function handleEditTemplate(data: TreinoForm) {
-    if (!tenantId || !editingTemplate) return;
-    await saveTreinoWorkspace({
-      tenantId,
-      id: editingTemplate.id,
-      nome: data.nome,
-      templateNome: data.templateNome ?? data.nome,
-      objetivo: data.objetivo,
-      divisao: data.divisao,
-      metaSessoesSemana: data.metaSessoesSemana,
-      frequenciaPlanejada: data.frequenciaPlanejada,
-      quantidadePrevista: data.quantidadePrevista,
-      dataInicio: data.dataInicio,
-      dataFim: data.dataFim,
-      observacoes: data.observacoes,
-      ativo: data.ativo,
-      status: editingTemplate.status ?? "RASCUNHO",
-      tipoTreino: "PRE_MONTADO",
-      itens: buildTreinoItems(data.itens, exercicios),
-    });
-    setEditingTemplate(null);
-    await loadData();
-    toast({
-      title: "Treino padrão atualizado",
-      description: data.templateNome ?? data.nome,
-    });
+    setCreatingTemplate(true);
+    try {
+      return await saveTreinoWorkspace({
+        tenantId,
+        nome: "Novo treino padrão",
+        templateNome: "Novo treino padrão",
+        metaSessoesSemana: 3,
+        frequenciaPlanejada: 3,
+        quantidadePrevista: 12,
+        dataInicio: getBusinessTodayIso(),
+        dataFim: addDaysToIsoDate(getBusinessTodayIso(), 28),
+        ativo: true,
+        status: "RASCUNHO",
+        tipoTreino: "PRE_MONTADO",
+        itens: [],
+      });
+    } catch (createError) {
+      toast({
+        title: "Não foi possível iniciar o treino padrão",
+        description: normalizeErrorMessage(createError),
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setCreatingTemplate(false);
+    }
   }
 
   async function loadTemplateDetail(template: TreinoTemplateResumo): Promise<Treino | null> {
@@ -328,12 +243,6 @@ export function useTreinosWorkspace() {
     } finally {
       setActionTemplateId(null);
     }
-  }
-
-  async function openEditTemplate(template: TreinoTemplateResumo) {
-    const detail = await loadTemplateDetail(template);
-    if (!detail) return;
-    setEditingTemplate(detail);
   }
 
   async function openAssignmentDialog(template: TreinoTemplateResumo) {
@@ -406,6 +315,50 @@ export function useTreinosWorkspace() {
       });
     } finally {
       setAssigning(false);
+    }
+  }
+
+  async function handlePublishTemplate(template: TreinoTemplateResumo) {
+    if (!tenantId || publishing) return;
+
+    const detail = await loadTemplateDetail(template);
+    if (!detail) return;
+
+    setPublishing(true);
+    try {
+      await saveTreinoWorkspace({
+        tenantId,
+        id: detail.id,
+        nome: detail.nome ?? getTemplateDisplayName(detail),
+        templateNome: detail.templateNome ?? detail.nome ?? getTemplateDisplayName(detail),
+        objetivo: detail.objetivo,
+        divisao: detail.divisao,
+        metaSessoesSemana: detail.metaSessoesSemana,
+        frequenciaPlanejada: detail.frequenciaPlanejada,
+        quantidadePrevista: detail.quantidadePrevista,
+        dataInicio: detail.dataInicio,
+        dataFim: detail.dataFim ?? detail.vencimento,
+        observacoes: detail.observacoes,
+        funcionarioId: detail.funcionarioId,
+        funcionarioNome: detail.funcionarioNome,
+        status: "ATIVO",
+        tipoTreino: "PRE_MONTADO",
+        ativo: true,
+        itens: detail.itens,
+      });
+      await loadData();
+      toast({
+        title: "Treino padrão publicado",
+        description: getTemplateDisplayName(detail),
+      });
+    } catch (publishError) {
+      toast({
+        title: "Não foi possível publicar o treino padrão",
+        description: normalizeErrorMessage(publishError),
+        variant: "destructive",
+      });
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -483,11 +436,6 @@ export function useTreinosWorkspace() {
     setReviewOnly,
     showInfo,
     setShowInfo,
-    createTemplateOpen,
-    setCreateTemplateOpen,
-    editingTemplate,
-    setEditingTemplate,
-    editingTemplateForm,
     archiveTemplate,
     setArchiveTemplate,
     assignmentDialogOpen,
@@ -501,6 +449,8 @@ export function useTreinosWorkspace() {
     error,
     assigning,
     archiving,
+    publishing,
+    creatingTemplate,
     actionTemplateId,
 
     // Permissions
@@ -508,13 +458,12 @@ export function useTreinosWorkspace() {
 
     // Handlers
     loadData,
-    handleCreateTemplate,
-    handleEditTemplate,
-    openEditTemplate,
+    createTemplateDraft,
     openAssignmentDialog,
     openArchiveDialog,
     handleAssignTemplate,
     handleArchiveTemplate,
+    handlePublishTemplate,
     emptyText,
   };
 }

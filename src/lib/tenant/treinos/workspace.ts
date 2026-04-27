@@ -1,11 +1,11 @@
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
 import { logger } from "@/lib/shared/logger";
+import { parseTreinoV2Metadata } from "@/lib/tenant/treinos/v2-runtime";
 import {
   assignTreinoTemplateApi,
   createExercicioApi,
   createGrupoMuscularApi,
   createTreinoApi,
-  duplicateTreinoTemplateApi,
   encerrarTreinoApi,
   getTreinoApi,
   listExerciciosApi,
@@ -13,8 +13,6 @@ import {
   listGruposMuscularesApi,
   listTreinosApi,
   registrarExecucaoTreinoApi,
-  renovarTreinoApi,
-  revisarTreinoApi,
   toggleExercicioApi,
   toggleGrupoMuscularApi,
   updateExercicioApi,
@@ -75,12 +73,16 @@ export type TreinoTemplateResumo = {
   precisaRevisao: boolean;
   pendenciasAbertas: number;
   atualizadoEm?: string;
-  /** Wave 8: descrição/observações para preview no card. */
+  /** Wave 8: descrição/observações para preview no card (já com sentinel V2 strippado). */
   observacoes?: string;
   /** Wave 8: grupos musculares distintos cobertos pelo template. */
   gruposMusculares?: string[];
   /** Wave 8: count de treinos ativos derivados deste template. */
   totalAtribuicoes?: number;
+  /** Total de sessões (A/B/C) extraído do metadata V2 embarcado. */
+  totalSessoes?: number;
+  /** Total de exercícios distintos somando todas as sessões. */
+  totalExercicios?: number;
 };
 
 export type TreinoTemplateTotais = {
@@ -158,10 +160,6 @@ type SaveExercicioInput = {
   videoUrl?: string;
   unidade?: string;
 };
-
-function resetTreinosWorkspace(): void {
-  // Mantido por compatibilidade com a suíte; o workspace agora é 100% API-only.
-}
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -375,6 +373,13 @@ function mapTreinoApiToDomain(item: TreinoApiResponse): Treino {
 }
 
 function mapTemplateResumoApiToDomain(item: TemplateResumoApiResponse): TreinoTemplateResumo {
+  const parsed = parseTreinoV2Metadata(item.observacoes ?? undefined);
+  const sessoes = parsed.metadata?.template?.sessoes ?? [];
+  const totalSessoes = sessoes.length > 0 ? sessoes.length : undefined;
+  const totalExercicios = sessoes.length > 0
+    ? sessoes.reduce((acc, sessao) => acc + (sessao.itens?.length ?? 0), 0)
+    : undefined;
+
   return {
     id: item.id,
     nome: trimString(item.nome) ?? "Template sem nome",
@@ -389,7 +394,7 @@ function mapTemplateResumoApiToDomain(item: TemplateResumoApiResponse): TreinoTe
     precisaRevisao: item.precisaRevisao === true,
     pendenciasAbertas: item.pendenciasAbertas == null ? 0 : Number(item.pendenciasAbertas),
     atualizadoEm: trimString(item.atualizadoEm),
-    observacoes: trimString(item.observacoes),
+    observacoes: trimString(parsed.observacoes),
     gruposMusculares: Array.isArray(item.gruposMusculares)
       ? item.gruposMusculares
           .map((g) => trimString(g))
@@ -397,27 +402,37 @@ function mapTemplateResumoApiToDomain(item: TemplateResumoApiResponse): TreinoTe
       : undefined,
     totalAtribuicoes:
       item.totalAtribuicoes == null ? undefined : Number(item.totalAtribuicoes),
+    totalSessoes,
+    totalExercicios,
   };
 }
 
 function toTreinoApiPayload(input: SaveTreinoInput) {
   const status: TreinoStatusApi =
     input.status ?? (input.ativo === false ? "ARQUIVADO" : "ATIVO");
+  const frequenciaSemanal = input.frequenciaPlanejada;
+  const totalSemanas =
+    frequenciaSemanal && input.quantidadePrevista
+      ? Math.max(1, Math.ceil(input.quantidadePrevista / frequenciaSemanal))
+      : undefined;
+  const nome =
+    input.tipoTreino === "PRE_MONTADO"
+      ? trimString(input.templateNome) ?? trimString(input.nome) ?? "Treino"
+      : trimString(input.nome) ?? trimString(input.templateNome) ?? "Treino";
   return {
     clienteId: trimString(input.alunoId),
-    nome: trimString(input.nome) ?? "Treino",
+    nome,
     objetivo: trimString(input.objetivo),
     observacoes: trimString(input.observacoes),
     divisao: trimString(input.divisao),
     metaSessoesSemana: input.metaSessoesSemana,
-    frequenciaPlanejada: input.frequenciaPlanejada,
-    quantidadePrevista: input.quantidadePrevista,
+    frequenciaSemanal,
+    totalSemanas,
     dataInicio: trimString(input.dataInicio),
     dataFim: trimString(input.dataFim),
     status,
     tipoTreino: input.tipoTreino ?? "CUSTOMIZADO",
     treinoBaseId: trimString(input.treinoBaseId),
-    templateNome: trimString(input.templateNome),
     professorId: trimString(input.funcionarioId),
     ativo: input.ativo !== false,
     itens: (input.itens ?? []).map((item, index) => ({
@@ -653,20 +668,6 @@ export async function assignTreinoTemplate(input: AssignTemplateInput): Promise<
   );
 }
 
-async function duplicateTreinoTemplate(input: { tenantId: string; id: string }): Promise<Treino> {
-  return mapTreinoApiToDomain(await duplicateTreinoTemplateApi(input));
-}
-
-async function revisarTreinoWorkspace(input: {
-  tenantId: string;
-  id: string;
-  observacao?: string;
-}): Promise<Treino> {
-  return mapTreinoApiToDomain(
-    await revisarTreinoApi({ tenantId: input.tenantId, id: input.id, data: { observacao: input.observacao } })
-  );
-}
-
 export async function encerrarTreinoWorkspace(input: {
   tenantId: string;
   id: string;
@@ -675,13 +676,6 @@ export async function encerrarTreinoWorkspace(input: {
   return mapTreinoApiToDomain(
     await encerrarTreinoApi({ tenantId: input.tenantId, id: input.id, data: { observacao: input.observacao } })
   );
-}
-
-async function renovarTreinoWorkspace(input: {
-  tenantId: string;
-  id: string;
-}): Promise<Treino> {
-  return mapTreinoApiToDomain(await renovarTreinoApi({ tenantId: input.tenantId, id: input.id }));
 }
 
 export async function registrarExecucaoTreinoWorkspace(input: {
