@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { Download } from "lucide-react";
 import type { Aluno } from "@/lib/types";
+import {
+  countClienteListFilters,
+  parseClienteListFilters,
+} from "@/lib/tenant/comercial/clientes-filters";
 
 import { useClientesData } from "./use-clientes-data";
 
@@ -15,6 +19,7 @@ const subscribeNoop = () => () => {};
 
 export function useClientesWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const {
     q, rawStatus, status: filtro, page, size: pageSize,
@@ -31,6 +36,15 @@ export function useClientesWorkspace() {
     () => getBusinessTodayIso().slice(0, 7),
     () => null,
   );
+  const advancedFilters = useMemo(
+    () => parseClienteListFilters(searchParams),
+    [searchParams],
+  );
+  const advancedFilterCount = useMemo(
+    () => countClienteListFilters(advancedFilters),
+    [advancedFilters],
+  );
+  const hasAnyFilters = hasActiveFilters || advancedFilterCount > 0;
 
   // P0-B (2026-04-23): `busca` agora é propagada server-side como `search`
   // pro endpoint `/api/v1/comercial/alunos`. A query backend foi estendida
@@ -42,6 +56,7 @@ export function useClientesWorkspace() {
     setTenant,
     filtro,
     search: q || undefined,
+    filters: advancedFilters,
     page,
     pageSize,
   });
@@ -145,7 +160,9 @@ export function useClientesWorkspace() {
     page,
     setParams,
     clearParams,
-    hasActiveFilters,
+    hasActiveFilters: hasAnyFilters,
+    advancedFilters,
+    advancedFilterCount,
 
     // Selection
     selectedIds,

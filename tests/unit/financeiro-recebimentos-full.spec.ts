@@ -4,12 +4,14 @@ import {
   createRecebimentoAvulsoService,
   importarPagamentosEmLoteService,
   listContasReceberOperacionais,
+  listContasReceberOperacionaisPage,
 } from "../../src/lib/tenant/financeiro/recebimentos";
 
 function mockFetchSequence(
   responses: Array<{
     body: unknown;
     status?: number;
+    headers?: Record<string, string>;
   }>,
 ) {
   const previousFetch = global.fetch;
@@ -30,7 +32,7 @@ function mockFetchSequence(
     return Promise.resolve(
       new Response(JSON.stringify(next.body), {
         status: next.status ?? 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(next.headers ?? {}) },
       }),
     );
   }) as typeof global.fetch;
@@ -96,6 +98,61 @@ test.describe("financeiro recebimentos full", () => {
         clienteNome: "Maria Souza",
       });
       expect(rows[0]?.aluno?.id).toBe("al-1");
+    } finally {
+      restore();
+    }
+  });
+
+  test("mantém listagem paginada mesmo quando enriquecimento de alunos falha", async () => {
+    const { restore } = mockFetchSequence([
+      {
+        body: [
+          {
+            id: "cr-page-1",
+            tenantId: "tenant-1",
+            cliente: "Cobrança Avulsa",
+            documentoCliente: "11122233344",
+            descricao: "Mensalidade corporativa",
+            categoria: "MENSALIDADE",
+            competencia: "2026-04-01",
+            dataVencimento: "2026-04-20",
+            valorOriginal: 150,
+            desconto: 10,
+            jurosMulta: 5,
+            status: "PENDENTE",
+            geradaAutomaticamente: false,
+            dataCriacao: "2026-04-01T10:00:00",
+          },
+        ],
+        headers: {
+          "x-total-count": "1",
+          "x-page": "0",
+          "x-size": "50",
+          "x-total-pages": "1",
+        },
+      },
+      {
+        body: { message: "falha ao carregar alunos" },
+        status: 500,
+      },
+    ]);
+
+    try {
+      const result = await listContasReceberOperacionaisPage({
+        tenantId: "tenant-1",
+        page: 0,
+        size: 50,
+      });
+
+      expect(result.total).toBe(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toMatchObject({
+        clienteNome: "Cobrança Avulsa",
+        descricao: "Mensalidade corporativa",
+        status: "PENDENTE",
+        valorFinal: 145,
+      });
+      expect(result.items[0]?.aluno).toBeUndefined();
     } finally {
       restore();
     }

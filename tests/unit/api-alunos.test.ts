@@ -138,12 +138,24 @@ describe("api/alunos", () => {
         tenantId: "t1",
         status: "ATIVO",
         search: "  Ana  ",
+        comPendenciaFinanceira: true,
+        comAgregador: true,
+        tipoAgregador: "WELLHUB",
+        comResponsavel: false,
+        semPlanoAtivo: true,
+        acessoBloqueado: false,
       });
       expect(spy.mock.calls[0][0].path).toBe("/api/v1/comercial/alunos");
       expect(spy.mock.calls[0][0].query).toMatchObject({
         tenantId: "t1",
         status: "ATIVO",
         search: "Ana",
+        comPendenciaFinanceira: true,
+        comAgregador: true,
+        tipoAgregador: "WELLHUB",
+        comResponsavel: false,
+        semPlanoAtivo: true,
+        acessoBloqueado: false,
         envelope: true,
       });
       expect(result.items).toHaveLength(1);

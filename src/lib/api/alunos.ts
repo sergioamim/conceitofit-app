@@ -12,6 +12,7 @@ import type {
   TenantOperationalEligibility,
   TenantOperationalEligibilityReason,
 } from "@/lib/types";
+import type { ClienteAgregadorTipo } from "@/lib/tenant/comercial/clientes-filters";
 import { apiRequest } from "./http";
 
 type CreateAlunoInput = {
@@ -357,6 +358,12 @@ export async function listAlunosApi(input: {
   tenantId?: string;
   status?: StatusAluno;
   search?: string;
+  comPendenciaFinanceira?: boolean;
+  comAgregador?: boolean;
+  tipoAgregador?: ClienteAgregadorTipo;
+  comResponsavel?: boolean;
+  semPlanoAtivo?: boolean;
+  acessoBloqueado?: boolean;
   page?: number;
   size?: number;
 }): Promise<ClienteListEnvelopeResponse> {
@@ -366,6 +373,12 @@ export async function listAlunosApi(input: {
       tenantId: input.tenantId,
       status: input.status,
       search: input.search?.trim() || undefined,
+      comPendenciaFinanceira: input.comPendenciaFinanceira,
+      comAgregador: input.comAgregador,
+      tipoAgregador: input.tipoAgregador,
+      comResponsavel: input.comResponsavel,
+      semPlanoAtivo: input.semPlanoAtivo,
+      acessoBloqueado: input.acessoBloqueado,
       page: input.page,
       size: input.size,
       envelope: true,

@@ -5,6 +5,7 @@ import { useClientes } from "@/lib/query/use-clientes";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { StatusAluno } from "@/lib/types";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import type { ClienteListFilters } from "@/lib/tenant/comercial/clientes-filters";
 
 interface UseClientesDataInput {
   tenantId: string | undefined;
@@ -13,6 +14,7 @@ interface UseClientesDataInput {
   filtro: WithFilterAll<StatusAluno>;
   /** Termo de busca server-side (propagado da URL pelo workspace). P0-B. */
   search?: string;
+  filters?: ClienteListFilters;
   page: number;
   pageSize: number;
 }
@@ -22,6 +24,7 @@ export function useClientesData({
   tenantResolved,
   filtro,
   search,
+  filters,
   page,
   pageSize,
 }: UseClientesDataInput) {
@@ -32,6 +35,7 @@ export function useClientesData({
     tenantResolved,
     status: statusFilter,
     search,
+    ...filters,
     page,
     size: pageSize,
   });

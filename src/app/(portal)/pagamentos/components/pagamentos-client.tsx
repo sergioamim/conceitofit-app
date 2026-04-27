@@ -18,7 +18,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getNfseConfiguracaoAtualApi } from "@/lib/api/financeiro-operacional";
-import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
+import {
+  extractAlunosFromListResponse,
+  listAlunosApi,
+  searchAlunosApi,
+} from "@/lib/api/alunos";
 import { listConveniosApi } from "@/lib/api/beneficios";
 import { listFormasPagamentoApi } from "@/lib/api/formas-pagamento";
 import { listContratosApi } from "@/lib/api/contratos";
@@ -54,6 +58,25 @@ import type {
   Convenio,
   NfseConfiguracao,
 } from "@/lib/types";
+import type { SuggestionOption } from "@/components/shared/suggestion-input";
+
+function mapAlunoToSuggestionOption(aluno: Aluno): SuggestionOption {
+  const cpf = (aluno.cpf ?? "").replace(/\D/g, "");
+  return {
+    id: aluno.id,
+    label: aluno.nome,
+    searchText: [cpf, aluno.email ?? "", aluno.telefone ?? ""].filter(Boolean).join(" "),
+  };
+}
+
+function mergeAlunosById(current: Aluno[], incoming: Aluno[]): Aluno[] {
+  if (incoming.length === 0) return current;
+  const byId = new Map(current.map((item) => [item.id, item] as const));
+  for (const aluno of incoming) {
+    byId.set(aluno.id, aluno);
+  }
+  return [...byId.values()];
+}
 
 function PagamentosPageContent() {
   const searchParams = useSearchParams();
@@ -75,6 +98,9 @@ function PagamentosPageContent() {
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [clienteFiltro, setClienteFiltro] = useState<string>(FILTER_ALL);
+  const [clienteBusca, setClienteBusca] = useState("");
+  const [clienteOptions, setClienteOptions] = useState<SuggestionOption[]>([]);
+  const [clienteOptionsLoading, setClienteOptionsLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [importPayload, setImportPayload] = useState(IMPORTAR_PAGAMENTOS_EXEMPLO_CSV);
   const [importandoPagamentos, setImportandoPagamentos] = useState(false);
@@ -113,7 +139,11 @@ function PagamentosPageContent() {
 
   const statusBackend = filtro === FILTER_ALL ? undefined : filtro;
 
-  const { data: pagamentosPage, isFetching } = usePagamentosPage({
+  const {
+    data: pagamentosPage,
+    isFetching,
+    error: pagamentosError,
+  } = usePagamentosPage({
     tenantId,
     tenantResolved: Boolean(tenantId),
     status: statusBackend,
@@ -141,7 +171,7 @@ function PagamentosPageContent() {
 
   const loadAuxData = useCallback(async () => {
     if (!tenantId) return;
-    const [fps, cls, mats, cvs, nfseConfig] = await Promise.all([
+    const [fps, cls, mats, cvs, nfseConfig] = await Promise.allSettled([
       listFormasPagamentoApi({ tenantId, apenasAtivas: false }),
       listAlunosApi({ tenantId, page: 0, size: 500 }),
       listContratosApi({ tenantId, page: 0, size: 500 }),
@@ -151,16 +181,75 @@ function PagamentosPageContent() {
         () => null,
       ),
     ]);
-    setFormasPagamento(fps);
-    setClientes(extractAlunosFromListResponse(cls));
-    setMatriculas(mats);
-    setConvenios(cvs);
-    setNfseConfiguracao(nfseConfig);
+    if (fps.status === "fulfilled") {
+      setFormasPagamento(fps.value);
+    }
+    if (cls.status === "fulfilled") {
+      const alunos = extractAlunosFromListResponse(cls.value);
+      setClientes(alunos);
+      setClienteOptions(alunos.slice(0, 12).map(mapAlunoToSuggestionOption));
+    }
+    if (mats.status === "fulfilled") {
+      setMatriculas(mats.value);
+    }
+    if (cvs.status === "fulfilled") {
+      setConvenios(cvs.value);
+    }
+    if (nfseConfig.status === "fulfilled") {
+      setNfseConfiguracao(nfseConfig.value);
+    }
   }, [tenantId]);
 
   useEffect(() => {
     void loadAuxData();
   }, [loadAuxData]);
+
+  const loadClienteSuggestions = useCallback(
+    async (searchTerm: string) => {
+      if (!tenantId) return;
+      setClienteOptionsLoading(true);
+      try {
+        const trimmed = searchTerm.trim();
+        if (!trimmed) {
+          if (clientes.length > 0) {
+            setClienteOptions(clientes.slice(0, 12).map(mapAlunoToSuggestionOption));
+            return;
+          }
+          const response = await listAlunosApi({ tenantId, page: 0, size: 12 });
+          const alunos = extractAlunosFromListResponse(response);
+          setClientes((current) => (current.length > 0 ? current : alunos));
+          setClienteOptions(alunos.map(mapAlunoToSuggestionOption));
+          return;
+        }
+
+        const alunos = await searchAlunosApi({
+          tenantId,
+          search: trimmed,
+          size: 10,
+        });
+        setClientes((current) => mergeAlunosById(current, alunos));
+        setClienteOptions(alunos.map(mapAlunoToSuggestionOption));
+      } catch {
+        setClienteOptions([]);
+      } finally {
+        setClienteOptionsLoading(false);
+      }
+    },
+    [clientes, tenantId],
+  );
+
+  useEffect(() => {
+    if (clienteSelecionadoId === undefined) {
+      if (!alunoUrlParam) {
+        setClienteBusca("");
+      }
+      return;
+    }
+    const alunoSelecionado = clientes.find((item) => item.id === clienteSelecionadoId);
+    if (alunoSelecionado) {
+      setClienteBusca(alunoSelecionado.nome);
+    }
+  }, [alunoUrlParam, clienteSelecionadoId, clientes]);
 
   // Totais do período vêm SEMPRE do sumário server-side (GROUP BY). Cards
   // refletem o período inteiro independente da página atual. `totalPendente`
@@ -169,6 +258,9 @@ function PagamentosPageContent() {
   const totalPendente = (sumarioPeriodo?.totalPendente ?? 0) + (sumarioPeriodo?.totalVencido ?? 0);
   const totalCount = sumarioPeriodo?.countTotal ?? pagamentosTotal;
   const nfseBloqueio = getNfseBloqueioMensagem(nfseConfiguracao);
+  const pagamentosErrorMessage = pagamentosError
+    ? normalizeErrorMessage(pagamentosError)
+    : null;
 
   async function handleConfirmRecebimento(data: {
     dataPagamento: string;
@@ -418,6 +510,12 @@ function PagamentosPageContent() {
         </div>
       ) : null}
 
+      {pagamentosErrorMessage ? (
+        <div className="rounded-xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+          Não foi possível carregar a listagem de pagamentos. {pagamentosErrorMessage}
+        </div>
+      ) : null}
+
       {nfseBloqueio ? (
         <div className="rounded-xl border border-gym-warning/30 bg-gym-warning/10 px-4 py-3 text-sm text-gym-warning">
           {nfseBloqueio}
@@ -446,13 +544,26 @@ function PagamentosPageContent() {
         onFiltroChange={setFiltro}
         clienteFiltro={clienteFiltro}
         onClienteFiltroChange={setClienteFiltro}
+        clienteBusca={clienteBusca}
+        onClienteBuscaChange={(value) => {
+          setClienteBusca(value);
+          void loadClienteSuggestions(value);
+        }}
+        onClienteSelect={(option) => {
+          setClienteBusca(option.label);
+          setClienteFiltro(option.id);
+        }}
+        onClienteSuggestionOpen={() => {
+          void loadClienteSuggestions(clienteBusca);
+        }}
         mes={mes}
         ano={ano}
         onMesAnoChange={(next) => {
           setMes(next.month);
           setAno(next.year);
         }}
-        clientes={clientes}
+        clienteOptions={clienteOptions}
+        clienteLoading={clienteOptionsLoading}
       />
 
       <PagamentosTable

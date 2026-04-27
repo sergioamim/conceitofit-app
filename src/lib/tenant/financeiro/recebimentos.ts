@@ -197,6 +197,14 @@ async function listAlunosTenant(tenantId: string): Promise<Aluno[]> {
   return extractAlunosFromListResponse(response);
 }
 
+async function listAlunosTenantSafe(tenantId: string): Promise<Aluno[]> {
+  try {
+    return await listAlunosTenant(tenantId);
+  } catch {
+    return [];
+  }
+}
+
 async function resolveClienteFromAlunoId(inputAlunoId: string | undefined, tenantId: string): Promise<{
   alunoId: string;
   cliente: string;
@@ -308,7 +316,7 @@ export async function listContasReceberOperacionais(input: {
       page: 0,
       size: 500,
     }),
-    listAlunosTenant(input.tenantId),
+    listAlunosTenantSafe(input.tenantId),
   ]);
 
   return contas.map((item) => mapContaReceberToPagamento(item, alunos));
@@ -359,7 +367,7 @@ export async function listContasReceberOperacionaisPage(input: {
       page: input.page ?? 0,
       size: input.size ?? 200,
     }),
-    listAlunosTenant(input.tenantId),
+    listAlunosTenantSafe(input.tenantId),
   ]);
 
   return {

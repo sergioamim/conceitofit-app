@@ -13,6 +13,12 @@ import {
 import { maskCPF, maskPhone } from "@/lib/utils";
 import type { StatusAluno } from "@/lib/types";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
+import {
+  clienteListFiltersToFormValues,
+  type ClienteListFilters,
+} from "@/lib/tenant/comercial/clientes-filters";
+
+import { ClientesAdvancedFiltersSheet } from "./clientes-advanced-filters-sheet";
 
 const STATUS_FILTERS: { value: WithFilterAll<StatusAluno>; label: string }[] = [
   { value: FILTER_ALL, label: "Todos" },
@@ -32,6 +38,8 @@ interface ClientesFilterBarProps {
   onFilterChange: (params: Record<string, string | number | null>) => void;
   onClear: () => void;
   hasActiveFilters: boolean;
+  advancedFilters: ClienteListFilters;
+  advancedFilterCount: number;
 }
 
 export function ClientesFilterBar({
@@ -45,6 +53,8 @@ export function ClientesFilterBar({
   onFilterChange,
   onClear,
   hasActiveFilters,
+  advancedFilters,
+  advancedFilterCount,
 }: ClientesFilterBarProps) {
   return (
     <div className="flex items-center gap-3">
@@ -107,6 +117,12 @@ export function ClientesFilterBar({
           className="w-72 border-border bg-secondary pl-8 text-sm"
         />
       </div>
+
+      <ClientesAdvancedFiltersSheet
+        values={clienteListFiltersToFormValues(advancedFilters)}
+        activeCount={advancedFilterCount}
+        onApply={onFilterChange}
+      />
 
       <div className="w-40">
         <Select value={sortBy} onValueChange={(v) => onSortChange(v as "cadastro" | "nome")}>

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listAlunosPageService, type ListAlunosPageServiceResult, updateAlunoService } from "@/lib/tenant/comercial/runtime";
 import type { StatusAluno } from "@/lib/types";
+import type { ClienteAgregadorTipo } from "@/lib/tenant/comercial/clientes-filters";
 import { queryKeys } from "./keys";
 
 export function useClientes(input: {
@@ -9,12 +10,24 @@ export function useClientes(input: {
   status?: StatusAluno;
   /** Termo de busca server-side (nome/email/CPF/telefone). P0-B 2026-04-23. */
   search?: string;
+  comPendenciaFinanceira?: boolean;
+  comAgregador?: boolean;
+  tipoAgregador?: ClienteAgregadorTipo;
+  comResponsavel?: boolean;
+  semPlanoAtivo?: boolean;
+  acessoBloqueado?: boolean;
   page?: number;
   size?: number;
 }) {
   const filters = {
     status: input.status,
     search: input.search,
+    comPendenciaFinanceira: input.comPendenciaFinanceira,
+    comAgregador: input.comAgregador,
+    tipoAgregador: input.tipoAgregador,
+    comResponsavel: input.comResponsavel,
+    semPlanoAtivo: input.semPlanoAtivo,
+    acessoBloqueado: input.acessoBloqueado,
     page: input.page ?? 0,
     size: input.size ?? 20,
   };
@@ -26,6 +39,12 @@ export function useClientes(input: {
         tenantId: input.tenantId!,
         status: input.status,
         search: input.search,
+        comPendenciaFinanceira: input.comPendenciaFinanceira,
+        comAgregador: input.comAgregador,
+        tipoAgregador: input.tipoAgregador,
+        comResponsavel: input.comResponsavel,
+        semPlanoAtivo: input.semPlanoAtivo,
+        acessoBloqueado: input.acessoBloqueado,
         page: input.page,
         size: input.size,
       }),

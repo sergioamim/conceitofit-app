@@ -191,6 +191,9 @@ test.describe("alunos api", () => {
       await listAlunosApi({
         tenantId: "tenant-clientes",
         search: "ana",
+        comPendenciaFinanceira: true,
+        tipoAgregador: "TOTALPASS",
+        semPlanoAtivo: false,
         page: 0,
         size: 12,
       });
@@ -199,6 +202,9 @@ test.describe("alunos api", () => {
       expect(calls[0].method).toBe("GET");
       expect(calls[0].url).toContain("/backend/api/v1/comercial/alunos");
       expect(calls[0].url).toContain("search=ana");
+      expect(calls[0].url).toContain("comPendenciaFinanceira=true");
+      expect(calls[0].url).toContain("tipoAgregador=TOTALPASS");
+      expect(calls[0].url).toContain("semPlanoAtivo=false");
       expect(calls[0].url).toContain("page=0");
       expect(calls[0].url).toContain("size=12");
       expect(calls[0].url).toContain("envelope=true");

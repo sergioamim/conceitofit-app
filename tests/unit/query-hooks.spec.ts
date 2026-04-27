@@ -10,6 +10,9 @@ test.describe("query hooks contracts", () => {
     expect(queryKeys.clientes.list("tn-1", { page: 0, size: 20 })).not.toEqual(
       queryKeys.clientes.list("tn-1", { page: 1, size: 20 }),
     );
+    expect(queryKeys.contratos.creditosDias("tn-1", "contrato-1")).toEqual(
+      ["matriculas", "tn-1", "creditos-dias", "contrato-1"],
+    );
     expect(queryKeys.recebimentos.list("tn-1", { startDate: "2026-03-01", endDate: "2026-03-31" })).not.toEqual(
       queryKeys.pagamentos.list("tn-1", { startDate: "2026-03-01", endDate: "2026-03-31" }),
     );

@@ -157,6 +157,8 @@ function ClientesPageContent() {
           onFilterChange={ws.setParams}
           onClear={ws.clearParams}
           hasActiveFilters={ws.hasActiveFilters}
+          advancedFilters={ws.advancedFilters}
+          advancedFilterCount={ws.advancedFilterCount}
         />
 
         <ClientesTable
