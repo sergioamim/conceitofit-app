@@ -324,17 +324,47 @@ export function AssignmentDialog({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="template-assignment-observacoes">Observações</Label>
+              <Label htmlFor="template-assignment-objetivo">Objetivo individual</Label>
               <Textarea
-                id="template-assignment-observacoes"
-                value={assignmentForm.observacoes}
+                id="template-assignment-objetivo"
+                value={assignmentForm.objetivoIndividual}
                 onChange={(event) =>
                   onAssignmentFormChange((current) =>
-                    current ? { ...current, observacoes: event.target.value } : current,
+                    current ? { ...current, objetivoIndividual: event.target.value } : current,
                   )
                 }
-                className="min-h-24"
-                placeholder="Notas específicas para este aluno (restrições, objetivos individuais, etc.)"
+                className="min-h-16"
+                placeholder="Meta específica deste aluno (ex.: perder 5kg em 8 semanas)"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="template-assignment-restricoes">Restrições / Lesões</Label>
+              <Textarea
+                id="template-assignment-restricoes"
+                value={assignmentForm.restricoes}
+                onChange={(event) =>
+                  onAssignmentFormChange((current) =>
+                    current ? { ...current, restricoes: event.target.value } : current,
+                  )
+                }
+                className="min-h-16"
+                placeholder="Lesões a respeitar, exercícios a evitar"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="template-assignment-notas">Notas do professor</Label>
+              <Textarea
+                id="template-assignment-notas"
+                value={assignmentForm.notasProfessor}
+                onChange={(event) =>
+                  onAssignmentFormChange((current) =>
+                    current ? { ...current, notasProfessor: event.target.value } : current,
+                  )
+                }
+                className="min-h-20"
+                placeholder="Orientações livres (cargas iniciais, evolução, observações)"
               />
             </div>
           </div>

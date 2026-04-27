@@ -7,6 +7,10 @@ import { extractAlunosFromListResponse, listAlunosApi } from "@/lib/api/alunos";
 import { addDaysToIsoDate, getBusinessTodayIso } from "@/lib/business-date";
 import { resolveTreinoV2Permissions } from "@/lib/tenant/treinos/v2-domain";
 import {
+  parseAssignmentNotes,
+  serializeAssignmentNotes,
+} from "@/lib/tenant/treinos/assignment-notes";
+import {
   assignTreinoTemplate,
   getTreinoWorkspace,
   listTreinoExercicios,
@@ -28,7 +32,10 @@ export type AssignmentState = {
   metaSessoesSemana: number;
   frequenciaPlanejada: number;
   quantidadePrevista: number;
-  observacoes: string;
+  /** Wave C.1: 3 sub-campos serializados no payload via assignment-notes. */
+  objetivoIndividual: string;
+  restricoes: string;
+  notasProfessor: string;
 };
 
 export type LatestAssignedState = {
@@ -63,6 +70,7 @@ function sortTemplatesByRecency(items: TreinoTemplateResumo[]): TreinoTemplateRe
 }
 
 function buildAssignmentState(template: Treino): AssignmentState {
+  const notes = parseAssignmentNotes(template.observacoes);
   return {
     templateId: template.id,
     alunoId: "",
@@ -71,7 +79,9 @@ function buildAssignmentState(template: Treino): AssignmentState {
     metaSessoesSemana: template.metaSessoesSemana ?? 3,
     frequenciaPlanejada: template.frequenciaPlanejada ?? template.metaSessoesSemana ?? 3,
     quantidadePrevista: template.quantidadePrevista ?? 12,
-    observacoes: template.observacoes ?? "",
+    objetivoIndividual: notes.objetivoIndividual,
+    restricoes: notes.restricoes,
+    notasProfessor: notes.notasProfessor,
   };
 }
 
@@ -279,6 +289,11 @@ export function useTreinosWorkspace() {
 
     setAssigning(true);
     try {
+      const observacoesPayload = serializeAssignmentNotes({
+        objetivoIndividual: assignmentForm.objetivoIndividual,
+        restricoes: assignmentForm.restricoes,
+        notasProfessor: assignmentForm.notasProfessor,
+      });
       const assigned = await assignTreinoTemplate({
         tenantId,
         templateId: assignmentTemplate.id,
@@ -288,7 +303,7 @@ export function useTreinosWorkspace() {
         alunoNome: aluno.nome,
         dataInicio: assignmentForm.dataInicio,
         dataFim: assignmentForm.dataFim,
-        observacoes: assignmentForm.observacoes,
+        observacoes: observacoesPayload,
         metaSessoesSemana: assignmentForm.metaSessoesSemana,
         frequenciaPlanejada: assignmentForm.frequenciaPlanejada,
         quantidadePrevista: assignmentForm.quantidadePrevista,

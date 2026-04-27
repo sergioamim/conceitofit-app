@@ -90,7 +90,17 @@ export function EditorHeader({
               <span>{editor.categoria ?? "Sem objetivo"}</span>
             )}
             <span>·</span>
-            <span>{editor.frequenciaSemanal ?? 0}x/sem</span>
+            <span>
+              {editor.frequenciaSemanal ?? 0}x/sem
+              {!isInstance ? (
+                <span
+                  className="ml-1 italic text-muted-foreground/70"
+                  title="Frequência sugerida — pode ser ajustada por aluno na atribuição"
+                >
+                  (sugerida)
+                </span>
+              ) : null}
+            </span>
             <span>·</span>
             <span>{editor.sessoes.length} sessões</span>
             <Badge variant="outline" className="ml-2 border-gym-accent/30 text-gym-accent">
