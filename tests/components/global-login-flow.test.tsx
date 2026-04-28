@@ -65,12 +65,6 @@ vi.mock("@/lib/tenant/theme-cookie", () => ({
   persistTenantThemeCookie: vi.fn(),
 }));
 
-async function selectOption(label: string, optionText: string) {
-  fireEvent.pointerDown(screen.getByRole("combobox", { name: label }));
-  const option = await screen.findByText(optionText);
-  fireEvent.click(option);
-}
-
 describe("GlobalLoginFlow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -86,15 +80,7 @@ describe("GlobalLoginFlow", () => {
           redeId: "rede-1",
           redeName: "Rede Norte",
           unidades: [
-            { id: "tenant-centro", nome: "Centro", matriz: true },
-            { id: "tenant-barra", nome: "Barra", matriz: false },
-          ],
-        },
-        {
-          redeId: "rede-2",
-          redeName: "Rede Sul",
-          unidades: [
-            { id: "tenant-sul", nome: "Sul", matriz: true },
+            { id: "tenant-barra", nome: "Barra", matriz: true },
           ],
         },
       ],
@@ -113,7 +99,7 @@ describe("GlobalLoginFlow", () => {
     });
   });
 
-  it("autentica operador global e exige escolha de rede/unidade quando há ambiguidade", async () => {
+  it("autentica operador global e define automaticamente a unidade quando o contexto é único", async () => {
     render(<GlobalLoginFlow nextPath="/dashboard" />);
 
     fireEvent.change(screen.getByLabelText("E-mail, CPF ou usuário"), {
@@ -126,23 +112,6 @@ describe("GlobalLoginFlow", () => {
 
     await waitFor(() => {
       expect(mockGetAccessibleContextsApi).toHaveBeenCalled();
-      expect(screen.getByLabelText("Rede")).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
-    expect(screen.getByText("Escolha uma rede para continuar.")).toBeInTheDocument();
-
-    await selectOption("Rede", "Rede Norte");
-    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Unidade")).toBeInTheDocument();
-    });
-
-    await selectOption("Unidade", "Barra");
-    fireEvent.click(screen.getByRole("button", { name: "Entrar na unidade" }));
-
-    await waitFor(() => {
       expect(mockSetTenantContextApi).toHaveBeenCalledWith("tenant-barra");
       expect(mockSetPreferredTenantId).toHaveBeenCalledWith("tenant-barra");
       expect(mockReplace).toHaveBeenCalledWith("/dashboard");
