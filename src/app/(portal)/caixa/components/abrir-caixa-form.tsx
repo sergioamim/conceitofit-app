@@ -1,17 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Controller, useForm } from "react-hook-form";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Loader2, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { abrirCaixa, getCaixaAtivo, listCaixaCatalogos } from "@/lib/api/caixa";
+import { abrirCaixa, getCaixaAtivo } from "@/lib/api/caixa";
 import {
   isCaixaApiError,
   mapCaixaError,
@@ -22,7 +20,6 @@ import {
   type AbrirCaixaFormData,
 } from "../lib/caixa-schemas";
 import type { CaixaAtivo } from "./caixa-content";
-import type { CaixaCatalogoResponse } from "@/lib/api/caixa.types";
 import { FecharCaixaModal } from "./fechar-caixa-modal";
 
 interface AbrirCaixaFormProps {
@@ -33,8 +30,7 @@ interface AbrirCaixaFormProps {
 /**
  * Formulário "Abrir caixa" — integra `react-hook-form` + `zodResolver`.
  *
- * O operador escolhe o catálogo de caixa já configurado no tenant.
- * UUID manual não é mais exposto na UI.
+ * Sem seleção de catálogo: backend usa um caixa default por operador/tenant.
  */
 export function AbrirCaixaForm({
   onSuccess,
@@ -42,15 +38,12 @@ export function AbrirCaixaForm({
 }: AbrirCaixaFormProps) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
-  const [catalogos, setCatalogos] = useState<CaixaCatalogoResponse[]>([]);
-  const [loadingCatalogos, setLoadingCatalogos] = useState(true);
   const [caixaDiaAnterior, setCaixaDiaAnterior] = useState<CaixaAtivo | null>(null);
   const [retryPayload, setRetryPayload] = useState<AbrirCaixaFormData | null>(null);
 
   const form = useForm<AbrirCaixaFormData>({
     resolver: zodResolver(AbrirCaixaSchema),
     defaultValues: {
-      caixaCatalogoId: "",
       valorAbertura: 0,
       observacoes: "",
     },
@@ -58,51 +51,17 @@ export function AbrirCaixaForm({
   });
 
   const {
-    control,
     register,
     handleSubmit,
-    setValue,
-    watch,
     formState: { errors },
   } = form;
 
-  useEffect(() => {
-    let active = true;
-    setLoadingCatalogos(true);
-    void listCaixaCatalogos()
-      .then((items) => {
-        if (!active) return;
-        setCatalogos(items);
-        if (items.length === 1) {
-          setValue("caixaCatalogoId", items[0].id, { shouldValidate: true });
-        }
-      })
-      .catch((err) => {
-        if (!active) return;
-        toast({
-          variant: "destructive",
-          title: "Não foi possível carregar os caixas",
-          description:
-            err instanceof Error ? err.message : "Tente novamente em instantes.",
-        });
-      })
-      .finally(() => {
-        if (active) setLoadingCatalogos(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [setValue, toast]);
-
-  const watchedCaixaCatalogoId = watch("caixaCatalogoId");
-  const canSave = Boolean(watchedCaixaCatalogoId?.trim()) && !loadingCatalogos;
+  const canSave = true;
 
   async function executarAbertura(data: AbrirCaixaFormData): Promise<void> {
     setSubmitting(true);
     try {
       const caixa = await abrirCaixa({
-        caixaCatalogoId: data.caixaCatalogoId,
         valorAbertura: data.valorAbertura,
         observacoes: data.observacoes?.trim() ? data.observacoes.trim() : null,
       });
@@ -210,73 +169,12 @@ export function AbrirCaixaForm({
               Abrir caixa
             </h2>
             <p className="text-xs text-muted-foreground">
-              Selecione o caixa configurado e informe o valor inicial do fundo de troco.
+              Informe o valor inicial do fundo de troco.
             </p>
           </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="caixaCatalogoId">
-              Caixa <span className="text-gym-danger">*</span>
-            </Label>
-            <Controller
-              control={control}
-              name="caixaCatalogoId"
-              render={({ field }) => (
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={loadingCatalogos || catalogos.length === 0}
-                >
-                  <SelectTrigger
-                    id="caixaCatalogoId"
-                    className="w-full"
-                    aria-invalid={Boolean(errors.caixaCatalogoId)}
-                    aria-label="Caixa"
-                  >
-                    <SelectValue
-                      placeholder={
-                        loadingCatalogos
-                          ? "Carregando caixas..."
-                          : catalogos.length === 0
-                            ? "Nenhum caixa configurado"
-                            : "Selecione o caixa"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {catalogos.map((catalogo) => (
-                      <SelectItem key={catalogo.id} value={catalogo.id}>
-                        {catalogo.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-            {errors.caixaCatalogoId ? (
-              <p className="text-xs text-gym-danger">
-                {errors.caixaCatalogoId.message}
-              </p>
-            ) : loadingCatalogos ? (
-              <p className="text-xs text-muted-foreground">
-                Carregando os caixas disponíveis para esta unidade...
-              </p>
-            ) : catalogos.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Nenhum caixa configurado para esta unidade.{" "}
-                <Link href="/admin/caixas" className="underline">
-                  Ver configurações
-                </Link>
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                O caixa selecionado identifica o PDV operacional que será aberto.
-              </p>
-            )}
-          </div>
-
           <div className="space-y-1.5">
             <Label htmlFor="valorAbertura">
               Valor de abertura (R$) <span className="text-gym-danger">*</span>

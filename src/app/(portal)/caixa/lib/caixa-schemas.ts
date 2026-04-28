@@ -14,10 +14,6 @@ const UUID_REGEX =
 
 /** Schema do formulário "Abrir caixa". */
 export const AbrirCaixaSchema = z.object({
-  caixaCatalogoId: z
-    .string()
-    .min(1, "Selecione o caixa do catálogo")
-    .regex(UUID_REGEX, "Catálogo inválido (esperado UUID)"),
   valorAbertura: z.coerce
     .number({ error: "Informe um valor numérico" })
     .min(0, "Valor de abertura não pode ser negativo"),

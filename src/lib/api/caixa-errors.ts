@@ -24,7 +24,6 @@ export type CaixaApiError =
   | {
       code: "CAIXA_NAO_ABERTO";
       acaoSugerida: "ABRIR_CAIXA";
-      caixaCatalogoSugerido: string | null;
     }
   | {
       code: "CAIXA_DIA_ANTERIOR";

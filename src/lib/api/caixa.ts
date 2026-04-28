@@ -15,7 +15,6 @@
 import type {
   AbrirCaixaRequest,
   AjusteAdminRequest,
-  CaixaCatalogoResponse,
   CaixaAjusteResponse,
   CaixaResponse,
   DashboardDiarioResponse,
@@ -72,10 +71,6 @@ function tryExtractCaixaApiError(error: ApiRequestError): CaixaApiError | null {
       return {
         code,
         acaoSugerida: "ABRIR_CAIXA",
-        caixaCatalogoSugerido:
-          typeof candidate.caixaCatalogoSugerido === "string"
-            ? candidate.caixaCatalogoSugerido
-            : null,
       };
     case "CAIXA_DIA_ANTERIOR":
       if (
@@ -119,14 +114,6 @@ async function withCaixaErrorMapping<T>(op: () => Promise<T>): Promise<T> {
 // ---------------------------------------------------------------------------
 // Endpoints
 // ---------------------------------------------------------------------------
-
-/** `GET /api/caixas/catalogo` → 200 `CaixaCatalogoResponse[]`. */
-export async function listCaixaCatalogos(): Promise<CaixaCatalogoResponse[]> {
-  return apiRequest<CaixaCatalogoResponse[]>({
-    path: "/api/caixas/catalogo",
-    method: "GET",
-  });
-}
 
 /** `POST /api/caixas/abrir` → 201 `CaixaResponse`. */
 export async function abrirCaixa(

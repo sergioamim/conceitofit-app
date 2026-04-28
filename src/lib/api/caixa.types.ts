@@ -15,15 +15,8 @@
  */
 
 export interface AbrirCaixaRequest {
-  caixaCatalogoId: string;
   valorAbertura: number;
   observacoes?: string | null;
-}
-
-export interface CaixaCatalogoResponse {
-  id: string;
-  nome: string;
-  descricao?: string | null;
 }
 
 export interface CaixaResponse {
@@ -36,7 +29,6 @@ export interface CaixaResponse {
   valorInformado: number | null;
   operadorId: string;
   operadorNome: string;
-  caixaCatalogoId: string;
 }
 
 export interface SaldoParcialResponse {

@@ -87,7 +87,7 @@ describe("api/caixa", () => {
         }),
       );
       try {
-        await abrirCaixa({ caixaCatalogoId: "cc1", valorAbertura: 0 });
+        await abrirCaixa({ valorAbertura: 0 });
         expect.fail("should have thrown");
       } catch (err) {
         expect(isCaixaApiError(err)).toBe(true);
@@ -102,7 +102,7 @@ describe("api/caixa", () => {
       const error = makeApiError(500, { message: "internal" });
       vi.spyOn(http, "apiRequest").mockRejectedValue(error);
       await expect(
-        abrirCaixa({ caixaCatalogoId: "cc1", valorAbertura: 0 }),
+        abrirCaixa({ valorAbertura: 0 }),
       ).rejects.toBe(error);
     });
   });
@@ -345,7 +345,7 @@ describe("api/caixa", () => {
         }),
       );
       try {
-        await abrirCaixa({ caixaCatalogoId: "cc1", valorAbertura: 0 });
+        await abrirCaixa({ valorAbertura: 0 });
         expect.fail("should have thrown");
       } catch (err) {
         expect(isCaixaApiError(err)).toBe(true);
@@ -364,7 +364,7 @@ describe("api/caixa", () => {
       });
       vi.spyOn(http, "apiRequest").mockRejectedValue(error);
       await expect(
-        abrirCaixa({ caixaCatalogoId: "cc1", valorAbertura: 0 }),
+        abrirCaixa({ valorAbertura: 0 }),
       ).rejects.toBe(error);
     });
 
@@ -372,7 +372,7 @@ describe("api/caixa", () => {
       const error = makeApiError(409, { code: "ALGO_ESTRANHO" });
       vi.spyOn(http, "apiRequest").mockRejectedValue(error);
       await expect(
-        abrirCaixa({ caixaCatalogoId: "cc1", valorAbertura: 0 }),
+        abrirCaixa({ valorAbertura: 0 }),
       ).rejects.toBe(error);
     });
   });
