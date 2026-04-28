@@ -26,6 +26,11 @@ export const planoFormSchema = z
     destaque: z.boolean().default(false),
     permiteVendaOnline: z.boolean().default(true),
     ordem: z.string().refine((v) => v.trim() === "" || parseInteger(v) >= 0, "Ordem não pode ser negativa.").optional().default(""),
+    parcelasMaximasCartao: z.string()
+      .refine((v) => v.trim() === "" || (parseInteger(v) >= 1 && parseInteger(v) <= 24),
+              "Entre 1 e 24 parcelas (ou vazio para o default 12x).")
+      .optional()
+      .default(""),
   })
   .superRefine((values, ctx) => {
     if (values.cobraAnuidade && parseMoney(values.valorAnuidade) < 0) {

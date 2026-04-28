@@ -81,6 +81,11 @@ export interface Plano {
   permiteVendaOnline: boolean;
   ativo: boolean;
   ordem?: number;
+  /**
+   * Limite máximo de parcelas em cartão de crédito (Parte B do
+   * PRD_PAGAMENTO_SPLIT). NULL = default 12x.
+   */
+  parcelasMaximasCartao?: number;
 }
 
 export type CicloPlanoPlataforma = "MENSAL" | "ANUAL";

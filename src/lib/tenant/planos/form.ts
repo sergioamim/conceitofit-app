@@ -32,6 +32,7 @@ export interface PlanoFormValues {
   destaque: boolean;
   permiteVendaOnline: boolean;
   ordem: string;
+  parcelasMaximasCartao: string;
 }
 
 export const TIPO_PLANO_LABEL: Record<TipoPlano, string> = {
@@ -64,6 +65,7 @@ export function getDefaultPlanoFormValues(): PlanoFormValues {
     destaque: false,
     permiteVendaOnline: true,
     ordem: "",
+    parcelasMaximasCartao: "",
   };
 }
 
@@ -89,6 +91,7 @@ export function planoToFormValues(plano: Plano): PlanoFormValues {
     destaque: plano.destaque,
     permiteVendaOnline: plano.permiteVendaOnline ?? true,
     ordem: plano.ordem ? String(plano.ordem) : "",
+    parcelasMaximasCartao: plano.parcelasMaximasCartao != null ? String(plano.parcelasMaximasCartao) : "",
   };
 }
 
@@ -126,6 +129,9 @@ export function buildPlanoPayload(values: PlanoFormValues): Omit<Plano, "id" | "
     destaque: values.destaque,
     permiteVendaOnline: values.permiteVendaOnline,
     ordem: values.ordem ? Math.max(0, parseInt(values.ordem, 10)) : undefined,
+    parcelasMaximasCartao: values.parcelasMaximasCartao.trim()
+      ? Math.max(1, Math.min(24, parseInt(values.parcelasMaximasCartao, 10) || 12))
+      : undefined,
   };
 }
 

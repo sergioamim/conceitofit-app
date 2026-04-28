@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { getParcelasMaximasApi } from "@/lib/api/pagamentos-split";
 import { type SubmitHandler, useForm } from "react-hook-form";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -120,6 +121,47 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
     [cart],
   );
 
+  // Limite de parcelas em CARTAO_CREDITO (Parte B do PRD_PAGAMENTO_SPLIT).
+  // Calculado backend-side via planos do carrinho (default 12) ou valor mínimo
+  // de parcela configurado na Unidade (quando carrinho só tem produto/avulso).
+  const planoIdsCarrinho = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          cart
+            .filter((i) => i.tipo === "PLANO" && i.referenciaId)
+            .map((i) => String(i.referenciaId)),
+        ),
+      ),
+    [cart],
+  );
+  const temProdutoSemPlano = useMemo(
+    () => cart.some((i) => i.tipo !== "PLANO"),
+    [cart],
+  );
+  const [parcelasMaximas, setParcelasMaximas] = useState<number>(12);
+  useEffect(() => {
+    if (!tenant?.id || cart.length === 0) {
+      setParcelasMaximas(12);
+      return;
+    }
+    let cancelled = false;
+    getParcelasMaximasApi(tenant.id, {
+      planoIds: planoIdsCarrinho.length > 0 ? planoIdsCarrinho : undefined,
+      temProduto: temProdutoSemPlano,
+      total,
+    })
+      .then((r) => {
+        if (!cancelled) setParcelasMaximas(r.parcelasMaximas);
+      })
+      .catch(() => {
+        if (!cancelled) setParcelasMaximas(12); // fallback seguro
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tenant?.id, cart.length, planoIdsCarrinho, temProdutoSemPlano, total]);
+
   const form = useForm<PaymentPanelFormValues>({
     resolver: zodResolver(paymentPanelSchema),
     mode: "onChange",
@@ -188,6 +230,14 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
       setValue("parcelas", 1, { shouldValidate: true });
     }
   }, [watchedForma, watchedParcelas, setValue]);
+
+  // Quando limite cai abaixo do valor selecionado (ex: removeu plano que
+  // permitia 12x), força reset pra 1 pra não submeter > limite.
+  useEffect(() => {
+    if (watchedParcelas > parcelasMaximas) {
+      setValue("parcelas", 1, { shouldValidate: true });
+    }
+  }, [parcelasMaximas, watchedParcelas, setValue]);
 
   // Colapsáveis
   const [convenioOpen, setConvenioOpen] = useState(false);
@@ -466,7 +516,7 @@ export function PaymentPanel({ workspace, handleConfirmPayment }: PaymentPanelPr
               Parcelas
             </legend>
             <div className="grid grid-cols-6 gap-1.5" role="radiogroup" aria-label="Número de parcelas">
-              {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => {
+              {Array.from({ length: Math.max(1, parcelasMaximas) }, (_, i) => i + 1).map((n) => {
                 const checked = watchedParcelas === n;
                 return (
                   <button

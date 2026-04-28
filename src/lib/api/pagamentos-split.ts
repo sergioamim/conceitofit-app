@@ -218,6 +218,49 @@ export async function obterRelatorioCaixaDiarioApi(
   };
 }
 
+// =========================================================================
+// Limite de parcelas em CARTAO_CREDITO (W10/W11)
+// =========================================================================
+
+export interface ParcelasMaximasResponseDto {
+  parcelasMaximas: number;
+  origemDecisao: string;
+}
+
+/**
+ * Calcula limite de parcelas em cartão de crédito conforme planos do
+ * carrinho ou config da unidade (quando carrinho só tem produto/avulso).
+ * Backend: GET /pagamentos/parcelas-maximas. Default seguro = 12.
+ */
+export async function getParcelasMaximasApi(
+  tenantId: string,
+  input: {
+    planoIds?: string[];
+    temProduto?: boolean;
+    total?: number;
+  },
+): Promise<ParcelasMaximasResponseDto> {
+  const query: Record<string, string | number | boolean | undefined> = { tenantId };
+  if (input.planoIds && input.planoIds.length > 0) {
+    query.planoIds = input.planoIds.join(",");
+  }
+  if (input.temProduto !== undefined) {
+    query.temProduto = input.temProduto;
+  }
+  if (input.total !== undefined) {
+    query.total = input.total;
+  }
+  const data = await apiRequest<ParcelasMaximasResponseDto>({
+    path: "/api/v1/comercial/pagamentos/parcelas-maximas",
+    method: "GET",
+    query,
+  });
+  return {
+    parcelasMaximas: toNumber(data.parcelasMaximas, 12),
+    origemDecisao: data.origemDecisao ?? "DEFAULT",
+  };
+}
+
 export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamentoSplit, string> = {
   DINHEIRO: "Dinheiro",
   PIX: "PIX",

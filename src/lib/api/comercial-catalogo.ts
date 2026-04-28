@@ -27,6 +27,7 @@ type PlanoApiResponse = {
   destaque?: unknown;
   permiteVendaOnline?: unknown;
   ordem?: unknown;
+  parcelasMaximasCartao?: unknown;
 };
 
 type PlanoListApiResponse =
@@ -61,6 +62,7 @@ export interface PlanoUpsertApiRequest {
   destaque?: boolean;
   permiteVendaOnline?: boolean;
   ordem?: number;
+  parcelasMaximasCartao?: number;
 }
 
 const MAX_PLANO_NAME_LENGTH = 100;
@@ -162,6 +164,7 @@ export function buildPlanoUpsertApiRequest(
     | "destaque"
     | "permiteVendaOnline"
     | "ordem"
+    | "parcelasMaximasCartao"
   >
 ): PlanoUpsertApiRequest {
   const atividadeIds = Array.from(
@@ -201,6 +204,10 @@ export function buildPlanoUpsertApiRequest(
     destaque: Boolean(data.destaque),
     permiteVendaOnline: data.permiteVendaOnline ?? true,
     ordem: data.ordem == null ? undefined : Math.max(0, Math.floor(toNumber(data.ordem, 0))),
+    parcelasMaximasCartao:
+      data.parcelasMaximasCartao == null
+        ? undefined
+        : Math.max(1, Math.min(24, Math.floor(toNumber(data.parcelasMaximasCartao, 12)))),
   };
 }
 
@@ -260,6 +267,10 @@ export function normalizePlanoApiResponse(
       source.ordem == null && fallback?.ordem == null
         ? undefined
         : Math.max(0, Math.floor(toNumber(source.ordem, fallback?.ordem ?? 0))),
+    parcelasMaximasCartao:
+      source.parcelasMaximasCartao == null && fallback?.parcelasMaximasCartao == null
+        ? undefined
+        : Math.max(1, Math.min(24, Math.floor(toNumber(source.parcelasMaximasCartao, fallback?.parcelasMaximasCartao ?? 12)))),
   };
 }
 

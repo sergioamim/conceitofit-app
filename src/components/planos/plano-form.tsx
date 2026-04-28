@@ -328,6 +328,26 @@ export function PlanoForm({
                   <Input type="number" {...register("ordem")} className="border-border bg-secondary" />
                   {errors.ordem?.message ? <p className="text-xs text-destructive">{errors.ordem.message}</p> : null}
                 </div>
+                <div className="space-y-1.5 md:max-w-60">
+                  <label
+                    htmlFor="plano-form-parcelas-maximas-cartao"
+                    className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    Máx. parcelas em cartão de crédito
+                  </label>
+                  <Input
+                    id="plano-form-parcelas-maximas-cartao"
+                    type="number"
+                    min={1}
+                    max={24}
+                    placeholder="12"
+                    {...register("parcelasMaximasCartao")}
+                    className="border-border bg-secondary"
+                    data-testid="plano-form-parcelas-maximas-cartao"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Vazio = default 12x. Aplica ao parcelamento no momento da venda.</p>
+                  {errors.parcelasMaximasCartao?.message ? <p className="text-xs text-destructive">{errors.parcelasMaximasCartao.message}</p> : null}
+                </div>
               </div>
             </div>
           </div>

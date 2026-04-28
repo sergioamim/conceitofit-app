@@ -72,6 +72,12 @@ interface SplitCobrancaModalProps {
    * /pagamentos/{id}/quitar-com-split (em vez de criar pagamento novo).
    */
   pagamentoExistenteId?: string;
+  /**
+   * Limite máximo de parcelas em cartão de crédito (default 12).
+   * Quando vem do fluxo de venda, deve ser pré-calculado pelo caller via
+   * getParcelasMaximasApi (planos do carrinho ou config da unidade).
+   */
+  parcelasMaximasCartao?: number;
   onSuccess?: (pagamento: PagamentoSplitResponseDto) => void;
 }
 
@@ -86,6 +92,7 @@ export function SplitCobrancaModal({
   descricaoSugerida = "",
   saldoCreditoInternoDisponivel = 0,
   pagamentoExistenteId,
+  parcelasMaximasCartao = 12,
   onSuccess,
 }: SplitCobrancaModalProps) {
   const modoQuitar = Boolean(pagamentoExistenteId);
@@ -391,6 +398,7 @@ export function SplitCobrancaModal({
         onOpenChange={setAddOpen}
         saldoRestante={saldoRestante}
         saldoCreditoInternoDisponivel={saldoCreditoInternoDisponivel}
+        parcelasMaximasCartao={parcelasMaximasCartao}
         onSubmit={handleAddParcela}
       />
     </>
@@ -402,6 +410,7 @@ interface AdicionarFormaModalProps {
   onOpenChange: (open: boolean) => void;
   saldoRestante: number;
   saldoCreditoInternoDisponivel: number;
+  parcelasMaximasCartao: number;
   onSubmit: (parcela: ParcelaInputDto) => void;
 }
 
@@ -410,6 +419,7 @@ function AdicionarFormaModal({
   onOpenChange,
   saldoRestante,
   saldoCreditoInternoDisponivel,
+  parcelasMaximasCartao,
   onSubmit,
 }: AdicionarFormaModalProps) {
   const [forma, setForma] = useState<FormaPagamentoSplit>("DINHEIRO");
@@ -534,7 +544,7 @@ function AdicionarFormaModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                  {Array.from({ length: Math.max(1, parcelasMaximasCartao) }, (_, i) => i + 1).map((n) => (
                     <SelectItem key={n} value={String(n)}>
                       {n}× de {formatBRL(valorNum / Math.max(1, n))}
                     </SelectItem>
