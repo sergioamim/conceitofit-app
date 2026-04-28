@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Archive, ClipboardList, FileStack, PencilLine, Search, SquareArrowOutUpRight, UserPlus } from "lucide-react";
-import dynamic from "next/dynamic";
-const TreinoModal = dynamic(() => import("@/components/shared/treino-modal").then((mod) => mod.TreinoModal), { ssr: false });
+import { useRouter } from "next/navigation";
+import { Archive, ClipboardList, FileStack, PencilLine, Search, UserPlus } from "lucide-react";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,48 +18,17 @@ import { TemplatesGridV3 } from "./templates-grid-v3";
 export default function TreinosPage() {
   const workspace = useTreinosWorkspace();
   const useV3UI = isTreinoEditorV3Enabled();
+  const router = useRouter();
+
+  async function handleCreateTemplate() {
+    const created = await workspace.createTemplateDraft();
+    if (created?.id) {
+      router.push(`/treinos/${created.id}`);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {workspace.createTemplateOpen ? (
-        <TreinoModal
-          key="template-create-open"
-          open
-          onClose={() => workspace.setCreateTemplateOpen(false)}
-          clientes={[]}
-          exercicios={workspace.exercicios.map((item) => ({
-            id: item.id,
-            nome: item.nome,
-            grupoMuscular: item.grupoMuscularNome ?? item.grupoMuscular,
-          }))}
-          mode="PRE_MONTADO"
-          title="Novo treino padrão"
-          description="Cadastre um template reutilizável para encontrar, editar e atribuir com rapidez."
-          submitLabel="Salvar treino padrão"
-          onSave={workspace.handleCreateTemplate}
-        />
-      ) : null}
-
-      {workspace.editingTemplate ? (
-        <TreinoModal
-          key={workspace.editingTemplate.id}
-          open
-          onClose={() => workspace.setEditingTemplate(null)}
-          clientes={[]}
-          exercicios={workspace.exercicios.map((item) => ({
-            id: item.id,
-            nome: item.nome,
-            grupoMuscular: item.grupoMuscularNome ?? item.grupoMuscular,
-          }))}
-          mode="PRE_MONTADO"
-          title="Editar treino padrão"
-          description="Ajuste os metadados e os exercícios do template sem sair da listagem operacional."
-          submitLabel="Salvar alterações"
-          initialData={workspace.editingTemplateForm}
-          onSave={workspace.handleEditTemplate}
-        />
-      ) : null}
-
       {workspace.assignmentDialogOpen ? (
         <AssignmentDialog
           open={workspace.assignmentDialogOpen}
@@ -124,12 +92,12 @@ export default function TreinosPage() {
             </Link>
           </Button>
           <Button
-            onClick={() => workspace.setCreateTemplateOpen(true)}
-            disabled={!workspace.permissions.canCreateTemplate}
+            onClick={() => void handleCreateTemplate()}
+            disabled={!workspace.permissions.canCreateTemplate || workspace.creatingTemplate}
             title={workspace.permissions.canCreateTemplate ? "Criar treino padrão" : "Seu perfil não pode criar templates"}
           >
             <FileStack className="size-4" />
-            Criar treino padrão
+            {workspace.creatingTemplate ? "Abrindo editor..." : "Criar treino padrão"}
           </Button>
         </div>
       </div>
@@ -138,7 +106,7 @@ export default function TreinosPage() {
         <Card className="border-border bg-card">
           <CardContent className="grid gap-2 p-4 text-sm text-muted-foreground md:grid-cols-3">
             <p>Use a busca principal para localizar templates por nome ou professor, sem misturar treinos atribuídos.</p>
-            <p>As ações rápidas desta tela cobrem edição, montagem, atribuição e arquivamento sem inflar a navegação.</p>
+            <p>Criação e edição agora usam o editor completo de treino, preservando a mesma experiência de montagem e governança.</p>
             <p>Treinos atribuídos seguem em uma fila separada para preservar governança, vigência e rastreabilidade.</p>
           </CardContent>
         </Card>
@@ -313,32 +281,23 @@ export default function TreinosPage() {
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        title={
-                          actionLoading
-                            ? "Carregando detalhes do template"
-                            : canEdit
-                              ? "Editar treino"
-                              : "Seu perfil não pode editar este template"
-                        }
-                        aria-label={`Editar treino ${displayName}`}
-                        disabled={!canEdit || actionLoading}
-                        onClick={() => void workspace.openEditTemplate(template)}
-                      >
-                        <PencilLine className="size-4" />
-                        Editar
-                      </Button>
-                      <Button
                         asChild
                         variant="outline"
                         size="sm"
-                        title="Abrir montagem"
-                        aria-label={`Abrir montagem de ${displayName}`}
+                        title={canEdit ? "Abrir editor do treino" : "Seu perfil não pode editar este template"}
+                        aria-label={`Editar treino ${displayName}`}
                       >
-                        <Link href={`/treinos/${template.id}`}>
-                          <SquareArrowOutUpRight className="size-4" />
-                          Abrir montagem
+                        <Link
+                          href={canEdit ? `/treinos/${template.id}` : "#"}
+                          aria-disabled={!canEdit || actionLoading}
+                          onClick={(event) => {
+                            if (!canEdit || actionLoading) {
+                              event.preventDefault();
+                            }
+                          }}
+                        >
+                          <PencilLine className="size-4" />
+                          Abrir editor
                         </Link>
                       </Button>
                       <Button

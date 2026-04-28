@@ -1,6 +1,8 @@
 import { Check } from "lucide-react";
 import { z } from "zod";
 import { checkAlunoDuplicidadeService, createAlunoComMatriculaService } from "@/lib/tenant/comercial/runtime";
+import { requiredPastDateString, requiredPersonalName } from "@/lib/forms/personal-identity-schemas";
+import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import { cn } from "@/lib/utils";
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -35,37 +37,21 @@ export async function checkUniqueness(tenantId: string, search: string): Promise
   }
 }
 
-export function normalizeDraftEmail(nome: string, identitySeed: string, email?: string) {
-  const trimmed = email?.trim();
-  if (trimmed) return trimmed;
-  const identityDigits = (identitySeed || "").replace(/\D/g, "");
-  const slug = (nome || "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-  const base = slug || identityDigits || "cliente";
-  return `${base}.${Date.now()}@temporario.local`;
-}
-
 // ─── ZOD SCHEMA PARA O WIZARD ──────────────────────────────────────────────
 
 const cpfMaskSchema = z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "Formato CPF inválido").or(z.literal(""));
 
 export const clienteWizardSchema = z.object({
-  nome: z.string().min(3, "Nome muito curto"),
-  email: z.string().email("E-mail inválido").or(z.literal("")),
+  nome: requiredPersonalName("Informe o nome.", "Informe um nome válido."),
+  email: requiredTrimmedString("Informe o e-mail.").email("E-mail inválido."),
   telefone: z.string().min(10, "Informe um telefone válido com DDD"),
   telefoneSec: z.string().optional(),
   cpf: cpfMaskSchema,
   estrangeiro: z.boolean().default(false),
   passaporte: z.string().optional(),
   rg: z.string().optional(),
-  dataNascimento: z.string().optional(),
-  sexo: z.string().optional(),
+  dataNascimento: requiredPastDateString("Informe a data de nascimento."),
+  sexo: z.string().trim().min(1, "Selecione o sexo."),
   enderecoCep: z.string().optional(),
   enderecoLogradouro: z.string().optional(),
   enderecoNumero: z.string().optional(),

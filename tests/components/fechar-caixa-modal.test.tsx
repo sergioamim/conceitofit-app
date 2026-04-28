@@ -49,4 +49,27 @@ describe("FecharCaixaModal", () => {
     const preview = screen.getByTestId("fechar-caixa-preview");
     expect(preview.getAttribute("data-diff-ok")).toBe("false");
   });
+
+  it("aceita título, descrição e label customizados", () => {
+    render(
+      <FecharCaixaModal
+        open
+        onOpenChange={() => {}}
+        caixaId="c1"
+        saldoAtual={saldo}
+        onSuccess={() => {}}
+        title="Caixa aberto em dia anterior"
+        description="Encerre o caixa anterior para continuar."
+        submitLabel="Encerrar caixa anterior"
+      />,
+    );
+
+    expect(screen.getByText("Caixa aberto em dia anterior")).toBeInTheDocument();
+    expect(
+      screen.getByText("Encerre o caixa anterior para continuar."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Encerrar caixa anterior" }),
+    ).toBeInTheDocument();
+  });
 });

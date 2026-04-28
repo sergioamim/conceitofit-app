@@ -105,7 +105,6 @@ export const operationGroup: NavGroup = {
     { href: "/treinos", label: "Treinos", icon: Dumbbell, exact: true, section: "Treinos" },
     { href: "/treinos/atribuidos", label: "Treinos Atribuídos", icon: ClipboardList },
     { href: "/treinos/exercicios", label: "Exercícios", icon: Dumbbell },
-    { href: "/treinos/grupos-musculares", label: "Grupos Musculares", icon: ListTree },
     { href: "/administrativo/catraca-status", label: "Integração Catraca", icon: Settings, section: "Acesso físico" },
     { href: "/gerencial/catraca-acessos", label: "Acessos Catraca", icon: ClipboardList },
   ],

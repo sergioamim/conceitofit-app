@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
 import { PhoneInput } from "@/components/shared/phone-input";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { requiredTrimmedString, optionalTrimmedString } from "@/lib/forms/zod-helpers";
+import { requiredPastDateString, requiredPersonalName } from "@/lib/forms/personal-identity-schemas";
 
 const cpfMaskSchema = z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido").or(z.literal(""));
 
 const clienteFormSchema = z.object({
-  nome: requiredTrimmedString("Informe o nome."),
+  nome: requiredPersonalName("Informe o nome.", "Informe um nome válido."),
   email: requiredTrimmedString("Informe o e-mail.").email("E-mail inválido."),
   telefone: requiredTrimmedString("Informe o telefone."),
   telefoneSec: optionalTrimmedString(),
@@ -26,7 +27,7 @@ const clienteFormSchema = z.object({
   estrangeiro: z.boolean().default(false),
   passaporte: optionalTrimmedString(),
   rg: optionalTrimmedString(),
-  dataNascimento: requiredTrimmedString("Informe a data de nascimento."),
+  dataNascimento: requiredPastDateString("Informe a data de nascimento."),
   sexo: requiredTrimmedString("Selecione o sexo."),
   enderecoCep: optionalTrimmedString(),
   enderecoLogradouro: optionalTrimmedString(),
@@ -130,6 +131,7 @@ export function ClienteEditForm({
     reset,
     watch,
     setValue,
+    setError: setFieldError,
     formState: { errors, isValid },
   } = useForm<ClienteFormValues>({
     resolver: zodResolver(clienteFormSchema),
@@ -242,7 +244,11 @@ export function ClienteEditForm({
         await onSaved();
       }
     } catch (saveError) {
-      setError(normalizeErrorMessage(saveError));
+      const { appliedFields } = applyApiFieldErrors(saveError, setFieldError);
+      setError(buildFormApiErrorMessage(saveError, {
+        appliedFields,
+        fallbackMessage: "Revise os campos destacados e tente novamente.",
+      }));
     } finally {
       setLoading(false);
     }

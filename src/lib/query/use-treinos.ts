@@ -8,8 +8,6 @@ import {
   getTreinoWorkspace,
   saveTreinoExercicio,
   toggleTreinoExercicio,
-  saveTreinoGrupoMuscular,
-  toggleTreinoGrupoMuscular,
   encerrarTreinoWorkspace,
   type TreinoTemplateResumo,
 } from "@/lib/tenant/treinos/workspace";
@@ -201,28 +199,3 @@ export function useGruposMusculares(input: {
   });
 }
 
-function useInvalidateGruposMusculares() {
-  const queryClient = useQueryClient();
-  return () =>
-    queryClient.invalidateQueries({ queryKey: ["treinos", "gruposMusculares"] });
-}
-
-export function useSaveGrupoMuscular() {
-  const invalidate = useInvalidateGruposMusculares();
-
-  return useMutation({
-    mutationFn: (input: Parameters<typeof saveTreinoGrupoMuscular>[0]) =>
-      saveTreinoGrupoMuscular(input),
-    onSuccess: () => invalidate(),
-  });
-}
-
-export function useToggleGrupoMuscular() {
-  const invalidate = useInvalidateGruposMusculares();
-
-  return useMutation({
-    mutationFn: (input: { tenantId: string; id: string }) =>
-      toggleTreinoGrupoMuscular(input),
-    onSuccess: () => invalidate(),
-  });
-}

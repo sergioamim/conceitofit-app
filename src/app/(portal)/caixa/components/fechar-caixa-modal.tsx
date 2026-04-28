@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -34,6 +35,9 @@ interface FecharCaixaModalProps {
   caixaId: string;
   saldoAtual: SaldoParcialResponse;
   onSuccess: () => void;
+  title?: string;
+  description?: string;
+  submitLabel?: string;
 }
 
 /** Tolerância padrão do backend para "sem diferença relevante" (R$ 0,50). */
@@ -55,6 +59,9 @@ export function FecharCaixaModal({
   caixaId,
   saldoAtual,
   onSuccess,
+  title = "Fechar caixa",
+  description,
+  submitLabel = "Confirmar fechamento",
 }: FecharCaixaModalProps) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +125,8 @@ export function FecharCaixaModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Fechar caixa</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
+          {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
 
         <form
@@ -202,7 +210,7 @@ export function FecharCaixaModal({
                   Fechando…
                 </>
               ) : (
-                "Confirmar fechamento"
+                submitLabel
               )}
             </Button>
           </DialogFooter>

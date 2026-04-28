@@ -13,6 +13,8 @@ Este arquivo define guardrails para agentes de IA neste repositório.
 - Evitar formulários controlados manualmente com `useState` campo a campo, exceto quando houver justificativa técnica clara e documentada na resposta.
 - Ao alterar formulários existentes, preferir convergir para `react-hook-form` em vez de introduzir um segundo padrão.
 - Ao alterar formulários existentes, preferir convergir para `react-hook-form` + `zodResolver` em vez de manter validações ad hoc em handlers, helpers soltos ou estado local por campo.
+- Para tarefas de frontend que criem ou refatorem formulários, preferir ativar o skill local `academia-frontend-form-guard` em `.codex/skills/academia-frontend-form-guard/SKILL.md`.
+- Validação no frontend nunca substitui validação de entrada no backend. Se o formulário introduzir ou alterar payload/semântica de API, revisar também o guardrail backend correspondente no repositório `academia-java`.
 
 ## Next.js / React: Hydration Safety
 - Nunca usar `Date.now()`, `Math.random()`, `new Date()`, `crypto.randomUUID()`, UUIDs aleatórios ou qualquer valor mutável durante `render`, `useMemo` de primeiro render, `useState(initializer)` SSR-compartilhado ou JSX que participa da hidratação.

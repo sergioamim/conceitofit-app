@@ -8,11 +8,12 @@ import { createAlunoService } from "@/lib/tenant/comercial/runtime";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import type { Aluno, Sexo } from "@/lib/types";
 import { useFormDraft } from "@/hooks/use-form-draft";
+import { useToast } from "@/components/ui/use-toast";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 
 import {
   clienteWizardSchema,
   type ClienteWizardForm,
-  normalizeDraftEmail,
 } from "./wizard-types";
 
 /**
@@ -54,17 +55,16 @@ const DEFAULT_VALUES: ClienteWizardForm = {
 };
 
 function buildAlunoPayload(vals: ClienteWizardForm) {
-  const identitySeed = vals.cpf || vals.passaporte || vals.telefone;
   return {
     nome: vals.nome,
-    email: normalizeDraftEmail(vals.nome, identitySeed, vals.email),
+    email: vals.email,
     telefone: vals.telefone,
     telefoneSec: vals.telefoneSec,
     cpf: vals.cpf || undefined,
     passaporte: vals.passaporte || undefined,
     rg: vals.rg,
-    dataNascimento: vals.dataNascimento || "2000-01-01",
-    sexo: (vals.sexo || "OUTRO") as Sexo,
+    dataNascimento: vals.dataNascimento,
+    sexo: vals.sexo as Sexo,
     endereco: vals.enderecoCep ? {
       cep: vals.enderecoCep,
       logradouro: vals.enderecoLogradouro,
@@ -109,6 +109,7 @@ export function useClienteWizardState(callbacks: {
   onDone?: (created?: Aluno, opts?: CreateOnlyOptions) => void | Promise<void>;
 }) {
   const { tenantId } = useTenantContext();
+  const { toast } = useToast();
   const [showComplementary, setShowComplementary] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -119,7 +120,7 @@ export function useClienteWizardState(callbacks: {
   });
 
   const draft = useFormDraft({ key: "novo_cliente_wizard", form });
-  const { formState: { isDirty, isValid }, trigger, getValues, reset } = form;
+  const { formState: { isDirty, isValid }, trigger, getValues, reset, setError } = form;
 
   function fullReset() {
     setShowComplementary(false);
@@ -145,8 +146,16 @@ export function useClienteWizardState(callbacks: {
       }
       callbacks.onClose();
       fullReset();
-    } catch {
-      window.alert("Não foi possível criar o pré-cadastro. Verifique os dados e tente novamente.");
+    } catch (error) {
+      const { appliedFields } = applyApiFieldErrors(error, setError);
+      toast({
+        title: "Não foi possível criar o pré-cadastro.",
+        description: buildFormApiErrorMessage(error, {
+          appliedFields,
+          fallbackMessage: "Revise os campos destacados e tente novamente.",
+        }),
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

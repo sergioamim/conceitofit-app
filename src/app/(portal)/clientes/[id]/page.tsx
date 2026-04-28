@@ -346,7 +346,11 @@ export default function ClienteDetalhePage() {
         tenantId={aluno.tenantId}
         onSuccess={(vinculo) => {
           setAgregadorVinculos((current) => [vinculo, ...current.filter((item) => item.id !== vinculo.id)]);
+          if (vinculo.status === "ATIVO") {
+            w.promoteAlunoStatusToAtivo();
+          }
           setVincularAgregadorOpen(false);
+          void w.reload({ silent: true });
         }}
       />
       {drawerAcoesEnabled && (

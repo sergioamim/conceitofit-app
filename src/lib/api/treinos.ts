@@ -320,13 +320,6 @@ type UpdateExercicioApiInput = Partial<CreateExercicioApiInput> & {
   nome: string;
 };
 
-type CreateGrupoMuscularApiInput = {
-  nome: string;
-  descricao?: string;
-  categoria?: "SUPERIOR" | "INFERIOR" | "CORE" | "FUNCIONAL" | "OUTRO";
-  ativo?: boolean;
-};
-
 function toNumber(value: unknown, fallback: number): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -635,54 +628,14 @@ function extractGruposMusculares(value: GrupoMuscularListApiResponse): GrupoMusc
 
 export async function listGruposMuscularesApi(input?: {
   tenantId?: string;
-  ativo?: boolean;
-  search?: string;
 }): Promise<GrupoMuscularApiResponse[]> {
   const response = await apiRequest<GrupoMuscularListApiResponse>({
     path: "/api/v1/grupos-musculares",
     query: {
       tenantId: input?.tenantId,
-      ativo: input?.ativo,
-      search: input?.search,
     },
   });
   return extractGruposMusculares(response);
-}
-
-export async function createGrupoMuscularApi(input: {
-  tenantId?: string;
-  data: CreateGrupoMuscularApiInput;
-}): Promise<GrupoMuscularApiResponse> {
-  return apiRequest<GrupoMuscularApiResponse>({
-    path: "/api/v1/grupos-musculares",
-    method: "POST",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
-}
-
-export async function updateGrupoMuscularApi(input: {
-  tenantId?: string;
-  id: string;
-  data: CreateGrupoMuscularApiInput;
-}): Promise<GrupoMuscularApiResponse> {
-  return apiRequest<GrupoMuscularApiResponse>({
-    path: `/api/v1/grupos-musculares/${input.id}`,
-    method: "PUT",
-    query: { tenantId: input.tenantId },
-    body: input.data,
-  });
-}
-
-export async function toggleGrupoMuscularApi(input: {
-  tenantId?: string;
-  id: string;
-}): Promise<GrupoMuscularApiResponse> {
-  return apiRequest<GrupoMuscularApiResponse>({
-    path: `/api/v1/grupos-musculares/${input.id}/toggle`,
-    method: "PATCH",
-    query: { tenantId: input.tenantId },
-  });
 }
 
 export async function duplicateTreinoTemplateApi(input: {

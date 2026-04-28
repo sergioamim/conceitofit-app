@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createExercicioApi,
-  createGrupoMuscularApi,
   createTreinoApi,
   duplicateTreinoTemplateApi,
   getTreinoApi,
@@ -10,9 +9,7 @@ import {
   listTreinoTemplatesApi,
   listTreinosApi,
   toggleExercicioApi,
-  toggleGrupoMuscularApi,
   updateExercicioApi,
-  updateGrupoMuscularApi,
   updateTreinoApi,
 } from "@/lib/api/treinos";
 import * as http from "@/lib/api/http";
@@ -255,38 +252,7 @@ describe("api/treinos", () => {
       expect(result).toHaveLength(1);
     });
 
-    it("createGrupoMuscularApi POST", async () => {
-      const spy = vi
-        .spyOn(http, "apiRequest")
-        .mockResolvedValue({} as never);
-      await createGrupoMuscularApi({
-        tenantId: "t1",
-        data: { nome: "GM" },
-      });
-      expect(spy.mock.calls[0][0].method).toBe("POST");
-    });
-
-    it("updateGrupoMuscularApi PUT", async () => {
-      const spy = vi
-        .spyOn(http, "apiRequest")
-        .mockResolvedValue({} as never);
-      await updateGrupoMuscularApi({
-        tenantId: "t1",
-        id: "g1",
-        data: { nome: "Edit" },
-      });
-      expect(spy.mock.calls[0][0].method).toBe("PUT");
-      expect(spy.mock.calls[0][0].path).toBe("/api/v1/grupos-musculares/g1");
-    });
-
-    it("toggleGrupoMuscularApi PATCH", async () => {
-      const spy = vi
-        .spyOn(http, "apiRequest")
-        .mockResolvedValue({} as never);
-      await toggleGrupoMuscularApi({ tenantId: "t1", id: "g1" });
-      expect(spy.mock.calls[0][0].path).toBe(
-        "/api/v1/grupos-musculares/g1/toggle",
-      );
-    });
+    // CRUD de grupo muscular foi removido na Wave 3 — taxonomia agora e
+    // canonica global (ver V202604271500__grupos_exercicio_canonicos.sql).
   });
 });

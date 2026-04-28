@@ -4,7 +4,6 @@ import { parseTreinoV2Metadata } from "@/lib/tenant/treinos/v2-runtime";
 import {
   assignTreinoTemplateApi,
   createExercicioApi,
-  createGrupoMuscularApi,
   createTreinoApi,
   encerrarTreinoApi,
   getTreinoApi,
@@ -14,9 +13,7 @@ import {
   listTreinosApi,
   registrarExecucaoTreinoApi,
   toggleExercicioApi,
-  toggleGrupoMuscularApi,
   updateExercicioApi,
-  updateGrupoMuscularApi,
   updateTreinoApi,
   type ExercicioApiResponse,
   type GrupoMuscularApiResponse,
@@ -148,14 +145,6 @@ type AssignTemplateInput = {
   objetivoIndividual?: string;
   restricoes?: string;
   notasProfessor?: string;
-};
-
-type SaveGrupoMuscularInput = {
-  tenantId: string;
-  id?: string;
-  nome: string;
-  descricao?: string;
-  categoria?: GrupoMuscular["categoria"];
 };
 
 type SaveExercicioInput = {
@@ -525,17 +514,6 @@ export async function listTreinoGruposMusculares(input: {
   search?: string;
 }): Promise<GrupoMuscular[]> {
   return (await listGruposMuscularesApi(input)).map(mapGrupoApiToDomain);
-}
-
-export async function saveTreinoGrupoMuscular(input: SaveGrupoMuscularInput): Promise<GrupoMuscular> {
-  const response = input.id
-    ? await updateGrupoMuscularApi({ tenantId: input.tenantId, id: input.id, data: input })
-    : await createGrupoMuscularApi({ tenantId: input.tenantId, data: input });
-  return mapGrupoApiToDomain(response);
-}
-
-export async function toggleTreinoGrupoMuscular(input: { tenantId: string; id: string }): Promise<GrupoMuscular> {
-  return mapGrupoApiToDomain(await toggleGrupoMuscularApi(input));
 }
 
 export async function listTreinoExercicios(input: {

@@ -186,30 +186,13 @@ describe("NovoClienteWizard (VUN-5.1: 3 CTAs finais)", () => {
 });
 
 describe("Wizard types e helpers", () => {
-  it("normalizeDraftEmail gera email temporário sem email informado", async () => {
-    const { normalizeDraftEmail } = await import(
-      "@/components/shared/novo-cliente-wizard/wizard-types"
-    );
-    const result = normalizeDraftEmail("Maria", "12345678901", "");
-    expect(result).toContain("maria");
-    expect(result).toContain("@temporario.local");
-  });
-
-  it("normalizeDraftEmail retorna email informado quando presente", async () => {
-    const { normalizeDraftEmail } = await import(
-      "@/components/shared/novo-cliente-wizard/wizard-types"
-    );
-    const result = normalizeDraftEmail("Maria", "12345678901", "maria@email.com");
-    expect(result).toBe("maria@email.com");
-  });
-
   it("clienteWizardSchema valida nome mínimo", async () => {
     const { clienteWizardSchema } = await import(
       "@/components/shared/novo-cliente-wizard/wizard-types"
     );
     const result = clienteWizardSchema.safeParse({
       nome: "AB",
-      email: "",
+      email: "maria@email.com",
       telefone: "11999990000",
       cpf: "123.456.789-09",
       pagamento: {},
@@ -223,12 +206,45 @@ describe("Wizard types e helpers", () => {
     );
     const result = clienteWizardSchema.safeParse({
       nome: "Maria Teste",
-      email: "",
+      email: "maria@email.com",
       telefone: "11999990000",
       cpf: "123.456.789-09",
+      dataNascimento: "1993-02-10",
+      sexo: "F",
       pagamento: { dataInicio: "2026-03-29", formaPagamento: "PIX" },
     });
     expect(result.success).toBe(true);
+  });
+
+  it("clienteWizardSchema rejeita data de nascimento ausente", async () => {
+    const { clienteWizardSchema } = await import(
+      "@/components/shared/novo-cliente-wizard/wizard-types"
+    );
+    const result = clienteWizardSchema.safeParse({
+      nome: "Maria Teste",
+      email: "maria@email.com",
+      telefone: "11999990000",
+      cpf: "123.456.789-09",
+      sexo: "F",
+      pagamento: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("clienteWizardSchema rejeita data de nascimento futura", async () => {
+    const { clienteWizardSchema } = await import(
+      "@/components/shared/novo-cliente-wizard/wizard-types"
+    );
+    const result = clienteWizardSchema.safeParse({
+      nome: "Maria Teste",
+      email: "maria@email.com",
+      telefone: "11999990000",
+      cpf: "123.456.789-09",
+      dataNascimento: "2099-01-01",
+      sexo: "F",
+      pagamento: {},
+    });
+    expect(result.success).toBe(false);
   });
 
   it("clienteWizardSchema rejeita CPF com formato inválido", async () => {
@@ -237,9 +253,27 @@ describe("Wizard types e helpers", () => {
     );
     const result = clienteWizardSchema.safeParse({
       nome: "Maria Teste",
-      email: "",
+      email: "maria@email.com",
       telefone: "11999990000",
       cpf: "12345678909",
+      dataNascimento: "1993-02-10",
+      sexo: "F",
+      pagamento: {},
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("clienteWizardSchema rejeita e-mail ausente", async () => {
+    const { clienteWizardSchema } = await import(
+      "@/components/shared/novo-cliente-wizard/wizard-types"
+    );
+    const result = clienteWizardSchema.safeParse({
+      nome: "Maria Teste",
+      email: "",
+      telefone: "11999990000",
+      cpf: "123.456.789-09",
+      dataNascimento: "1993-02-10",
+      sexo: "F",
       pagamento: {},
     });
     expect(result.success).toBe(false);

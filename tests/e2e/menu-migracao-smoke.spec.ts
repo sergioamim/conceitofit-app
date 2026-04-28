@@ -82,68 +82,6 @@ test.describe("Smoke — rotas migradas do nav-items legacy", () => {
     });
   });
 
-  test("/treinos/grupos-musculares — com dados mockados exibe nome do grupo", async ({
-    page,
-  }) => {
-    // Grupos + exercícios são carregados via useQuery no client
-    // (useGruposMusculares → listTreinoGruposMusculares + listTreinoExercicios)
-    await page.route(/\/api\/v1\/grupos-musculares(\?|$)/, async (route) => {
-      if (route.request().method() !== "GET") return route.fallback();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: "grp-1",
-            tenantId: TENANT_ID,
-            nome: "Peitoral",
-            descricao: "Grupo superior — foco em peito",
-            categoria: "SUPERIOR",
-            ativo: true,
-          },
-          {
-            id: "grp-2",
-            tenantId: TENANT_ID,
-            nome: "Posterior de coxa",
-            descricao: "Grupo inferior — isquiotibiais",
-            categoria: "INFERIOR",
-            ativo: true,
-          },
-        ]),
-      });
-    });
-    await page.route(/\/api\/v1\/exercicios(\?|$)/, async (route) => {
-      if (route.request().method() !== "GET") return route.fallback();
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          {
-            id: "ex-1",
-            tenantId: TENANT_ID,
-            nome: "Supino reto",
-            grupoMuscularId: "grp-1",
-            ativo: true,
-          },
-        ]),
-      });
-    });
-
-    await page.goto("/treinos/grupos-musculares", {
-      waitUntil: "domcontentloaded",
-    });
-    await expect(
-      page.getByRole("heading", { name: /Grupos Musculares/ }),
-    ).toBeVisible();
-    await expect(page.getByText("Peitoral").first()).toBeVisible({
-      timeout: 10_000,
-    });
-    await expect(page.getByText("Posterior de coxa").first()).toBeVisible();
-    // A tabela mostra quantos exercícios existem por grupo. Supino reto
-    // pertence a grp-1 → coluna "Exercícios" deve mostrar "1 cadastrados".
-    await expect(page.getByText("1 cadastrados").first()).toBeVisible();
-  });
-
   test("/administrativo/salas — com dados mockados exibe linha da sala", async ({
     page,
   }) => {

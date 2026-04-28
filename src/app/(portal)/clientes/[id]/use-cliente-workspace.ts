@@ -72,6 +72,10 @@ export type CartoesTabState = {
   error: string | null;
 };
 
+type ReloadOptions = {
+  silent?: boolean;
+};
+
 function createIdleNfseTabState(tenantId: string | null = null): NfseTabState {
   return {
     tenantId,
@@ -327,14 +331,17 @@ export function useClienteWorkspace() {
     }
   }, []);
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (options?: ReloadOptions) => {
     const id = params?.id;
     if (!id || !tenantResolved) {
       setLoading(false);
       return;
     }
-    setLoading(true);
-    setLoadError(null);
+    const silent = options?.silent === true;
+    if (!silent) {
+      setLoading(true);
+      setLoadError(null);
+    }
     try {
       const resolved = await getClienteOperationalContextService({
         alunoId: id,
@@ -403,13 +410,17 @@ export function useClienteWorkspace() {
         current.tenantId === currentTenantId ? current : createIdleCartoesTabState(currentTenantId)
       );
     } catch (error) {
-      setLoadError(normalizeErrorMessage(error));
-      setAluno(null);
-      setClienteContexto(null);
-      setNfseTabState(createIdleNfseTabState());
-      setCartoesTabState(createIdleCartoesTabState());
+      if (!silent) {
+        setLoadError(normalizeErrorMessage(error));
+        setAluno(null);
+        setClienteContexto(null);
+        setNfseTabState(createIdleNfseTabState());
+        setCartoesTabState(createIdleCartoesTabState());
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [eligibleTenants, params?.id, setTenant, tenantId, tenantResolved, tenants]);
 
@@ -900,6 +911,18 @@ export function useClienteWorkspace() {
     }
   }
 
+  function promoteAlunoStatusToAtivo() {
+    setAluno((current) => {
+      if (!current || current.status === "ATIVO") {
+        return current;
+      }
+      return {
+        ...current,
+        status: "ATIVO",
+      };
+    });
+  }
+
   return {
     // Core data
     aluno,
@@ -998,6 +1021,7 @@ export function useClienteWorkspace() {
     actionError,
     setActionError,
     reload,
+    promoteAlunoStatusToAtivo,
     loadCartoesTabData,
     handleLiberarAcesso,
     handleExcluir,

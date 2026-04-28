@@ -6,19 +6,29 @@
  * e permitir interpolação em backgrounds compostos.
  */
 
+// Cores canônicas alinhadas com os 15 grupos da seed
+// V202604271500__grupos_exercicio_canonicos.sql.
 const GRUPO_COLORS: Record<string, string> = {
   Peito: "#c8f135",
   Costas: "#3de8a0",
-  Pernas: "#38bdf8",
   Ombro: "#f472b6",
-  Bíceps: "#ffb347",
+  Trapezio: "#fbbf24",
+  Trapézio: "#fbbf24",
+  Pescoco: "#cbd5e1",
+  Pescoço: "#cbd5e1",
   Biceps: "#ffb347",
-  Tríceps: "#a78bfa",
+  Bíceps: "#ffb347",
   Triceps: "#a78bfa",
+  Tríceps: "#a78bfa",
+  Antebraco: "#d8b4fe",
+  Antebraço: "#d8b4fe",
   Core: "#fb923c",
-  Glúteo: "#fda4af",
-  Gluteo: "#fda4af",
+  Pernas: "#38bdf8",
   Panturrilha: "#94a3b8",
+  Gluteo: "#fda4af",
+  Glúteo: "#fda4af",
+  Adutores: "#67e8f9",
+  Abdutores: "#7dd3fc",
   Cardio: "#ff5c5c",
 };
 

@@ -8,7 +8,6 @@ import {
   listTreinosWorkspace,
   registrarExecucaoTreinoWorkspace,
   saveTreinoExercicio,
-  saveTreinoGrupoMuscular,
   saveTreinoWorkspace,
   toggleTreinoExercicio,
 } from "../../src/lib/tenant/treinos/workspace";
@@ -437,6 +436,8 @@ function installTreinosFetchMock() {
     }
 
     if (path === "/api/v1/treinos" && method === "POST") {
+      const frequenciaSemanal = body?.frequenciaSemanal ? Number(body.frequenciaSemanal) : undefined;
+      const totalSemanas = body?.totalSemanas ? Number(body.totalSemanas) : undefined;
       const createdId = nextId("trn");
       const created: TreinoRecord = refreshTreinoMetrics({
         id: createdId,
@@ -447,8 +448,13 @@ function installTreinosFetchMock() {
         objetivo: body?.objetivo ? String(body.objetivo) : undefined,
         divisao: body?.divisao ? String(body.divisao) : undefined,
         metaSessoesSemana: body?.metaSessoesSemana ? Number(body.metaSessoesSemana) : undefined,
-        frequenciaPlanejada: body?.frequenciaPlanejada ? Number(body.frequenciaPlanejada) : undefined,
-        quantidadePrevista: body?.quantidadePrevista ? Number(body.quantidadePrevista) : undefined,
+        frequenciaPlanejada: frequenciaSemanal,
+        quantidadePrevista:
+          body?.quantidadePrevista
+            ? Number(body.quantidadePrevista)
+            : frequenciaSemanal && totalSemanas
+              ? frequenciaSemanal * totalSemanas
+              : undefined,
         dataInicio: body?.dataInicio ? String(body.dataInicio) : undefined,
         dataFim: body?.dataFim ? String(body.dataFim) : undefined,
         observacoes: body?.observacoes ? String(body.observacoes) : undefined,
@@ -456,7 +462,12 @@ function installTreinosFetchMock() {
         status: (body?.status as TreinoRecord["status"]) ?? "ATIVO",
         tipoTreino: (body?.tipoTreino as TreinoRecord["tipoTreino"]) ?? "CUSTOMIZADO",
         treinoBaseId: body?.treinoBaseId ? String(body.treinoBaseId) : undefined,
-        templateNome: body?.templateNome ? String(body.templateNome) : undefined,
+        templateNome:
+          body?.tipoTreino === "PRE_MONTADO"
+            ? String(body?.nome ?? "Treino")
+            : body?.templateNome
+              ? String(body.templateNome)
+              : undefined,
         ativo: body?.ativo !== false,
         revisaoAtual: 1,
         proximaRevisaoEm: "2026-03-24",
@@ -503,6 +514,8 @@ function installTreinosFetchMock() {
       const id = path.split("/")[4] ?? "";
       const current = treinos.find((item) => item.id === id);
       if (!current) return json({ message: "Treino não encontrado." }, 404);
+      const frequenciaSemanal = body?.frequenciaSemanal ? Number(body.frequenciaSemanal) : current.frequenciaPlanejada;
+      const totalSemanas = body?.totalSemanas ? Number(body.totalSemanas) : undefined;
       Object.assign(current, refreshTreinoMetrics({
         ...current,
         clienteId: body?.clienteId ? String(body.clienteId) : current.clienteId,
@@ -510,15 +523,25 @@ function installTreinosFetchMock() {
         objetivo: body?.objetivo ? String(body.objetivo) : current.objetivo,
         divisao: body?.divisao ? String(body.divisao) : current.divisao,
         metaSessoesSemana: body?.metaSessoesSemana ? Number(body.metaSessoesSemana) : current.metaSessoesSemana,
-        frequenciaPlanejada: body?.frequenciaPlanejada ? Number(body.frequenciaPlanejada) : current.frequenciaPlanejada,
-        quantidadePrevista: body?.quantidadePrevista ? Number(body.quantidadePrevista) : current.quantidadePrevista,
+        frequenciaPlanejada: frequenciaSemanal,
+        quantidadePrevista:
+          body?.quantidadePrevista
+            ? Number(body.quantidadePrevista)
+            : totalSemanas && frequenciaSemanal
+              ? totalSemanas * frequenciaSemanal
+              : current.quantidadePrevista,
         dataInicio: body?.dataInicio ? String(body.dataInicio) : current.dataInicio,
         dataFim: body?.dataFim ? String(body.dataFim) : current.dataFim,
         observacoes: body?.observacoes ? String(body.observacoes) : current.observacoes,
         status: (body?.status as TreinoRecord["status"]) ?? current.status,
         tipoTreino: (body?.tipoTreino as TreinoRecord["tipoTreino"]) ?? current.tipoTreino,
         treinoBaseId: body?.treinoBaseId ? String(body.treinoBaseId) : current.treinoBaseId,
-        templateNome: body?.templateNome ? String(body.templateNome) : current.templateNome,
+        templateNome:
+          (body?.tipoTreino as TreinoRecord["tipoTreino"] | undefined) === "PRE_MONTADO"
+            ? String(body?.nome ?? current.nome)
+            : body?.templateNome
+              ? String(body.templateNome)
+              : current.templateNome,
         ativo: body?.ativo !== false,
       }));
       return json(current);
@@ -660,20 +683,17 @@ test.describe("treinos workspace", () => {
     process.env.NEXT_PUBLIC_DEV_AUTO_LOGIN = envSnapshot.devAutoLogin;
   });
 
-  test("mantém catálogo canônico de grupos musculares e exercícios", async () => {
+  test("usa grupo canônico global ao salvar exercício", async () => {
+    // Wave 3 (2026-04-28): grupos são canônicos globais — não há mais
+    // saveTreinoGrupoMuscular. O exercício referencia um id pré-existente
+    // da seed de 15 grupos.
     const { restore } = installTreinosFetchMock();
     try {
-      const stamp = Date.now();
-      const grupo = await saveTreinoGrupoMuscular({
-        tenantId: TENANT_ID,
-        nome: `Posterior QA ${stamp}`,
-        categoria: "INFERIOR",
-        descricao: "Grupo criado pela suíte unitária.",
-      });
-
       const grupos = await listTreinoGruposMusculares({ tenantId: TENANT_ID });
-      expect(grupos.some((item) => item.id === grupo.id && item.nome.includes(`Posterior QA ${stamp}`))).toBeTruthy();
+      const grupo = grupos[0];
+      expect(grupo).toBeTruthy();
 
+      const stamp = Date.now();
       const exercicio = await saveTreinoExercicio({
         tenantId: TENANT_ID,
         nome: `Stiff QA ${stamp}`,
@@ -787,6 +807,61 @@ test.describe("treinos workspace", () => {
     }
   });
 
+  test("saveTreinoWorkspace usa payload canônico de frequência semanal ao criar e editar", async () => {
+    const { restore } = installTreinosFetchMock();
+    try {
+      const exercicios = await listTreinoExercicios({ tenantId: TENANT_ID, ativo: true });
+      const exercicio = exercicios[0];
+
+      const created = await saveTreinoWorkspace({
+        tenantId: TENANT_ID,
+        nome: "Template payload canônico",
+        templateNome: "Template payload canônico",
+        objetivo: "Hipertrofia",
+        metaSessoesSemana: 4,
+        frequenciaPlanejada: 4,
+        quantidadePrevista: 20,
+        dataInicio: "2026-03-10",
+        dataFim: "2026-04-14",
+        tipoTreino: "PRE_MONTADO",
+        ativo: true,
+        itens: [
+          {
+            id: "",
+            treinoId: "",
+            exercicioId: exercicio.id,
+            ordem: 1,
+            series: 3,
+          },
+        ],
+      });
+
+      expect(created.frequenciaPlanejada).toBe(4);
+      expect(created.quantidadePrevista).toBe(20);
+
+      const updated = await saveTreinoWorkspace({
+        tenantId: TENANT_ID,
+        id: created.id,
+        nome: created.nome ?? "Template payload canônico",
+        templateNome: created.templateNome ?? created.nome ?? "Template payload canônico",
+        objetivo: created.objetivo,
+        metaSessoesSemana: 5,
+        frequenciaPlanejada: 5,
+        quantidadePrevista: 25,
+        dataInicio: created.dataInicio,
+        dataFim: created.dataFim,
+        tipoTreino: "PRE_MONTADO",
+        ativo: true,
+        itens: created.itens ?? [],
+      });
+
+      expect(updated.frequenciaPlanejada).toBe(5);
+      expect(updated.quantidadePrevista).toBe(25);
+    } finally {
+      restore();
+    }
+  });
+
   test("encerra e renova um ciclo customizado preservando rastreabilidade", async () => {
     const { restore } = installTreinosFetchMock();
     try {
@@ -836,6 +911,51 @@ test.describe("treinos workspace", () => {
       expect(encerrado.ativo).toBeFalsy();
       expect(encerrado.statusCiclo).toBe("ENCERRADO");
     } finally {
+      restore();
+    }
+  });
+
+  test("salva template padrão usando nome canônico sem enviar templateNome no payload", async () => {
+    const { restore } = installTreinosFetchMock();
+    const requests: Array<{ method: string; path: string; body?: unknown }> = [];
+    const originalFetch = global.fetch;
+    global.fetch = (async (input, init) => {
+      const response = await originalFetch(input, init);
+      const requestUrl = new URL(typeof input === "string" ? input : input instanceof Request ? input.url : String(input), "http://localhost");
+      const body =
+        typeof init?.body === "string" && init.body.length > 0 ? JSON.parse(init.body) : undefined;
+      requests.push({
+        method: (init?.method ?? "GET").toUpperCase(),
+        path: requestUrl.pathname,
+        body,
+      });
+      return response;
+    }) as typeof global.fetch;
+
+    try {
+      const created = await saveTreinoWorkspace({
+        tenantId: TENANT_ID,
+        nome: "Ignorado pelo template",
+        templateNome: "Template QA",
+        tipoTreino: "PRE_MONTADO",
+        status: "RASCUNHO",
+        frequenciaPlanejada: 3,
+        quantidadePrevista: 12,
+      });
+
+      expect(created.nome).toBe("Template QA");
+      expect(created.templateNome).toBe("Template QA");
+      const postRequest = requests.find((item) => item.method === "POST" && item.path === "/api/v1/treinos");
+      expect(postRequest).toBeTruthy();
+      expect(postRequest?.body).toMatchObject({
+        nome: "Template QA",
+        tipoTreino: "PRE_MONTADO",
+        frequenciaSemanal: 3,
+        totalSemanas: 4,
+      });
+      expect(postRequest?.body).not.toHaveProperty("templateNome");
+    } finally {
+      global.fetch = originalFetch;
       restore();
     }
   });
