@@ -159,11 +159,14 @@ function ClientesPageContent() {
           hasActiveFilters={ws.hasActiveFilters}
           advancedFilters={ws.advancedFilters}
           advancedFilterCount={ws.advancedFilterCount}
+          view={ws.view}
+          onViewChange={ws.setView}
         />
 
         <ClientesTable
           items={ws.filtered}
           loading={ws.loading}
+          view={ws.view}
           selectedIds={ws.selectedIds}
           onSelectionChange={ws.setSelectedIds}
           bulkActions={ws.bulkActions}

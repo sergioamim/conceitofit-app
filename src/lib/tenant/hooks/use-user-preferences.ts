@@ -10,11 +10,13 @@ const MAX_RECENT_ITEMS = 5;
 type UserPreferences = {
   favorites: string[];
   recent: string[];
+  views: Record<string, string>;
 };
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   favorites: [],
   recent: [],
+  views: {},
 };
 
 // Singleton para o Client Side 
@@ -41,7 +43,18 @@ function loadFromStorage() {
   const stored = localStorage.getItem(PREFERENCES_KEY);
   if (stored) {
     try {
-      globalPreferences = JSON.parse(stored);
+      const parsed = JSON.parse(stored) as Partial<UserPreferences>;
+      globalPreferences = {
+        favorites: Array.isArray(parsed.favorites) ? parsed.favorites.filter((value): value is string => typeof value === "string") : [],
+        recent: Array.isArray(parsed.recent) ? parsed.recent.filter((value): value is string => typeof value === "string") : [],
+        views: parsed.views && typeof parsed.views === "object"
+          ? Object.fromEntries(
+            Object.entries(parsed.views).filter(
+              (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string",
+            ),
+          )
+          : {},
+      };
     } catch (e) {
       logger.error("Erro ao carregar preferências", { module: "user-preferences", error: e });
       globalPreferences = { ...DEFAULT_PREFERENCES };
@@ -137,12 +150,33 @@ export function useUserPreferences() {
     return preferences.favorites.includes(href);
   }, [preferences.favorites]);
 
+  const getViewPreference = useCallback((key: string) => {
+    return preferences.views[key];
+  }, [preferences.views]);
+
+  const setViewPreference = useCallback((key: string, value: string) => {
+    if (!key.trim() || !value.trim()) {
+      return;
+    }
+
+    saveToStorageAndNotify({
+      ...globalPreferences,
+      views: {
+        ...globalPreferences.views,
+        [key]: value,
+      },
+    });
+  }, []);
+
   return {
     favorites: preferences.favorites,
     recent: preferences.recent,
+    views: preferences.views,
     toggleFavorite,
     addRecent,
     isFavorite,
+    getViewPreference,
+    setViewPreference,
     hydrated,
   };
 }

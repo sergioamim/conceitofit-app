@@ -13,6 +13,8 @@ export interface AuthSession {
   userId?: string;
   userKind?: string;
   displayName?: string;
+  perfilId?: string;
+  perfilNome?: string;
   networkId?: string;
   networkSubdomain?: string;
   networkSlug?: string;
@@ -34,6 +36,8 @@ export interface AuthSessionTokenClaims {
   userId?: string;
   userKind?: string;
   displayName?: string;
+  perfilId?: string;
+  perfilNome?: string;
   networkId?: string;
   networkSubdomain?: string;
   networkSlug?: string;
@@ -331,6 +335,8 @@ export function getAuthSessionSnapshot(): AuthSession | null {
     userId: claims?.userId,
     userKind: claims?.userKind,
     displayName: claims?.displayName,
+    perfilId: typeof claims?.perfilId === "string" ? claims.perfilId : undefined,
+    perfilNome: typeof claims?.perfilNome === "string" ? claims.perfilNome : undefined,
     networkId: claims?.networkId,
     networkSubdomain: claims?.networkSubdomain,
     networkSlug: claims?.networkSlug,

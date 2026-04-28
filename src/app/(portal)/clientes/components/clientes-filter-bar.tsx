@@ -17,6 +17,11 @@ import {
   clienteListFiltersToFormValues,
   type ClienteListFilters,
 } from "@/lib/tenant/comercial/clientes-filters";
+import {
+  CLIENTE_LIST_VIEW_VALUES,
+  getClienteListViewLabel,
+  type ClienteListView,
+} from "@/lib/tenant/comercial/clientes-list-view";
 
 import { ClientesAdvancedFiltersSheet } from "./clientes-advanced-filters-sheet";
 
@@ -40,6 +45,8 @@ interface ClientesFilterBarProps {
   hasActiveFilters: boolean;
   advancedFilters: ClienteListFilters;
   advancedFilterCount: number;
+  view: ClienteListView;
+  onViewChange: (view: ClienteListView) => void;
 }
 
 export function ClientesFilterBar({
@@ -55,6 +62,8 @@ export function ClientesFilterBar({
   hasActiveFilters,
   advancedFilters,
   advancedFilterCount,
+  view,
+  onViewChange,
 }: ClientesFilterBarProps) {
   return (
     <div className="flex items-center gap-3">
@@ -123,6 +132,21 @@ export function ClientesFilterBar({
         activeCount={advancedFilterCount}
         onApply={onFilterChange}
       />
+
+      <div className="w-40">
+        <Select value={view} onValueChange={(value) => onViewChange(value as ClienteListView)}>
+          <SelectTrigger className="w-full border-border bg-secondary text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="border-border bg-card">
+            {CLIENTE_LIST_VIEW_VALUES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {getClienteListViewLabel(item)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <div className="w-40">
         <Select value={sortBy} onValueChange={(v) => onSortChange(v as "cadastro" | "nome")}>

@@ -37,6 +37,7 @@ import type {
   StatusAluno,
 } from "@/lib/types";
 import type { ClienteAgregadorTipo } from "@/lib/tenant/comercial/clientes-filters";
+import type { ClienteListView } from "@/lib/tenant/comercial/clientes-list-view";
 
 export type ListAlunosPageServiceResult = {
   items: Aluno[];
@@ -59,6 +60,7 @@ export async function listAlunosPageService(input: {
   tenantId: string;
   status?: StatusAluno;
   search?: string;
+  view?: ClienteListView;
   comPendenciaFinanceira?: boolean;
   comAgregador?: boolean;
   tipoAgregador?: ClienteAgregadorTipo;
@@ -72,6 +74,7 @@ export async function listAlunosPageService(input: {
     tenantId: input.tenantId,
     status: input.status,
     search: input.search,
+    view: input.view,
     comPendenciaFinanceira: input.comPendenciaFinanceira,
     comAgregador: input.comAgregador,
     tipoAgregador: input.tipoAgregador,

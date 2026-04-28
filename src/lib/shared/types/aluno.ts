@@ -57,14 +57,23 @@ export interface Aluno {
   };
   observacoesMedicas?: string;
   foto?: string;
+  motivoBloqueioSistema?: string;
+  justificativaBloqueioSistema?: string;
   estadoAtual?: {
     dataInicioContratoAtual?: LocalDate;
     dataFimContratoAtual?: LocalDate;
     descricaoContratoAtual?: string;
     dataInicioTreino?: LocalDate;
     dataValidadeTreino?: LocalDate;
+    statusAdesao?: string;
+    pendenciaContratual?: string;
   };
   status: StatusAluno;
+  bloqueioSistemaAtualId?: UUID;
+  suspensaoAtualId?: UUID;
+  statusAdesao?: string;
+  pendenciaContratual?: string;
+  motivoStatus?: string;
   suspensao?: {
     motivo: string;
     inicio?: LocalDate;

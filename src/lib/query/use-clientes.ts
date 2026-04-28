@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listAlunosPageService, type ListAlunosPageServiceResult, updateAlunoService } from "@/lib/tenant/comercial/runtime";
 import type { StatusAluno } from "@/lib/types";
 import type { ClienteAgregadorTipo } from "@/lib/tenant/comercial/clientes-filters";
+import type { ClienteListView } from "@/lib/tenant/comercial/clientes-list-view";
 import { queryKeys } from "./keys";
 
 export function useClientes(input: {
@@ -10,6 +11,7 @@ export function useClientes(input: {
   status?: StatusAluno;
   /** Termo de busca server-side (nome/email/CPF/telefone). P0-B 2026-04-23. */
   search?: string;
+  view?: ClienteListView;
   comPendenciaFinanceira?: boolean;
   comAgregador?: boolean;
   tipoAgregador?: ClienteAgregadorTipo;
@@ -22,6 +24,7 @@ export function useClientes(input: {
   const filters = {
     status: input.status,
     search: input.search,
+    view: input.view,
     comPendenciaFinanceira: input.comPendenciaFinanceira,
     comAgregador: input.comAgregador,
     tipoAgregador: input.tipoAgregador,
@@ -39,6 +42,7 @@ export function useClientes(input: {
         tenantId: input.tenantId!,
         status: input.status,
         search: input.search,
+        view: input.view,
         comPendenciaFinanceira: input.comPendenciaFinanceira,
         comAgregador: input.comAgregador,
         tipoAgregador: input.tipoAgregador,

@@ -191,6 +191,7 @@ test.describe("alunos api", () => {
       await listAlunosApi({
         tenantId: "tenant-clientes",
         search: "ana",
+        view: "operacional",
         comPendenciaFinanceira: true,
         tipoAgregador: "TOTALPASS",
         semPlanoAtivo: false,
@@ -202,6 +203,7 @@ test.describe("alunos api", () => {
       expect(calls[0].method).toBe("GET");
       expect(calls[0].url).toContain("/backend/api/v1/comercial/alunos");
       expect(calls[0].url).toContain("search=ana");
+      expect(calls[0].url).toContain("view=operacional");
       expect(calls[0].url).toContain("comPendenciaFinanceira=true");
       expect(calls[0].url).toContain("tipoAgregador=TOTALPASS");
       expect(calls[0].url).toContain("semPlanoAtivo=false");

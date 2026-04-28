@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTableSearchParams } from "@/hooks/use-table-search-params";
 import { getBusinessTodayIso } from "@/lib/business-date";
+import { getAuthSessionSnapshot } from "@/lib/api/session";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { useUserPreferences } from "@/lib/tenant/hooks/use-user-preferences";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { Download } from "lucide-react";
 import type { Aluno } from "@/lib/types";
@@ -12,6 +14,11 @@ import {
   countClienteListFilters,
   parseClienteListFilters,
 } from "@/lib/tenant/comercial/clientes-filters";
+import {
+  DEFAULT_CLIENTE_LIST_VIEW,
+  normalizeClienteListView,
+  resolveClienteListProfileDefault,
+} from "@/lib/tenant/comercial/clientes-list-view";
 
 import { useClientesData } from "./use-clientes-data";
 
@@ -21,6 +28,7 @@ export function useClientesWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
+  const session = getAuthSessionSnapshot();
   const {
     q, rawStatus, status: filtro, page, size: pageSize,
     setParams, clearParams, hasActiveFilters,
@@ -44,6 +52,15 @@ export function useClientesWorkspace() {
     () => countClienteListFilters(advancedFilters),
     [advancedFilters],
   );
+  const { getViewPreference, setViewPreference } = useUserPreferences();
+  const viewPreferenceKey = useMemo(
+    () => `clientes:list-view:${session?.userId?.trim() || "anonymous"}`,
+    [session?.userId],
+  );
+  const viewFromUrl = normalizeClienteListView(searchParams.get("view"));
+  const profileDefaultView = resolveClienteListProfileDefault(session?.perfilNome);
+  const preferredView = normalizeClienteListView(getViewPreference(viewPreferenceKey));
+  const effectiveView = viewFromUrl ?? preferredView ?? profileDefaultView ?? DEFAULT_CLIENTE_LIST_VIEW;
   const hasAnyFilters = hasActiveFilters || advancedFilterCount > 0;
 
   // P0-B (2026-04-23): `busca` agora é propagada server-side como `search`
@@ -56,6 +73,7 @@ export function useClientesWorkspace() {
     setTenant,
     filtro,
     search: q || undefined,
+    view: effectiveView,
     filters: advancedFilters,
     page,
     pageSize,
@@ -142,6 +160,11 @@ export function useClientesWorkspace() {
     [exportCsv],
   );
 
+  const setView = useCallback((nextView: typeof effectiveView) => {
+    setViewPreference(viewPreferenceKey, nextView);
+    setParams({ view: nextView });
+  }, [setParams, setViewPreference, viewPreferenceKey]);
+
   return {
     // Data
     ...data,
@@ -149,6 +172,9 @@ export function useClientesWorkspace() {
     isSearchFiltered,
     metrics,
     tenantId,
+    view: effectiveView,
+    setView,
+    profileDefaultView,
 
     // Filter / search / sort
     filtro,

@@ -13,6 +13,7 @@ import type {
   TenantOperationalEligibilityReason,
 } from "@/lib/types";
 import type { ClienteAgregadorTipo } from "@/lib/tenant/comercial/clientes-filters";
+import type { ClienteListView } from "@/lib/tenant/comercial/clientes-list-view";
 import { apiRequest } from "./http";
 
 type CreateAlunoInput = {
@@ -358,6 +359,7 @@ export async function listAlunosApi(input: {
   tenantId?: string;
   status?: StatusAluno;
   search?: string;
+  view?: ClienteListView;
   comPendenciaFinanceira?: boolean;
   comAgregador?: boolean;
   tipoAgregador?: ClienteAgregadorTipo;
@@ -373,6 +375,7 @@ export async function listAlunosApi(input: {
       tenantId: input.tenantId,
       status: input.status,
       search: input.search?.trim() || undefined,
+      view: input.view,
       comPendenciaFinanceira: input.comPendenciaFinanceira,
       comAgregador: input.comAgregador,
       tipoAgregador: input.tipoAgregador,

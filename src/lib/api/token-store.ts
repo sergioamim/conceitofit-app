@@ -45,6 +45,8 @@ interface SessionClaims {
   userId?: string;
   userKind?: string;
   displayName?: string;
+  perfilId?: string;
+  perfilNome?: string;
   networkId?: string;
   networkSubdomain?: string;
   networkSlug?: string;
