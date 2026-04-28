@@ -268,6 +268,22 @@ export interface AccessNetworkContext {
   helpEmail?: string;
 }
 
+export interface AccessibleNetworkUnit {
+  id: string;
+  nome: string;
+  matriz: boolean;
+}
+
+export interface AccessibleNetworkContext {
+  redeId: string;
+  redeName: string;
+  unidades: AccessibleNetworkUnit[];
+}
+
+export interface AccessibleContextsResponse {
+  redes: AccessibleNetworkContext[];
+}
+
 function normalizeAvailableScopes(raw?: string[]): AuthSessionScope[] {
   if (!raw?.length) return [];
   return raw
@@ -309,7 +325,7 @@ export async function loginApi(input: {
   const identifier = input.identifier?.trim();
   const email = input.email?.trim();
   const response = await apiRequest<LoginApiResponse>({
-    path: "/api/v1/auth/login",
+    path: input.redeIdentifier ? "/api/v1/auth/rede/login" : "/api/v1/auth/login",
     method: "POST",
     includeContextHeader: false,
     headers: buildNetworkHeader(input.redeIdentifier),
@@ -335,6 +351,50 @@ export async function loginApi(input: {
     })
     .catch(() => undefined);
   return session;
+}
+
+export async function getAccessibleContextsApi(): Promise<AccessibleContextsResponse> {
+  const response = await apiRequest<{
+    redes?: Array<{
+      redeId?: string;
+      redeName?: string;
+      unidades?: Array<{
+        id?: string;
+        nome?: string;
+        matriz?: boolean;
+      }>;
+    }>;
+  }>({
+    path: "/api/v1/auth/contexts",
+    includeContextHeader: false,
+  });
+
+  return {
+    redes: (response.redes ?? [])
+      .map((rede) => {
+        const redeId = typeof rede.redeId === "string" ? rede.redeId.trim() : "";
+        if (!redeId) return null;
+        return {
+          redeId,
+          redeName: typeof rede.redeName === "string" && rede.redeName.trim()
+            ? rede.redeName.trim()
+            : "Rede",
+          unidades: (rede.unidades ?? [])
+            .map((unidade) => {
+              const unidadeId = typeof unidade.id === "string" ? unidade.id.trim() : "";
+              const unidadeNome = typeof unidade.nome === "string" ? unidade.nome.trim() : "";
+              if (!unidadeId || !unidadeNome) return null;
+              return {
+                id: unidadeId,
+                nome: unidadeNome,
+                matriz: Boolean(unidade.matriz),
+              };
+            })
+            .filter((unidade): unidade is AccessibleNetworkUnit => unidade !== null),
+        };
+      })
+      .filter((rede): rede is AccessibleNetworkContext => rede !== null),
+  };
 }
 
 export async function adminLoginApi(input: {
