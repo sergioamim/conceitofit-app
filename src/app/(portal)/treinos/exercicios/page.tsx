@@ -14,15 +14,27 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ImageOff,
   Library,
   MoreVertical,
   PlayCircle,
   Plus,
   Search,
+  Trash2,
 } from "lucide-react";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ExercicioModal, type ExercicioForm } from "@/components/shared/exercicio-modal";
 import { ImportarDoCatalogoDialog } from "@/components/treinos/editor/importar-do-catalogo-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +57,7 @@ import {
   useSaveExercicio,
   useToggleExercicio,
 } from "@/lib/query/use-treinos";
+import { useSanitizeBiblioteca } from "@/lib/query/use-catalogo-exercicios";
 import type { Exercicio } from "@/lib/types";
 import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 import { cn } from "@/lib/utils";
@@ -65,6 +78,8 @@ export default function ExerciciosPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Exercicio | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [sanitizeOpen, setSanitizeOpen] = useState(false);
+  const sanitizeMutation = useSanitizeBiblioteca(tenantId ?? "");
 
   const { data, isLoading: loading, isError, error: queryError } = useExercicios({
     tenantId,
@@ -254,6 +269,17 @@ export default function ExerciciosPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {tenantId && exercicios.length > 0 ? (
+            <Button
+              variant="outline"
+              onClick={() => setSanitizeOpen(true)}
+              className="border-rose-500/40 text-rose-300 hover:bg-rose-500/5 hover:text-rose-200"
+              title="Apaga todos os exercícios da biblioteca para reimportar do zero"
+            >
+              <Trash2 className="mr-2 size-4" />
+              Sanitizar
+            </Button>
+          ) : null}
           {tenantId ? (
             <Button
               variant="outline"
@@ -275,6 +301,57 @@ export default function ExerciciosPage() {
           </Button>
         </div>
       </div>
+
+      {/* Wave D.4: dialog de confirmação do sanitize. */}
+      <AlertDialog open={sanitizeOpen} onOpenChange={setSanitizeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sanitizar biblioteca?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Vai apagar <b>{exercicios.length}</b> exercícios da biblioteca local
+                  (soft delete — referências em treinos antigos continuam resolvendo).
+                </p>
+                <p>
+                  Após confirmar, abra <b>Importar do catálogo</b> e selecione os
+                  exercícios que quer trazer (com mídia, grupo muscular e equipamentos
+                  já preenchidos do catálogo canônico).
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sanitizeMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={sanitizeMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-500"
+              onClick={(event) => {
+                event.preventDefault();
+                sanitizeMutation.mutate(undefined, {
+                  onSuccess: (resp) => {
+                    toast({
+                      title: "Biblioteca sanitizada",
+                      description: `${resp.totalRemovidos} exercícios removidos. Use "Importar do catálogo" pra repovoar.`,
+                    });
+                    setSanitizeOpen(false);
+                    setImportDialogOpen(true);
+                  },
+                  onError: (err) => {
+                    toast({
+                      title: "Não foi possível sanitizar",
+                      description: normalizeErrorMessage(err),
+                      variant: "destructive",
+                    });
+                  },
+                });
+              }}
+            >
+              {sanitizeMutation.isPending ? "Apagando..." : "Sim, apagar tudo"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Contador */}
       <div className="text-xs text-muted-foreground">
@@ -308,19 +385,20 @@ export default function ExerciciosPage() {
                 }}
                 className="group relative flex cursor-pointer flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-0.5 hover:border-gym-accent/40 hover:shadow-lg hover:shadow-gym-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gym-accent"
               >
-                {/* Thumb com cor do grupo */}
+                {/* Thumb: mídia real (gif/imagem) + hover ativa video preview se houver.
+                    Fallback: placeholder com cor do grupo. */}
                 <div
-                  className="relative flex h-[120px] items-center justify-center border-b border-border"
+                  className="relative flex h-[120px] items-center justify-center overflow-hidden border-b border-border"
                   style={{
                     background: `linear-gradient(135deg, ${cor}1f, transparent), repeating-linear-gradient(45deg, transparent 0 8px, rgba(255,255,255,0.03) 8px 9px)`,
                   }}
                 >
-                  <div className="flex flex-col items-center text-muted-foreground/70">
-                    <PlayCircle className="size-8 opacity-50" />
-                    <span className="mt-1 font-mono text-[10px] uppercase tracking-wider">
-                      vídeo demo
-                    </span>
-                  </div>
+                  <ExercicioThumb
+                    midiaUrl={ex.midiaUrl}
+                    thumbnailUrl={ex.thumbnailUrl}
+                    videoUrl={ex.videoUrl}
+                    nome={ex.nome}
+                  />
                   {/* Chip do grupo no canto sup esq */}
                   {grupoNome ? (
                     <span
@@ -394,6 +472,84 @@ export default function ExerciciosPage() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+/**
+ * Wave D.3: thumb do card de exercício.
+ *
+ * - Renderiza `<img>` real (gif/imagem) quando `midiaUrl`/`thumbnailUrl` houver.
+ * - On hover, se houver `videoUrl`, troca por `<video autoPlay muted loop>`.
+ * - Sem mídia, mostra placeholder "vídeo demo" com PlayCircle.
+ *
+ * Hidratação: o estado `hover` só altera após mount (handlers de mouse não
+ * rodam no SSR), então não há mismatch.
+ */
+function ExercicioThumb({
+  midiaUrl,
+  thumbnailUrl,
+  videoUrl,
+  nome,
+}: {
+  midiaUrl?: string;
+  thumbnailUrl?: string;
+  videoUrl?: string;
+  nome: string;
+}) {
+  const [hovering, setHovering] = useState(false);
+  const imageUrl = midiaUrl ?? thumbnailUrl ?? null;
+  const showVideo = hovering && Boolean(videoUrl);
+
+  if (!imageUrl && !videoUrl) {
+    return (
+      <div className="flex flex-col items-center text-muted-foreground/70">
+        <PlayCircle className="size-8 opacity-50" />
+        <span className="mt-1 font-mono text-[10px] uppercase tracking-wider">
+          vídeo demo
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="absolute inset-0 h-full w-full"
+      onMouseEnter={() => setHovering(true)}
+      onMouseLeave={() => setHovering(false)}
+    >
+      {showVideo && videoUrl ? (
+        <video
+          src={videoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="h-full w-full object-cover"
+        />
+      ) : imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt={nome}
+          loading="lazy"
+          className="h-full w-full object-cover"
+          onError={(event) => {
+            // Fallback gracioso se o gif/imagem 404 — esconde, deixa o
+            // gradiente do grupo aparecer com o ícone de placeholder.
+            const target = event.currentTarget;
+            target.style.display = "none";
+            const parent = target.parentElement;
+            if (parent) {
+              parent.dataset.broken = "true";
+            }
+          }}
+        />
+      ) : (
+        <div className="flex h-full flex-col items-center justify-center text-muted-foreground/70">
+          <ImageOff className="size-8 opacity-50" />
+        </div>
+      )}
     </div>
   );
 }

@@ -257,6 +257,8 @@ function mapExercicioApiToDomain(item: ExercicioApiResponse): Exercicio {
     equipamento: trimString(item.aparelho),
     descricao: trimString(item.descricao),
     videoUrl: trimString(item.videoUrl),
+    midiaUrl: trimString(item.midiaUrl),
+    thumbnailUrl: trimString(item.thumbnailUrl),
     unidade: trimString(item.unidade),
     ativo: item.ativo !== false,
     criadoEm: trimString(item.createdAt),
