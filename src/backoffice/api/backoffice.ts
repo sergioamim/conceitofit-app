@@ -249,14 +249,6 @@ export async function listBackofficeUnidadesApi(): Promise<Tenant[]> {
   return extractItems(response).map((item) => normalizeBackofficeUnidade(item));
 }
 
-async function getBackofficeUnidadeApi(id: string): Promise<Tenant> {
-  const response = await apiRequest<BackofficeUnidadeApiResponse>({
-    path: `/api/v1/admin/unidades/${id}`,
-    includeContextHeader: false,
-  });
-  return normalizeBackofficeUnidade(response);
-}
-
 export async function createBackofficeUnidadeApi(data: Partial<Tenant>): Promise<Tenant> {
   const response = await apiRequest<BackofficeUnidadeApiResponse>({
     path: "/api/v1/admin/unidades",
@@ -272,6 +264,7 @@ export async function updateBackofficeUnidadeApi(id: string, data: Partial<Tenan
     path: `/api/v1/admin/unidades/${id}`,
     method: "PUT",
     body: buildBackofficeUnidadePayload(data),
+    includeContextHeader: false,
   });
   return normalizeBackofficeUnidade(response, data);
 }
@@ -280,6 +273,7 @@ export async function toggleBackofficeUnidadeApi(id: string): Promise<Tenant> {
   const response = await apiRequest<BackofficeUnidadeApiResponse>({
     path: `/api/v1/admin/unidades/${id}/toggle`,
     method: "PATCH",
+    includeContextHeader: false,
   });
   return normalizeBackofficeUnidade(response);
 }
@@ -288,5 +282,6 @@ export async function deleteBackofficeUnidadeApi(id: string): Promise<void> {
   await apiRequest<void>({
     path: `/api/v1/admin/unidades/${id}`,
     method: "DELETE",
+    includeContextHeader: false,
   });
 }

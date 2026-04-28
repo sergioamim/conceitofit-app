@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,15 +15,22 @@ import { useToast } from "@/components/ui/use-toast";
 import { PaginatedTable } from "@/components/shared/paginated-table";
 import { SuggestionInput, type SuggestionOption } from "@/components/shared/suggestion-input";
 import { useAdminAcademias, useAdminUnidades, useCreateAcademia } from "@/backoffice/query";
-import type { Academia } from "@/lib/types";
+import type { Academia, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-
-interface AcademiaForm {
-  nome: string;
-  documento: string;
-}
+import { zodResolver } from "@/lib/forms/zod-resolver";
+import {
+  applyApiFieldErrors,
+  buildFormApiErrorMessage,
+} from "@/lib/forms/api-form-errors";
+import {
+  backofficeAcademiaCreateSchema,
+  buildBackofficeAcademiaCreateDefaults,
+  type BackofficeAcademiaCreateForm,
+} from "@/lib/forms/backoffice-academia-form";
 
 type PageSize = 20 | 50 | 100 | 200;
+const EMPTY_ACADEMIAS: Academia[] = [];
+const EMPTY_UNIDADES: Tenant[] = [];
 
 export default function AcademiasPage() {
   const router = useRouter();
@@ -30,14 +38,23 @@ export default function AcademiasPage() {
   const academiasQuery = useAdminAcademias();
   const unidadesQuery = useAdminUnidades();
   const createMutation = useCreateAcademia();
-  const [form, setForm] = useState<AcademiaForm>({ nome: "", documento: "" });
   const [busca, setBusca] = useState("");
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState<PageSize>(20);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<BackofficeAcademiaCreateForm>({
+    resolver: zodResolver(backofficeAcademiaCreateSchema),
+    defaultValues: buildBackofficeAcademiaCreateDefaults(),
+  });
 
   const loading = academiasQuery.isLoading || unidadesQuery.isLoading;
-  const academias = academiasQuery.data ?? [];
-  const unidades = unidadesQuery.data ?? [];
+  const academias = academiasQuery.data ?? EMPTY_ACADEMIAS;
+  const unidades = unidadesQuery.data ?? EMPTY_UNIDADES;
   const error = academiasQuery.error || unidadesQuery.error
     ? normalizeErrorMessage(academiasQuery.error ?? unidadesQuery.error)
     : null;
@@ -89,37 +106,32 @@ export default function AcademiasPage() {
 
   const saving = createMutation.isPending;
 
-  function handleCreate() {
+  const handleCreate = handleSubmit(async (values) => {
     if (loading) {
       return;
     }
-    if (!form.nome.trim()) {
-      toast({ title: "Informe o nome da academia", variant: "destructive" });
-      return;
-    }
-    createMutation.mutate(
-      {
-        nome: form.nome.trim(),
-        documento: form.documento.trim() || undefined,
+    try {
+      const created = await createMutation.mutateAsync({
+        nome: values.nome.trim(),
+        documento: values.documento.trim() || undefined,
         ativo: true,
-      },
-      {
-        onSuccess: (created) => {
-          setForm({ nome: "", documento: "" });
-          toast({ title: "Academia criada", description: created.nome });
-          setBusca("");
-          setPage(0);
-        },
-        onError: (createError) => {
-          toast({
-            title: "Não foi possível criar a academia",
-            description: normalizeErrorMessage(createError),
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  }
+      });
+      reset(buildBackofficeAcademiaCreateDefaults());
+      toast({ title: "Academia criada", description: created.nome });
+      setBusca("");
+      setPage(0);
+    } catch (createError) {
+      const { appliedFields } = applyApiFieldErrors(createError, setError);
+      toast({
+        title: "Não foi possível criar a academia",
+        description: buildFormApiErrorMessage(createError, {
+          appliedFields,
+          fallbackMessage: normalizeErrorMessage(createError),
+        }),
+        variant: "destructive",
+      });
+    }
+  });
 
   function handleSearchChange(nextValue: string) {
     setBusca(nextValue);
@@ -150,20 +162,22 @@ export default function AcademiasPage() {
             <Input
               id="academia-nome"
               placeholder="Conceito Fit - Rede Norte"
-              value={form.nome}
               disabled={loading || saving}
-              onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
+              aria-invalid={errors.nome ? "true" : "false"}
+              {...register("nome")}
             />
+            {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="academia-doc">Documento</Label>
             <Input
               id="academia-doc"
               placeholder="CNPJ"
-              value={form.documento}
               disabled={loading || saving}
-              onChange={(e) => setForm((prev) => ({ ...prev, documento: e.target.value }))}
+              aria-invalid={errors.documento ? "true" : "false"}
+              {...register("documento")}
             />
+            {errors.documento ? <p className="text-xs text-gym-danger">{errors.documento.message}</p> : null}
           </div>
           <div className="flex justify-end">
             <Button onClick={handleCreate} disabled={saving || loading}>

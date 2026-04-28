@@ -8,3 +8,4 @@ Convenção do projeto para formulários baseados em `react-hook-form`:
 - Para payloads normalizados, prefira `z.output<typeof algumFormularioSchema>` quando houver transformação/coerção no schema.
 - `z.infer` continua aceitável quando input e output forem idênticos e o tipo não for exportado para fora do arquivo.
 - Mensagens de erro do schema devem ser a fonte primária da UX; validações adicionais no submit só devem existir para regras dependentes de contexto externo ou compatibilidade de payload.
+- Para `fieldErrors` vindos do backend, prefira `applyApiFieldErrors` em `src/lib/forms/api-form-errors.ts` antes de cair em toast ou mensagem agregada.

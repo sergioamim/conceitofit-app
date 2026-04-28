@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { formatDateTimeBR } from "@/lib/formatters";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -24,24 +26,22 @@ import { Input } from "@/components/ui/input";
 import { Copy, Check, KeyRound } from "lucide-react";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { DataTableRowActions } from "@/components/shared/data-table-row-actions";
+import { useToast } from "@/components/ui/use-toast";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import type { CatracaCredentialResponse } from "@/lib/api/catraca";
 import { useAuthAccess, useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { gerarCatracaCredencialAction, hasServerAdminToken } from "./actions";
 import { PageError } from "@/components/shared/page-error";
 import { useAdminCrud } from "@/lib/query/use-admin-crud";
-
-type UnitForm = {
-  nome: string;
-  razaoSocial: string;
-  documento: string;
-  groupId: string;
-  subdomain: string;
-  email: string;
-  telefone: string;
-  cupomPrintMode: "58MM" | "80MM" | "CUSTOM";
-  cupomCustomWidthMm: string;
-};
+import {
+  buildUnidadeFormValues,
+  buildUnidadePayload,
+  EMPTY_UNIDADE_FORM_VALUES,
+  mapUnidadeFieldError,
+  type UnidadeFormValues,
+  unidadeFormSchema,
+} from "./unidade-form";
 
 type CopyButtonProps = {
   label: string;
@@ -50,6 +50,7 @@ type CopyButtonProps = {
 
 function CopyButton({ label, value }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   function handleCopy() {
     navigator.clipboard
@@ -59,7 +60,11 @@ function CopyButton({ label, value }: CopyButtonProps) {
         setTimeout(() => setCopied(false), 1500);
       })
       .catch(() => {
-        window.alert(`Não foi possível copiar ${label.toLowerCase()}.`);
+        toast({
+          title: "Falha ao copiar",
+          description: `Não foi possível copiar ${label.toLowerCase()}.`,
+          variant: "destructive",
+        });
       });
   }
 
@@ -75,18 +80,6 @@ function CopyButton({ label, value }: CopyButtonProps) {
   );
 }
 
-const EMPTY_FORM: UnitForm = {
-  nome: "",
-  razaoSocial: "",
-  documento: "",
-  groupId: "",
-  subdomain: "",
-  email: "",
-  telefone: "",
-  cupomPrintMode: "80MM",
-  cupomCustomWidthMm: "80",
-};
-
 // Sentinel tenantId for global (non-tenant-scoped) unidades API
 const GLOBAL_TENANT_KEY = "__global__";
 
@@ -94,11 +87,11 @@ export function UnidadesContent() {
   const access = useAuthAccess();
   const tenantContext = useTenantContext();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [currentTenantId, setCurrentTenantId] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmCredencialOpen, setConfirmCredencialOpen] = useState(false);
   const [editing, setEditing] = useState<Tenant | null>(null);
-  const [form, setForm] = useState<UnitForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [modalTab, setModalTab] = useState<"DADOS" | "CONFIG">("DADOS");
@@ -108,6 +101,20 @@ export function UnidadesContent() {
   const [credentialSuccess, setCredentialSuccess] = useState("");
   const [manualCatracaAdminToken, setManualCatracaAdminToken] = useState("");
   const [hasConfiguredCatracaTokenFromEnv, setHasConfiguredCatracaTokenFromEnv] = useState(false);
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    clearErrors,
+    setError: setFieldError,
+    watch,
+    formState: { errors },
+  } = useForm<UnidadeFormValues>({
+    resolver: zodResolver(unidadeFormSchema),
+    mode: "onChange",
+    defaultValues: EMPTY_UNIDADE_FORM_VALUES,
+  });
 
   const { items: rows, isLoading: loading, error: loadError, refetch, create, update, toggle } = useAdminCrud<
     Tenant,
@@ -125,6 +132,7 @@ export function UnidadesContent() {
 
   const tenantSelecionado = rows.find((tenant) => tenant.id === currentTenantId);
   const tenantDisplay = tenantSelecionado?.nome || tenantSelecionado?.id || "Nenhuma unidade selecionada";
+  const cupomPrintMode = watch("cupomPrintMode");
 
   useEffect(() => {
     setCurrentTenantId(tenantContext.tenantId);
@@ -136,6 +144,21 @@ export function UnidadesContent() {
 
   function closeCatracaModal() {
     setConfirmCredencialOpen(false);
+  }
+
+  function resetModalState(nextValues: UnidadeFormValues = EMPTY_UNIDADE_FORM_VALUES) {
+    setError("");
+    clearErrors();
+    reset(nextValues);
+    setModalTab("DADOS");
+  }
+
+  function handleModalOpenChange(open: boolean) {
+    setModalOpen(open);
+    if (!open) {
+      setEditing(null);
+      resetModalState();
+    }
   }
 
   async function handleGenerateCatraca() {
@@ -177,66 +200,41 @@ export function UnidadesContent() {
 
   function openCreate() {
     setEditing(null);
-    setError("");
-    setForm(EMPTY_FORM);
-    setModalTab("DADOS");
+    resetModalState();
     setModalOpen(true);
   }
 
   function openEdit(item: Tenant) {
     setEditing(item);
-    setError("");
-    setForm({
-      nome: item.nome ?? "",
-      razaoSocial: item.razaoSocial ?? "",
-      documento: item.documento ?? "",
-      groupId: item.groupId ?? "",
-      subdomain: item.subdomain ?? "",
-      email: item.email ?? "",
-      telefone: item.telefone ?? "",
-      cupomPrintMode: item.configuracoes?.impressaoCupom?.modo ?? "80MM",
-      cupomCustomWidthMm: String(item.configuracoes?.impressaoCupom?.larguraCustomMm ?? 80),
-    });
-    setModalTab("DADOS");
+    resetModalState(buildUnidadeFormValues(item));
     setModalOpen(true);
   }
 
-  async function handleSave() {
-    if (!form.nome.trim()) {
-      setError("Informe o nome da unidade.");
-      return;
-    }
-    if (!form.groupId.trim()) {
-      setError("Informe o Grupo da unidade.");
-      return;
-    }
+  async function handleSave(values: UnidadeFormValues) {
     setSaving(true);
     setError("");
     try {
-      const payload = {
-        nome: form.nome.trim(),
-        razaoSocial: form.razaoSocial.trim() || undefined,
-        documento: form.documento.trim() || undefined,
-        groupId: form.groupId.trim(),
-        subdomain: form.subdomain.trim() || undefined,
-        email: form.email.trim() || undefined,
-        telefone: form.telefone.trim() || undefined,
-        configuracoes: {
-          impressaoCupom: {
-            modo: form.cupomPrintMode,
-            larguraCustomMm: Math.max(40, Math.min(120, Number(form.cupomCustomWidthMm) || 80)),
-          },
-        },
-      };
+      const payload = buildUnidadePayload(values);
 
       if (editing) {
         await update!.mutateAsync({ id: editing.id, data: payload });
       } else {
         await create!.mutateAsync({ ...payload, ativo: true } as Omit<Tenant, "id">);
       }
-      setModalOpen(false);
-      setEditing(null);
-      setForm(EMPTY_FORM);
+      handleModalOpenChange(false);
+    } catch (saveError) {
+      const { appliedFields } = applyApiFieldErrors(saveError, setFieldError, {
+        mapField: mapUnidadeFieldError,
+      });
+      if (appliedFields.includes("configuracoes.impressaoCupom.larguraCustomMm")) {
+        setModalTab("CONFIG");
+      } else if (appliedFields.length > 0) {
+        setModalTab("DADOS");
+      }
+      setError(buildFormApiErrorMessage(saveError, {
+        appliedFields,
+        fallbackMessage: "Revise os campos destacados e tente novamente.",
+      }));
     } finally {
       setSaving(false);
     }
@@ -257,126 +255,170 @@ export function UnidadesContent() {
       await deleteUnidadeApi(id);
       await queryClient.invalidateQueries({ queryKey: ["admin", "unidades"] });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Não foi possível remover a unidade.";
-      window.alert(message);
+      toast({
+        title: "Falha ao remover unidade",
+        description: normalizeErrorMessage(e) || "Não foi possível remover a unidade.",
+        variant: "destructive",
+      });
     }
   }
 
   return (
     <div className="space-y-6">
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={modalOpen} onOpenChange={handleModalOpenChange}>
         <DialogContent className="border-border bg-card sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle className="font-display text-lg font-bold">
               {editing ? "Editar unidade" : "Nova unidade"}
             </DialogTitle>
           </DialogHeader>
-
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-secondary/30 p-1">
-            <button
-              type="button"
-              className={`cursor-pointer rounded-md px-3 py-2 text-sm font-medium ${modalTab === "DADOS" ? "bg-card text-foreground" : "text-muted-foreground"}`}
-              onClick={() => setModalTab("DADOS")}
-            >
-              Dados da unidade
-            </button>
-            <button
-              type="button"
-              className={`cursor-pointer rounded-md px-3 py-2 text-sm font-medium ${modalTab === "CONFIG" ? "bg-card text-foreground" : "text-muted-foreground"}`}
-              onClick={() => setModalTab("CONFIG")}
-            >
-              Configurações
-            </button>
-          </div>
-
-          {modalTab === "DADOS" ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-                <Input value={form.nome} onChange={(e) => setForm((s) => ({ ...s, nome: e.target.value }))} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Razão social</label>
-                <Input value={form.razaoSocial} onChange={(e) => setForm((s) => ({ ...s, razaoSocial: e.target.value }))} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Documento (CNPJ)</label>
-                <Input value={form.documento} onChange={(e) => setForm((s) => ({ ...s, documento: e.target.value }))} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Grupo *</label>
-                <Input value={form.groupId} onChange={(e) => setForm((s) => ({ ...s, groupId: e.target.value }))} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subdomínio</label>
-                <Input value={form.subdomain} onChange={(e) => setForm((s) => ({ ...s, subdomain: e.target.value }))} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail</label>
-                <Input type="email" value={form.email} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} className="border-border bg-secondary" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
-                <PhoneInput value={form.telefone} onChange={(value) => setForm((s) => ({ ...s, telefone: value }))} className="border-border bg-secondary" />
-              </div>
+          <form
+            onSubmit={handleSubmit(handleSave, (formErrors) => {
+              if (formErrors.cupomCustomWidthMm) {
+                setModalTab("CONFIG");
+              } else {
+                setModalTab("DADOS");
+              }
+              setError("Revise os campos destacados e tente novamente.");
+            })}
+            className="space-y-4"
+          >
+            <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-secondary/30 p-1">
+              <button
+                type="button"
+                className={`cursor-pointer rounded-md px-3 py-2 text-sm font-medium ${modalTab === "DADOS" ? "bg-card text-foreground" : "text-muted-foreground"}`}
+                onClick={() => setModalTab("DADOS")}
+              >
+                Dados da unidade
+              </button>
+              <button
+                type="button"
+                className={`cursor-pointer rounded-md px-3 py-2 text-sm font-medium ${modalTab === "CONFIG" ? "bg-card text-foreground" : "text-muted-foreground"}`}
+                onClick={() => setModalTab("CONFIG")}
+              >
+                Configurações
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4 rounded-lg border border-border bg-secondary/20 p-4">
-              <div>
-                <p className="text-sm font-semibold">Impressão de cupom de venda</p>
-                <p className="text-xs text-muted-foreground">
-                  Define o tamanho padrão para recibo em impressora térmica desta unidade.
-                </p>
-              </div>
 
-              <div className="grid gap-2 md:grid-cols-3">
-                {[
-                  { value: "80MM", label: "80mm (padrão)" },
-                  { value: "58MM", label: "58mm" },
-                  { value: "CUSTOM", label: "Customizado" },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setForm((s) => ({ ...s, cupomPrintMode: option.value as UnitForm["cupomPrintMode"] }))}
-                    className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
-                      form.cupomPrintMode === option.value
-                        ? "border-gym-accent bg-gym-accent/10 text-foreground"
-                        : "border-border bg-card text-muted-foreground"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-
-              {form.cupomPrintMode === "CUSTOM" && (
-                <div className="space-y-1.5 md:max-w-xs">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Largura custom (mm)</label>
-                  <Input
-                    type="number"
-                    min={40}
-                    max={120}
-                    value={form.cupomCustomWidthMm}
-                    onChange={(e) => setForm((s) => ({ ...s, cupomCustomWidthMm: e.target.value }))}
-                    className="border-border bg-card"
-                  />
-                  <p className="text-xs text-muted-foreground">Faixa sugerida: 40mm a 120mm</p>
+            {modalTab === "DADOS" ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                  <Input id="unidade-nome" {...register("nome")} aria-invalid={errors.nome ? "true" : "false"} className="border-border bg-secondary" />
+                  {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
                 </div>
-              )}
-            </div>
-          )}
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-razao-social" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Razão social</label>
+                  <Input id="unidade-razao-social" {...register("razaoSocial")} className="border-border bg-secondary" />
+                  {errors.razaoSocial ? <p className="text-xs text-gym-danger">{errors.razaoSocial.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-documento" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Documento (CNPJ)</label>
+                  <Input id="unidade-documento" {...register("documento")} aria-invalid={errors.documento ? "true" : "false"} className="border-border bg-secondary" />
+                  {errors.documento ? <p className="text-xs text-gym-danger">{errors.documento.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-group-id" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Grupo *</label>
+                  <Input id="unidade-group-id" {...register("groupId")} aria-invalid={errors.groupId ? "true" : "false"} className="border-border bg-secondary" />
+                  {errors.groupId ? <p className="text-xs text-gym-danger">{errors.groupId.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-subdomain" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Subdomínio</label>
+                  <Input id="unidade-subdomain" {...register("subdomain")} aria-invalid={errors.subdomain ? "true" : "false"} className="border-border bg-secondary" />
+                  {errors.subdomain ? <p className="text-xs text-gym-danger">{errors.subdomain.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-email" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">E-mail</label>
+                  <Input id="unidade-email" type="email" {...register("email")} aria-invalid={errors.email ? "true" : "false"} className="border-border bg-secondary" />
+                  {errors.email ? <p className="text-xs text-gym-danger">{errors.email.message}</p> : null}
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="unidade-telefone" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</label>
+                  <Controller
+                    control={control}
+                    name="telefone"
+                    render={({ field }) => (
+                      <PhoneInput
+                        id="unidade-telefone"
+                        value={field.value}
+                        onChange={field.onChange}
+                        aria-invalid={errors.telefone ? "true" : "false"}
+                        className="border-border bg-secondary"
+                      />
+                    )}
+                  />
+                  {errors.telefone ? <p className="text-xs text-gym-danger">{errors.telefone.message}</p> : null}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 rounded-lg border border-border bg-secondary/20 p-4">
+                <div>
+                  <p className="text-sm font-semibold">Impressão de cupom de venda</p>
+                  <p className="text-xs text-muted-foreground">
+                    Define o tamanho padrão para recibo em impressora térmica desta unidade.
+                  </p>
+                </div>
 
-          {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
+                <Controller
+                  control={control}
+                  name="cupomPrintMode"
+                  render={({ field }) => (
+                    <div className="grid gap-2 md:grid-cols-3">
+                      {[
+                        { value: "80MM", label: "80mm (padrão)" },
+                        { value: "58MM", label: "58mm" },
+                        { value: "CUSTOM", label: "Customizado" },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => field.onChange(option.value)}
+                          className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
+                            field.value === option.value
+                              ? "border-gym-accent bg-gym-accent/10 text-foreground"
+                              : "border-border bg-card text-muted-foreground"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                />
 
-          <DialogFooter>
-            <Button variant="outline" className="border-border" onClick={() => setModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
+                {cupomPrintMode === "CUSTOM" && (
+                  <div className="space-y-1.5 md:max-w-xs">
+                    <label htmlFor="unidade-cupom-custom-width" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Largura custom (mm)</label>
+                    <Input
+                      id="unidade-cupom-custom-width"
+                      type="number"
+                      min={40}
+                      max={120}
+                      {...register("cupomCustomWidthMm")}
+                      aria-invalid={errors.cupomCustomWidthMm ? "true" : "false"}
+                      className="border-border bg-card"
+                    />
+                    {errors.cupomCustomWidthMm ? (
+                      <p className="text-xs text-gym-danger">{errors.cupomCustomWidthMm.message}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Faixa sugerida: 40mm a 120mm</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {error ? <p className="text-sm text-gym-danger">{error}</p> : null}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" className="border-border" onClick={() => handleModalOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Salvando..." : "Salvar"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 

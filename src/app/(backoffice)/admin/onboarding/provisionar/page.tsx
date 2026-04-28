@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@/lib/forms/zod-resolver";
-import { ApiRequestError } from "@/lib/api/http";
 import { Check, Copy, KeyRound, Mail, MessageCircle, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -20,8 +19,11 @@ import {
   normalizeProvisionPhone,
   type AdminOnboardingProvisionFormValues,
 } from "@/lib/forms/admin-onboarding-provision-form";
+import {
+  applyApiFieldErrors,
+  buildFormApiErrorMessage,
+} from "@/lib/forms/api-form-errors";
 import { formatPhone } from "@/lib/shared/formatters";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatCnpj } from "@/lib/utils/cnpj";
 import { PhoneInput } from "@/components/shared/phone-input";
 
@@ -208,16 +210,13 @@ export default function AdminProvisionarAcademiaPage() {
         description: "As credenciais iniciais já estão prontas para envio ao administrador.",
       });
     } catch (error) {
-      if (error instanceof ApiRequestError) {
-        Object.entries(error.fieldErrors ?? {}).forEach(([field, message]) => {
-          const mappedField = mapFieldError(field);
-          if (mappedField) {
-            setError(mappedField, { type: "server", message });
-          }
-        });
-      }
-
-      const message = normalizeErrorMessage(error);
+      const { appliedFields } = applyApiFieldErrors(error, setError, {
+        mapField: mapFieldError,
+      });
+      const message = buildFormApiErrorMessage(error, {
+        appliedFields,
+        fallbackMessage: "Revise os campos destacados e tente novamente.",
+      });
       setSubmitError(message);
       toast({
         title: "Falha ao provisionar academia",

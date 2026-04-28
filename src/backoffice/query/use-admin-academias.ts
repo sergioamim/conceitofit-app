@@ -4,6 +4,10 @@ import {
   getGlobalAcademiaById,
   createGlobalAcademia,
   updateGlobalAcademia,
+  createGlobalUnidade,
+  updateGlobalUnidade,
+  toggleGlobalUnidade,
+  deleteGlobalUnidade,
   listGlobalUnidades,
 } from "@/backoffice/lib/admin";
 import type { Academia, Tenant } from "@/lib/types";
@@ -49,6 +53,51 @@ export function useUpdateAcademia() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.academias.all() });
       void queryClient.invalidateQueries({ queryKey: queryKeys.admin.unidades.all() });
+    },
+  });
+}
+
+export function useCreateUnidade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<Tenant>) => createGlobalUnidade(data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.unidades.all() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.academias.all() });
+    },
+  });
+}
+
+export function useUpdateUnidade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Tenant> }) =>
+      updateGlobalUnidade(id, data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.unidades.all() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.academias.all() });
+    },
+  });
+}
+
+export function useToggleUnidade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => toggleGlobalUnidade(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.unidades.all() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.academias.all() });
+    },
+  });
+}
+
+export function useDeleteUnidade() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteGlobalUnidade(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.unidades.all() });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.admin.academias.all() });
     },
   });
 }

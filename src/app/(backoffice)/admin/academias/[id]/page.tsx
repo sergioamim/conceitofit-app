@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
+import { Controller, useForm } from "react-hook-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -11,25 +12,32 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useAdminAcademiaDetail, useAdminUnidades, useUpdateAcademia } from "@/backoffice/query";
-import type { Academia } from "@/lib/types";
+import type { Academia, Tenant } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-
-type AcademiaForm = {
-  nome: string;
-  razaoSocial: string;
-  documento: string;
-  email: string;
-  telefone: string;
-  ativo: "ATIVA" | "INATIVA";
-};
+import { zodResolver } from "@/lib/forms/zod-resolver";
+import {
+  applyApiFieldErrors,
+  buildFormApiErrorMessage,
+} from "@/lib/forms/api-form-errors";
+import {
+  backofficeAcademiaDetailSchema,
+  buildBackofficeAcademiaDetailDefaults,
+  type BackofficeAcademiaDetailForm,
+} from "@/lib/forms/backoffice-academia-form";
 
 function buildManageUnitHref(academiaId: string, unitId?: string) {
   const params = new URLSearchParams({ academiaId });
-  if (unitId) params.set("edit", unitId);
+  if (unitId) {
+    params.set("edit", unitId);
+  } else {
+    params.set("create", "1");
+  }
   return `/admin/unidades?${params.toString()}`;
 }
 
-function buildForm(academia: Academia | null): AcademiaForm {
+const EMPTY_UNIDADES: Tenant[] = [];
+
+function buildForm(academia: Academia | null): BackofficeAcademiaDetailForm {
   return {
     nome: academia?.nome ?? "",
     razaoSocial: academia?.razaoSocial ?? "",
@@ -47,22 +55,30 @@ export default function AcademiaDetalhePage() {
   const academiaQuery = useAdminAcademiaDetail(id);
   const unidadesQuery = useAdminUnidades();
   const updateMutation = useUpdateAcademia();
-  const [form, setForm] = useState<AcademiaForm>(() => buildForm(null));
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors },
+  } = useForm<BackofficeAcademiaDetailForm>({
+    resolver: zodResolver(backofficeAcademiaDetailSchema),
+    defaultValues: buildBackofficeAcademiaDetailDefaults(),
+  });
 
   const loading = academiaQuery.isLoading || unidadesQuery.isLoading;
   const academia = academiaQuery.data ?? null;
-  const unidades = unidadesQuery.data ?? [];
+  const unidades = unidadesQuery.data ?? EMPTY_UNIDADES;
   const error = academiaQuery.error || unidadesQuery.error
     ? normalizeErrorMessage(academiaQuery.error ?? unidadesQuery.error)
     : null;
 
   useEffect(() => {
     if (academiaQuery.data) {
-      // Mantem o form editavel sincronizado quando a carga assíncrona muda de academia.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setForm(buildForm(academiaQuery.data));
+      reset(buildForm(academiaQuery.data));
     }
-  }, [academiaQuery.data]);
+  }, [academiaQuery.data, reset]);
 
   const unidadesDaAcademia = useMemo(
     () => unidades.filter((unit) => (unit.academiaId ?? unit.groupId) === id),
@@ -71,39 +87,33 @@ export default function AcademiaDetalhePage() {
 
   const saving = updateMutation.isPending;
 
-  function handleSave() {
-    if (!form.nome.trim()) {
-      toast({ title: "Informe o nome da academia", variant: "destructive" });
-      return;
-    }
-
-    updateMutation.mutate(
-      {
+  const handleSave = handleSubmit(async (values) => {
+    try {
+      const updated = await updateMutation.mutateAsync({
         id,
         data: {
-          nome: form.nome.trim(),
-          razaoSocial: form.razaoSocial.trim() || undefined,
-          documento: form.documento.trim() || undefined,
-          email: form.email.trim() || undefined,
-          telefone: form.telefone.trim() || undefined,
-          ativo: form.ativo === "ATIVA",
+          nome: values.nome.trim(),
+          razaoSocial: values.razaoSocial.trim() || undefined,
+          documento: values.documento.trim() || undefined,
+          email: values.email.trim() || undefined,
+          telefone: values.telefone.trim() || undefined,
+          ativo: values.ativo === "ATIVA",
         },
-      },
-      {
-        onSuccess: (updated) => {
-          setForm(buildForm(updated));
-          toast({ title: "Academia atualizada", description: updated.nome });
-        },
-        onError: (saveError) => {
-          toast({
-            title: "Não foi possível salvar a academia",
-            description: normalizeErrorMessage(saveError),
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  }
+      });
+      reset(buildForm(updated));
+      toast({ title: "Academia atualizada", description: updated.nome });
+    } catch (saveError) {
+      const { appliedFields } = applyApiFieldErrors(saveError, setError);
+      toast({
+        title: "Não foi possível salvar a academia",
+        description: buildFormApiErrorMessage(saveError, {
+          appliedFields,
+          fallbackMessage: normalizeErrorMessage(saveError),
+        }),
+        variant: "destructive",
+      });
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -139,63 +149,71 @@ export default function AcademiaDetalhePage() {
             <Label htmlFor="academia-detalhe-nome">Nome *</Label>
             <Input
               id="academia-detalhe-nome"
-              value={form.nome}
-              onChange={(event) => setForm((current) => ({ ...current, nome: event.target.value }))}
               disabled={loading || !academia}
+              aria-invalid={errors.nome ? "true" : "false"}
+              {...register("nome")}
             />
+            {errors.nome ? <p className="text-xs text-gym-danger">{errors.nome.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="academia-detalhe-razao">Razão social</Label>
             <Input
               id="academia-detalhe-razao"
-              value={form.razaoSocial}
-              onChange={(event) => setForm((current) => ({ ...current, razaoSocial: event.target.value }))}
               disabled={loading || !academia}
+              aria-invalid={errors.razaoSocial ? "true" : "false"}
+              {...register("razaoSocial")}
             />
+            {errors.razaoSocial ? <p className="text-xs text-gym-danger">{errors.razaoSocial.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="academia-detalhe-documento">Documento</Label>
             <Input
               id="academia-detalhe-documento"
-              value={form.documento}
-              onChange={(event) => setForm((current) => ({ ...current, documento: event.target.value }))}
               disabled={loading || !academia}
+              aria-invalid={errors.documento ? "true" : "false"}
+              {...register("documento")}
             />
+            {errors.documento ? <p className="text-xs text-gym-danger">{errors.documento.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="academia-detalhe-email">E-mail</Label>
             <Input
               id="academia-detalhe-email"
               type="email"
-              value={form.email}
-              onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
               disabled={loading || !academia}
+              aria-invalid={errors.email ? "true" : "false"}
+              {...register("email")}
             />
+            {errors.email ? <p className="text-xs text-gym-danger">{errors.email.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="academia-detalhe-telefone">Telefone</Label>
             <Input
               id="academia-detalhe-telefone"
-              value={form.telefone}
-              onChange={(event) => setForm((current) => ({ ...current, telefone: event.target.value }))}
               disabled={loading || !academia}
+              aria-invalid={errors.telefone ? "true" : "false"}
+              {...register("telefone")}
             />
+            {errors.telefone ? <p className="text-xs text-gym-danger">{errors.telefone.message}</p> : null}
           </div>
           <div className="space-y-2">
             <Label>Status</Label>
-            <Select
-              value={form.ativo}
-              onValueChange={(value) => setForm((current) => ({ ...current, ativo: value as AcademiaForm["ativo"] }))}
-              disabled={loading || !academia}
-            >
-              <SelectTrigger aria-label="Status da academia" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ATIVA">Ativa</SelectItem>
-                <SelectItem value="INATIVA">Inativa</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="ativo"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange} disabled={loading || !academia}>
+                  <SelectTrigger aria-label="Status da academia" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ATIVA">Ativa</SelectItem>
+                    <SelectItem value="INATIVA">Inativa</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.ativo ? <p className="text-xs text-gym-danger">{errors.ativo.message}</p> : null}
           </div>
 
           <div className="md:col-span-2 flex justify-end">
