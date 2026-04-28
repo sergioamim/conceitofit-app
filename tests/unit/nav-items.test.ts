@@ -65,7 +65,7 @@ describe("nav-items", () => {
   it("operationGroup contém planos, contratos, treinos e grade", () => {
     const hrefs = operationGroup.items.map((i) => i.href);
     expect(hrefs).toContain("/planos");
-    expect(hrefs).toContain("/matriculas");
+    expect(hrefs).toContain("/contratos");
     expect(hrefs).toContain("/grade");
     expect(hrefs).toContain("/treinos");
     expect(hrefs).toContain("/clientes");
