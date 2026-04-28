@@ -217,12 +217,13 @@ export interface CrmPlaybookStep {
 
 export interface CrmPlaybook {
   id: UUID;
-  tenantId: UUID;
+  tenantId?: UUID;
   nome: string;
-  objetivo: string;
-  stageStatus: StatusProspect;
+  descricao?: string;
   ativo: boolean;
-  passos: CrmPlaybookStep[];
+  prioridadePadrao?: CrmTaskPrioridade;
+  prazoHorasPadrao?: number;
+  etapas: string[];
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
 }

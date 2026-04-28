@@ -436,13 +436,21 @@ describe("api/crm", () => {
         tenantId: "t1",
         data: {
           nome: "PB",
-          objetivo: "obj",
-          stageStatus: "NOVO",
+          descricao: "obj",
           ativo: true,
-          passos: [],
+          prioridadePadrao: "MEDIA",
+          prazoHorasPadrao: 12,
+          etapas: ["Contato inicial", "Follow-up"],
         },
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].body).toMatchObject({
+        nome: "PB",
+        descricao: "obj",
+        prioridadePadrao: "MEDIA",
+        prazoHorasPadrao: 12,
+        etapas: ["Contato inicial", "Follow-up"],
+      });
     });
 
     it("updateCrmPlaybookApi PUT", async () => {

@@ -136,17 +136,11 @@ function extractListItems<T>(response: GenericListResponse<T>): T[] {
 
 type CrmPlaybookUpsertData = {
   nome: string;
-  objetivo: string;
-  stageStatus: StatusProspect;
+  descricao?: string;
   ativo: boolean;
-  passos: Array<{
-    id?: string;
-    titulo: string;
-    descricao?: string;
-    acao: CrmPlaybook["passos"][number]["acao"];
-    prazoHoras: number;
-    obrigatoria: boolean;
-  }>;
+  prioridadePadrao: NonNullable<CrmPlaybook["prioridadePadrao"]>;
+  prazoHorasPadrao: number;
+  etapas: string[];
 };
 
 type CrmCadenciaUpsertData = {

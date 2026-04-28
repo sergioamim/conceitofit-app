@@ -1,30 +1,25 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { normalizeCapabilityError } from "@/lib/api/backend-capability";
+import { useState } from "react";
+import { type FieldPath, useFieldArray, useForm } from "react-hook-form";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import {
-  useCrmPlaybooks,
   useCrmCadencias,
-  useSavePlaybook,
+  useCrmPlaybooks,
   useSaveCadencia,
+  useSavePlaybook,
 } from "@/lib/query/use-crm-playbooks";
-import type {
-  CrmCadencia,
-  CrmCadenciaAcao,
-  CrmCadenciaGatilho,
-  CrmPipelineStage,
-  CrmPlaybook,
-  CrmPlaybookAcao,
-  StatusProspect,
-} from "@/lib/types";
+import type { CrmCadencia, CrmTaskPrioridade, CrmPlaybook } from "@/lib/types";
 import {
   buildDefaultCrmPipelineStages,
   CRM_CADENCIA_ACTION_LABEL,
   CRM_CADENCIA_TRIGGER_LABEL,
-  CRM_PLAYBOOK_ACTION_LABEL,
+  CRM_TASK_PRIORITY_LABEL,
 } from "@/lib/tenant/crm/workspace";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
+import { formatDateTime } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -37,205 +32,226 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDateTime } from "@/lib/formatters";
+import {
+  cadenciaFormSchema,
+  EMPTY_CADENCIA_FORM_VALUES,
+  EMPTY_PLAYBOOK_FORM_VALUES,
+  type CadenciaFormValues,
+  type PlaybookFormValues,
+  playbookFormSchema,
+} from "./playbooks-form-schema";
 
-type PlaybookStepForm = {
-  id?: string;
-  titulo: string;
-  descricao: string;
-  acao: CrmPlaybookAcao;
-  prazoHoras: number;
-  obrigatoria: boolean;
-};
-
-type PlaybookFormState = {
-  nome: string;
-  objetivo: string;
-  stageStatus: StatusProspect;
-  ativo: boolean;
-  passos: PlaybookStepForm[];
-};
-
-type CadenciaStepForm = {
-  id?: string;
-  titulo: string;
-  acao: CrmCadenciaAcao;
-  delayDias: number;
-  template: string;
-  automatica: boolean;
-};
-
-type CadenciaFormState = {
-  nome: string;
-  objetivo: string;
-  stageStatus: StatusProspect;
-  gatilho: CrmCadenciaGatilho;
-  ativo: boolean;
-  passos: CadenciaStepForm[];
-};
-
-function createPlaybookStep(): PlaybookStepForm {
-  return {
-    titulo: "",
-    descricao: "",
-    acao: "CHECKLIST",
-    prazoHoras: 4,
-    obrigatoria: true,
-  };
+function normalizeFieldErrorPath(field: string): string {
+  return field.replace(/\[(\d+)\]/g, ".$1");
 }
 
-function createCadenciaStep(): CadenciaStepForm {
-  return {
-    titulo: "",
-    acao: "WHATSAPP",
-    delayDias: 0,
-    template: "",
-    automatica: true,
-  };
+function mapPlaybookFieldError(field: string): FieldPath<PlaybookFormValues> | null {
+  const normalized = normalizeFieldErrorPath(field);
+  if (/^etapas\.\d+$/.test(normalized)) {
+    return `${normalized}.value` as FieldPath<PlaybookFormValues>;
+  }
+  if (["nome", "descricao", "ativo", "prioridadePadrao", "prazoHorasPadrao", "etapas"].includes(normalized)) {
+    return normalized as FieldPath<PlaybookFormValues>;
+  }
+  return null;
 }
 
-const EMPTY_PLAYBOOK_FORM: PlaybookFormState = {
-  nome: "",
-  objetivo: "",
-  stageStatus: "NOVO",
-  ativo: true,
-  passos: [createPlaybookStep()],
-};
+function mapCadenciaFieldError(field: string): FieldPath<CadenciaFormValues> | null {
+  const normalized = normalizeFieldErrorPath(field);
+  if (normalized.startsWith("passos.")) {
+    return normalized as FieldPath<CadenciaFormValues>;
+  }
+  if (["nome", "objetivo", "stageStatus", "gatilho", "ativo", "passos"].includes(normalized)) {
+    return normalized as FieldPath<CadenciaFormValues>;
+  }
+  return null;
+}
 
-const EMPTY_CADENCIA_FORM: CadenciaFormState = {
-  nome: "",
-  objetivo: "",
-  stageStatus: "NOVO",
-  gatilho: "NOVO_PROSPECT",
-  ativo: true,
-  passos: [createCadenciaStep()],
-};
-
-function toPlaybookForm(playbook?: CrmPlaybook | null): PlaybookFormState {
-  if (!playbook) return EMPTY_PLAYBOOK_FORM;
+function toPlaybookFormValues(playbook?: CrmPlaybook | null): PlaybookFormValues {
+  if (!playbook) return EMPTY_PLAYBOOK_FORM_VALUES;
   return {
     nome: playbook.nome,
-    objetivo: playbook.objetivo,
-    stageStatus: playbook.stageStatus,
+    descricao: playbook.descricao ?? "",
     ativo: playbook.ativo,
-    passos: playbook.passos.map((step) => ({
-      id: step.id,
-      titulo: step.titulo,
-      descricao: step.descricao ?? "",
-      acao: step.acao,
-      prazoHoras: step.prazoHoras,
-      obrigatoria: step.obrigatoria,
-    })),
+    prioridadePadrao: playbook.prioridadePadrao ?? "MEDIA",
+    prazoHorasPadrao: playbook.prazoHorasPadrao ?? 24,
+    etapas: playbook.etapas.length > 0 ? playbook.etapas.map((etapa) => ({ value: etapa })) : [{ value: "" }],
   };
 }
 
-function toCadenciaForm(cadencia?: CrmCadencia | null): CadenciaFormState {
-  if (!cadencia) return EMPTY_CADENCIA_FORM;
+function toCadenciaFormValues(cadencia?: CrmCadencia | null): CadenciaFormValues {
+  if (!cadencia) return EMPTY_CADENCIA_FORM_VALUES;
   return {
     nome: cadencia.nome,
     objetivo: cadencia.objetivo,
     stageStatus: cadencia.stageStatus,
     gatilho: cadencia.gatilho,
     ativo: cadencia.ativo,
-    passos: cadencia.passos.map((step) => ({
-      id: step.id,
-      titulo: step.titulo,
+    passos: cadencia.passos.length > 0
+      ? cadencia.passos.map((step) => ({
+          titulo: step.titulo,
+          acao: step.acao,
+          delayDias: step.delayDias,
+          template: step.template ?? "",
+          automatica: step.automatica,
+        }))
+      : EMPTY_CADENCIA_FORM_VALUES.passos,
+  };
+}
+
+function toPlaybookPayload(values: PlaybookFormValues) {
+  return {
+    nome: values.nome.trim(),
+    descricao: values.descricao?.trim() ? values.descricao.trim() : undefined,
+    ativo: values.ativo,
+    prioridadePadrao: values.prioridadePadrao,
+    prazoHorasPadrao: Number(values.prazoHorasPadrao),
+    etapas: values.etapas.map((etapa) => etapa.value.trim()),
+  };
+}
+
+function toCadenciaPayload(values: CadenciaFormValues) {
+  return {
+    nome: values.nome.trim(),
+    objetivo: values.objetivo.trim(),
+    stageStatus: values.stageStatus,
+    gatilho: values.gatilho,
+    ativo: values.ativo,
+    passos: values.passos.map((step) => ({
+      titulo: step.titulo.trim(),
       acao: step.acao,
-      delayDias: step.delayDias,
-      template: step.template ?? "",
+      delayDias: Number(step.delayDias),
+      template: step.template?.trim() ? step.template.trim() : undefined,
       automatica: step.automatica,
     })),
   };
 }
 
+const PRIORIDADES_PLAYBOOK = Object.keys(CRM_TASK_PRIORITY_LABEL) as CrmTaskPrioridade[];
 
 export default function PlaybooksContent() {
   const tenantContext = useTenantContext();
+  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
+  const stages = buildDefaultCrmPipelineStages(tenantId || "tenant-runtime");
+
   const [editingPlaybook, setEditingPlaybook] = useState<CrmPlaybook | null>(null);
   const [editingCadencia, setEditingCadencia] = useState<CrmCadencia | null>(null);
-  const [playbookForm, setPlaybookForm] = useState<PlaybookFormState>(EMPTY_PLAYBOOK_FORM);
-  const [cadenciaForm, setCadenciaForm] = useState<CadenciaFormState>(EMPTY_CADENCIA_FORM);
-  const [error, setError] = useState("");
-  const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
-  const stages: CrmPipelineStage[] = buildDefaultCrmPipelineStages(tenantId || "tenant-runtime");
+  const [playbookSubmitError, setPlaybookSubmitError] = useState<string | null>(null);
+  const [cadenciaSubmitError, setCadenciaSubmitError] = useState<string | null>(null);
 
   const { data: playbooks = [], isLoading: playbooksLoading } = useCrmPlaybooks({ tenantId });
   const { data: cadencias = [], isLoading: cadenciasLoading, isError: cadenciasError } = useCrmCadencias({ tenantId });
   const savePlaybookMutation = useSavePlaybook(tenantId);
   const saveCadenciaMutation = useSaveCadencia(tenantId);
 
+  const playbookForm = useForm<PlaybookFormValues>({
+    resolver: zodResolver(playbookFormSchema),
+    defaultValues: EMPTY_PLAYBOOK_FORM_VALUES,
+    mode: "onChange",
+  });
+  const cadenciaForm = useForm<CadenciaFormValues>({
+    resolver: zodResolver(cadenciaFormSchema),
+    defaultValues: EMPTY_CADENCIA_FORM_VALUES,
+    mode: "onChange",
+  });
+
+  const {
+    register: registerPlaybook,
+    handleSubmit: handleSubmitPlaybook,
+    reset: resetPlaybookValues,
+    setError: setPlaybookFieldError,
+    control: playbookControl,
+    formState: { errors: playbookErrors, isValid: isPlaybookValid },
+  } = playbookForm;
+  const {
+    fields: playbookEtapas,
+    append: appendPlaybookEtapa,
+    remove: removePlaybookEtapa,
+  } = useFieldArray({
+    control: playbookControl,
+    name: "etapas",
+  });
+
+  const {
+    register: registerCadencia,
+    handleSubmit: handleSubmitCadencia,
+    reset: resetCadenciaValues,
+    setError: setCadenciaFieldError,
+    control: cadenciaControl,
+    formState: { errors: cadenciaErrors, isValid: isCadenciaValid },
+  } = cadenciaForm;
+  const {
+    fields: cadenciaPassos,
+    append: appendCadenciaPasso,
+    remove: removeCadenciaPasso,
+  } = useFieldArray({
+    control: cadenciaControl,
+    name: "passos",
+  });
+
   const loading = playbooksLoading || cadenciasLoading;
-  const saving = savePlaybookMutation.isPending || saveCadenciaMutation.isPending;
   const cadenciasUnavailable = cadenciasError;
 
   function resetPlaybookForm(playbook?: CrmPlaybook | null) {
     setEditingPlaybook(playbook ?? null);
-    setPlaybookForm(toPlaybookForm(playbook));
+    setPlaybookSubmitError(null);
+    resetPlaybookValues(toPlaybookFormValues(playbook));
   }
 
   function resetCadenciaForm(cadencia?: CrmCadencia | null) {
     setEditingCadencia(cadencia ?? null);
-    setCadenciaForm(toCadenciaForm(cadencia));
+    setCadenciaSubmitError(null);
+    resetCadenciaValues(toCadenciaFormValues(cadencia));
   }
 
-  async function handleSavePlaybook(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitPlaybook(values: PlaybookFormValues) {
     if (!tenantId) return;
-    setError("");
+    setPlaybookSubmitError(null);
     try {
-      const payload = {
-        nome: playbookForm.nome,
-        objetivo: playbookForm.objetivo,
-        stageStatus: playbookForm.stageStatus,
-        ativo: playbookForm.ativo,
-        passos: playbookForm.passos.map((step) => ({
-          id: step.id,
-          titulo: step.titulo,
-          descricao: step.descricao,
-          acao: step.acao,
-          prazoHoras: step.prazoHoras,
-          obrigatoria: step.obrigatoria,
-        })),
-      };
       await savePlaybookMutation.mutateAsync({
         id: editingPlaybook?.id,
-        data: payload,
+        data: toPlaybookPayload(values),
       });
       resetPlaybookForm(null);
-    } catch (submitError) {
-      setError(normalizeCapabilityError(submitError, "Falha ao salvar playbook."));
+    } catch (error) {
+      const fieldResult = applyApiFieldErrors(error, setPlaybookFieldError, {
+        mapField: mapPlaybookFieldError,
+      });
+      const message = buildFormApiErrorMessage(error, {
+        appliedFields: fieldResult.appliedFields,
+        fallbackMessage: "Falha ao salvar playbook.",
+      });
+      if (message) {
+        setPlaybookSubmitError(message);
+      }
     }
   }
 
-  async function handleSaveCadencia(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function submitCadencia(values: CadenciaFormValues) {
     if (!tenantId) return;
-    setError("");
+    setCadenciaSubmitError(null);
     try {
-      const payload = {
-        nome: cadenciaForm.nome,
-        objetivo: cadenciaForm.objetivo,
-        stageStatus: cadenciaForm.stageStatus,
-        gatilho: cadenciaForm.gatilho,
-        ativo: cadenciaForm.ativo,
-        passos: cadenciaForm.passos.map((step) => ({
-          id: step.id,
-          titulo: step.titulo,
-          acao: step.acao,
-          delayDias: step.delayDias,
-          template: step.template,
-          automatica: step.automatica,
-        })),
-      };
       await saveCadenciaMutation.mutateAsync({
         id: editingCadencia?.id,
-        data: payload,
+        data: toCadenciaPayload(values),
       });
       resetCadenciaForm(null);
-    } catch (submitError) {
-      setError(normalizeCapabilityError(submitError, "Falha ao salvar cadência."));
+    } catch (error) {
+      const fieldResult = applyApiFieldErrors(error, setCadenciaFieldError, {
+        mapField: mapCadenciaFieldError,
+      });
+      const message = buildFormApiErrorMessage(error, {
+        appliedFields: fieldResult.appliedFields,
+        fallbackMessage: "Falha ao salvar cadência.",
+      });
+      if (message) {
+        setCadenciaSubmitError(message);
+      }
     }
   }
+
+  const playbookSaving = savePlaybookMutation.isPending;
+  const cadenciaSaving = saveCadenciaMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -250,11 +266,6 @@ export default function PlaybooksContent() {
         </p>
       </div>
 
-      {error ? (
-        <Card className="border-rose-500/40 bg-rose-500/10">
-          <CardContent className="px-6 py-5 text-sm text-rose-100">{error}</CardContent>
-        </Card>
-      ) : null}
       {cadenciasUnavailable ? (
         <Card className="border-amber-500/40 bg-amber-500/10">
           <CardContent className="px-6 py-5 text-sm text-amber-100">
@@ -274,7 +285,7 @@ export default function PlaybooksContent() {
             <Card className="border-border/70 bg-card/80">
               <CardHeader>
                 <CardTitle>Biblioteca de playbooks</CardTitle>
-                <CardDescription>Checklists e scripts por etapa do funil.</CardDescription>
+                <CardDescription>Checklists e scripts operacionais com prioridade e prazo padrão.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {loading ? (
@@ -302,24 +313,25 @@ export default function PlaybooksContent() {
                               {playbook.ativo ? "Ativo" : "Pausado"}
                             </span>
                           </div>
-                          <p className="mt-1 text-sm text-muted-foreground">{playbook.objetivo}</p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {playbook.descricao?.trim() || "Sem descrição cadastrada."}
+                          </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Etapa base: {stages.find((stage) => stage.status === playbook.stageStatus)?.nome ?? playbook.stageStatus}
-                            {" · "}
-                            {playbook.passos.length} etapas
+                            Prioridade {CRM_TASK_PRIORITY_LABEL[playbook.prioridadePadrao ?? "MEDIA"]} · prazo padrão{" "}
+                            {playbook.prazoHorasPadrao ?? 24}h · {playbook.etapas.length} etapa(s)
                           </p>
                           <div className="mt-3 space-y-2">
-                            {playbook.passos.map((step, index) => (
-                              <div key={step.id} className="rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-sm">
+                            {playbook.etapas.map((etapa, index) => (
+                              <div key={`${playbook.id}-etapa-${index}`} className="rounded-lg border border-border/60 bg-background/40 px-3 py-2 text-sm">
                                 <span className="font-medium">
-                                  {index + 1}. {step.titulo}
-                                </span>
-                                <span className="ml-2 text-muted-foreground">
-                                  {CRM_PLAYBOOK_ACTION_LABEL[step.acao]} · {step.prazoHoras}h
+                                  {index + 1}. {etapa}
                                 </span>
                               </div>
                             ))}
                           </div>
+                          <p className="mt-3 text-xs text-muted-foreground">
+                            Atualizado {formatDateTime(playbook.dataAtualizacao ?? playbook.dataCriacao)}
+                          </p>
                         </div>
                         <Button type="button" variant="outline" onClick={() => resetPlaybookForm(playbook)}>
                           Editar
@@ -334,187 +346,125 @@ export default function PlaybooksContent() {
             <Card className="border-border/70 bg-card/80">
               <CardHeader>
                 <CardTitle>{editingPlaybook ? "Editar playbook" : "Novo playbook"}</CardTitle>
-                <CardDescription>Defina roteiro, prazo e obrigatoriedade das ações.</CardDescription>
+                <CardDescription>Defina descrição, prioridade padrão e o checklist base do fluxo.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form className="space-y-4" onSubmit={handleSavePlaybook}>
+                <form className="space-y-4" onSubmit={handleSubmitPlaybook(submitPlaybook)}>
+                  {playbookSubmitError ? (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                      {playbookSubmitError}
+                    </div>
+                  ) : null}
+
                   <div className="space-y-1.5">
                     <Label htmlFor="crm-playbook-nome">Nome do playbook</Label>
                     <Input
                       id="crm-playbook-nome"
-                      value={playbookForm.nome}
-                      onChange={(event) => setPlaybookForm((current) => ({ ...current, nome: event.target.value }))}
+                      {...registerPlaybook("nome")}
                       className="border-border bg-secondary"
                     />
+                    {playbookErrors.nome?.message ? <p className="text-xs text-destructive">{playbookErrors.nome.message}</p> : null}
                   </div>
+
                   <div className="space-y-1.5">
-                    <Label htmlFor="crm-playbook-objetivo">Objetivo</Label>
+                    <Label htmlFor="crm-playbook-descricao">Descrição operacional</Label>
                     <Textarea
-                      id="crm-playbook-objetivo"
-                      value={playbookForm.objetivo}
-                      onChange={(event) =>
-                        setPlaybookForm((current) => ({ ...current, objetivo: event.target.value }))
-                      }
+                      id="crm-playbook-descricao"
+                      {...registerPlaybook("descricao")}
                       className="border-border bg-secondary"
                     />
+                    {playbookErrors.descricao?.message ? <p className="text-xs text-destructive">{playbookErrors.descricao.message}</p> : null}
                   </div>
+
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
-                      <Label htmlFor="crm-playbook-stage">Etapa base</Label>
+                      <Label htmlFor="crm-playbook-prioridade">Prioridade padrão</Label>
                       <select
-                        id="crm-playbook-stage"
-                        value={playbookForm.stageStatus}
-                        onChange={(event) =>
-                          setPlaybookForm((current) => ({
-                            ...current,
-                            stageStatus: event.target.value as StatusProspect,
-                          }))
-                        }
+                        id="crm-playbook-prioridade"
+                        {...registerPlaybook("prioridadePadrao")}
                         className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                       >
-                        {stages.map((stage) => (
-                          <option key={stage.id} value={stage.status}>
-                            {stage.nome}
+                        {PRIORIDADES_PLAYBOOK.map((prioridade) => (
+                          <option key={prioridade} value={prioridade}>
+                            {CRM_TASK_PRIORITY_LABEL[prioridade]}
                           </option>
                         ))}
                       </select>
+                      {playbookErrors.prioridadePadrao?.message ? (
+                        <p className="text-xs text-destructive">{playbookErrors.prioridadePadrao.message}</p>
+                      ) : null}
                     </div>
-                    <label className="flex items-center gap-2 rounded-md border border-border bg-secondary px-3 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={playbookForm.ativo}
-                        onChange={(event) =>
-                          setPlaybookForm((current) => ({ ...current, ativo: event.target.checked }))
-                        }
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="crm-playbook-prazo">Prazo padrão (h)</Label>
+                      <Input
+                        id="crm-playbook-prazo"
+                        type="number"
+                        min={0}
+                        max={720}
+                        {...registerPlaybook("prazoHorasPadrao")}
+                        className="border-border bg-secondary"
                       />
-                      Playbook ativo
-                    </label>
+                      {playbookErrors.prazoHorasPadrao?.message ? (
+                        <p className="text-xs text-destructive">{playbookErrors.prazoHorasPadrao.message}</p>
+                      ) : null}
+                    </div>
                   </div>
+
+                  <label className="flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm">
+                    <input type="checkbox" {...registerPlaybook("ativo")} />
+                    Playbook ativo
+                  </label>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label>Etapas do playbook</Label>
+                      <Label>Etapas do checklist</Label>
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() =>
-                          setPlaybookForm((current) => ({
-                            ...current,
-                            passos: [...current.passos, createPlaybookStep()],
-                          }))
-                        }
+                        onClick={() => appendPlaybookEtapa({ value: "" })}
                       >
                         Adicionar etapa
                       </Button>
                     </div>
-                    {playbookForm.passos.map((step, index) => (
-                      <div key={`${step.id ?? "new"}-${index}`} className="rounded-xl border border-border/70 bg-secondary/20 p-4">
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`playbook-step-title-${index}`}>Título da etapa {index + 1}</Label>
+
+                    {typeof playbookErrors.etapas?.message === "string" ? (
+                      <p className="text-xs text-destructive">{playbookErrors.etapas.message}</p>
+                    ) : null}
+
+                    {playbookEtapas.map((field, index) => (
+                      <div key={field.id} className="rounded-xl border border-border/70 bg-secondary/20 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <Label htmlFor={`playbook-etapa-${index}`}>Etapa {index + 1}</Label>
                             <Input
-                              id={`playbook-step-title-${index}`}
-                              value={step.titulo}
-                              onChange={(event) =>
-                                setPlaybookForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index ? { ...item, titulo: event.target.value } : item
-                                  ),
-                                }))
-                              }
+                              id={`playbook-etapa-${index}`}
+                              {...registerPlaybook(`etapas.${index}.value`)}
                               className="border-border bg-background/60"
                             />
+                            {playbookErrors.etapas?.[index]?.value?.message ? (
+                              <p className="text-xs text-destructive">{playbookErrors.etapas[index]?.value?.message}</p>
+                            ) : null}
                           </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`playbook-step-action-${index}`}>Ação da etapa {index + 1}</Label>
-                            <select
-                              id={`playbook-step-action-${index}`}
-                              value={step.acao}
-                              onChange={(event) =>
-                                setPlaybookForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, acao: event.target.value as CrmPlaybookAcao }
-                                      : item
-                                  ),
-                                }))
-                              }
-                              className="flex h-10 w-full rounded-md border border-border bg-background/60 px-3 text-sm"
-                            >
-                              {Object.entries(CRM_PLAYBOOK_ACTION_LABEL).map(([value, label]) => (
-                                <option key={value} value={value}>
-                                  {label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_120px_auto]">
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`playbook-step-desc-${index}`}>Descrição da etapa {index + 1}</Label>
-                            <Textarea
-                              id={`playbook-step-desc-${index}`}
-                              value={step.descricao}
-                              onChange={(event) =>
-                                setPlaybookForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index ? { ...item, descricao: event.target.value } : item
-                                  ),
-                                }))
-                              }
-                              className="border-border bg-background/60"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`playbook-step-prazo-${index}`}>Prazo (h)</Label>
-                            <Input
-                              id={`playbook-step-prazo-${index}`}
-                              type="number"
-                              min={0}
-                              value={step.prazoHoras}
-                              onChange={(event) =>
-                                setPlaybookForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, prazoHoras: Number(event.target.value || 0) }
-                                      : item
-                                  ),
-                                }))
-                              }
-                              className="border-border bg-background/60"
-                            />
-                          </div>
-                          <label className="mt-7 flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={step.obrigatoria}
-                              onChange={(event) =>
-                                setPlaybookForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, obrigatoria: event.target.checked }
-                                      : item
-                                  ),
-                                }))
-                              }
-                            />
-                            Obrigatória
-                          </label>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="mt-6"
+                            onClick={() => removePlaybookEtapa(index)}
+                            disabled={playbookEtapas.length <= 1}
+                          >
+                            Remover
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={saving}>
-                      {saving ? "Salvando..." : editingPlaybook ? "Salvar playbook" : "Criar playbook"}
+                    <Button type="submit" disabled={!tenantId || playbookSaving || !isPlaybookValid}>
+                      {playbookSaving ? "Salvando..." : editingPlaybook ? "Salvar playbook" : "Criar playbook"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => resetPlaybookForm(null)} disabled={saving}>
+                    <Button type="button" variant="outline" onClick={() => resetPlaybookForm(null)} disabled={playbookSaving}>
                       Limpar
                     </Button>
                   </div>
@@ -593,39 +543,39 @@ export default function PlaybooksContent() {
                 <CardDescription>Defina gatilho, atraso por passo e ação automática/manual.</CardDescription>
               </CardHeader>
               <CardContent>
-                <form className="space-y-4" onSubmit={handleSaveCadencia}>
+                <form className="space-y-4" onSubmit={handleSubmitCadencia(submitCadencia)}>
+                  {cadenciaSubmitError ? (
+                    <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                      {cadenciaSubmitError}
+                    </div>
+                  ) : null}
+
                   <div className="space-y-1.5">
                     <Label htmlFor="crm-cadencia-nome">Nome da cadência</Label>
                     <Input
                       id="crm-cadencia-nome"
-                      value={cadenciaForm.nome}
-                      onChange={(event) => setCadenciaForm((current) => ({ ...current, nome: event.target.value }))}
+                      {...registerCadencia("nome")}
                       className="border-border bg-secondary"
                     />
+                    {cadenciaErrors.nome?.message ? <p className="text-xs text-destructive">{cadenciaErrors.nome.message}</p> : null}
                   </div>
+
                   <div className="space-y-1.5">
                     <Label htmlFor="crm-cadencia-objetivo">Objetivo</Label>
                     <Textarea
                       id="crm-cadencia-objetivo"
-                      value={cadenciaForm.objetivo}
-                      onChange={(event) =>
-                        setCadenciaForm((current) => ({ ...current, objetivo: event.target.value }))
-                      }
+                      {...registerCadencia("objetivo")}
                       className="border-border bg-secondary"
                     />
+                    {cadenciaErrors.objetivo?.message ? <p className="text-xs text-destructive">{cadenciaErrors.objetivo.message}</p> : null}
                   </div>
+
                   <div className="grid gap-3 md:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="crm-cadencia-stage">Etapa base</Label>
                       <select
                         id="crm-cadencia-stage"
-                        value={cadenciaForm.stageStatus}
-                        onChange={(event) =>
-                          setCadenciaForm((current) => ({
-                            ...current,
-                            stageStatus: event.target.value as StatusProspect,
-                          }))
-                        }
+                        {...registerCadencia("stageStatus")}
                         className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                       >
                         {stages.map((stage) => (
@@ -634,18 +584,16 @@ export default function PlaybooksContent() {
                           </option>
                         ))}
                       </select>
+                      {cadenciaErrors.stageStatus?.message ? (
+                        <p className="text-xs text-destructive">{cadenciaErrors.stageStatus.message}</p>
+                      ) : null}
                     </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="crm-cadencia-gatilho">Gatilho</Label>
+                      <Label htmlFor="crm-cadencia-trigger">Gatilho</Label>
                       <select
-                        id="crm-cadencia-gatilho"
-                        value={cadenciaForm.gatilho}
-                        onChange={(event) =>
-                          setCadenciaForm((current) => ({
-                            ...current,
-                            gatilho: event.target.value as CrmCadenciaGatilho,
-                          }))
-                        }
+                        id="crm-cadencia-trigger"
+                        {...registerCadencia("gatilho")}
                         className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
                       >
                         {Object.entries(CRM_CADENCIA_TRIGGER_LABEL).map(([value, label]) => (
@@ -654,16 +602,12 @@ export default function PlaybooksContent() {
                           </option>
                         ))}
                       </select>
+                      {cadenciaErrors.gatilho?.message ? <p className="text-xs text-destructive">{cadenciaErrors.gatilho.message}</p> : null}
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-3 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={cadenciaForm.ativo}
-                      onChange={(event) =>
-                        setCadenciaForm((current) => ({ ...current, ativo: event.target.checked }))
-                      }
-                    />
+
+                  <label className="flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm">
+                    <input type="checkbox" {...registerCadencia("ativo")} />
                     Cadência ativa
                   </label>
 
@@ -673,51 +617,45 @@ export default function PlaybooksContent() {
                       <Button
                         type="button"
                         variant="outline"
-                        disabled={cadenciasUnavailable}
                         onClick={() =>
-                          setCadenciaForm((current) => ({
-                            ...current,
-                            passos: [...current.passos, createCadenciaStep()],
-                          }))
+                          appendCadenciaPasso({
+                            titulo: "",
+                            acao: "WHATSAPP",
+                            delayDias: 0,
+                            template: "",
+                            automatica: true,
+                          })
                         }
+                        disabled={cadenciasUnavailable}
                       >
                         Adicionar passo
                       </Button>
                     </div>
-                    {cadenciaForm.passos.map((step, index) => (
-                      <div key={`${step.id ?? "new"}-${index}`} className="rounded-xl border border-border/70 bg-secondary/20 p-4">
+
+                    {typeof cadenciaErrors.passos?.message === "string" ? (
+                      <p className="text-xs text-destructive">{cadenciaErrors.passos.message}</p>
+                    ) : null}
+
+                    {cadenciaPassos.map((field, index) => (
+                      <div key={field.id} className="rounded-xl border border-border/70 bg-secondary/20 p-4">
                         <div className="grid gap-3 md:grid-cols-2">
                           <div className="space-y-1.5">
                             <Label htmlFor={`cadencia-step-title-${index}`}>Título do passo {index + 1}</Label>
                             <Input
                               id={`cadencia-step-title-${index}`}
-                              value={step.titulo}
-                              onChange={(event) =>
-                                setCadenciaForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index ? { ...item, titulo: event.target.value } : item
-                                  ),
-                                }))
-                              }
+                              {...registerCadencia(`passos.${index}.titulo`)}
                               className="border-border bg-background/60"
                             />
+                            {cadenciaErrors.passos?.[index]?.titulo?.message ? (
+                              <p className="text-xs text-destructive">{cadenciaErrors.passos[index]?.titulo?.message}</p>
+                            ) : null}
                           </div>
+
                           <div className="space-y-1.5">
                             <Label htmlFor={`cadencia-step-action-${index}`}>Ação do passo {index + 1}</Label>
                             <select
                               id={`cadencia-step-action-${index}`}
-                              value={step.acao}
-                              onChange={(event) =>
-                                setCadenciaForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, acao: event.target.value as CrmCadenciaAcao }
-                                      : item
-                                  ),
-                                }))
-                              }
+                              {...registerCadencia(`passos.${index}.acao`)}
                               className="flex h-10 w-full rounded-md border border-border bg-background/60 px-3 text-sm"
                             >
                               {Object.entries(CRM_CADENCIA_ACTION_LABEL).map(([value, label]) => (
@@ -726,72 +664,64 @@ export default function PlaybooksContent() {
                                 </option>
                               ))}
                             </select>
+                            {cadenciaErrors.passos?.[index]?.acao?.message ? (
+                              <p className="text-xs text-destructive">{cadenciaErrors.passos[index]?.acao?.message}</p>
+                            ) : null}
                           </div>
                         </div>
-                        <div className="mt-3 grid gap-3 md:grid-cols-[120px_1fr_auto]">
+
+                        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_160px_auto_auto]">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`cadencia-step-template-${index}`}>Template</Label>
+                            <Input
+                              id={`cadencia-step-template-${index}`}
+                              {...registerCadencia(`passos.${index}.template`)}
+                              className="border-border bg-background/60"
+                            />
+                            {cadenciaErrors.passos?.[index]?.template?.message ? (
+                              <p className="text-xs text-destructive">{cadenciaErrors.passos[index]?.template?.message}</p>
+                            ) : null}
+                          </div>
+
                           <div className="space-y-1.5">
                             <Label htmlFor={`cadencia-step-delay-${index}`}>Delay (dias)</Label>
                             <Input
                               id={`cadencia-step-delay-${index}`}
                               type="number"
                               min={0}
-                              value={step.delayDias}
-                              onChange={(event) =>
-                                setCadenciaForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, delayDias: Number(event.target.value || 0) }
-                                      : item
-                                  ),
-                                }))
-                              }
+                              max={365}
+                              {...registerCadencia(`passos.${index}.delayDias`)}
                               className="border-border bg-background/60"
                             />
+                            {cadenciaErrors.passos?.[index]?.delayDias?.message ? (
+                              <p className="text-xs text-destructive">{cadenciaErrors.passos[index]?.delayDias?.message}</p>
+                            ) : null}
                           </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`cadencia-step-template-${index}`}>Template / orientação</Label>
-                            <Textarea
-                              id={`cadencia-step-template-${index}`}
-                              value={step.template}
-                              onChange={(event) =>
-                                setCadenciaForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index ? { ...item, template: event.target.value } : item
-                                  ),
-                                }))
-                              }
-                              className="border-border bg-background/60"
-                            />
-                          </div>
+
                           <label className="mt-7 flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={step.automatica}
-                              onChange={(event) =>
-                                setCadenciaForm((current) => ({
-                                  ...current,
-                                  passos: current.passos.map((item, itemIndex) =>
-                                    itemIndex === index
-                                      ? { ...item, automatica: event.target.checked }
-                                      : item
-                                  ),
-                                }))
-                              }
-                            />
+                            <input type="checkbox" {...registerCadencia(`passos.${index}.automatica`)} />
                             Automática
                           </label>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="mt-6"
+                            onClick={() => removeCadenciaPasso(index)}
+                            disabled={cadenciaPassos.length <= 1 || cadenciasUnavailable}
+                          >
+                            Remover
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={saving || cadenciasUnavailable}>
-                      {saving ? "Salvando..." : editingCadencia ? "Salvar cadência" : "Criar cadência"}
+                    <Button type="submit" disabled={!tenantId || cadenciaSaving || !isCadenciaValid || cadenciasUnavailable}>
+                      {cadenciaSaving ? "Salvando..." : editingCadencia ? "Salvar cadência" : "Criar cadência"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => resetCadenciaForm(null)} disabled={saving}>
+                    <Button type="button" variant="outline" onClick={() => resetCadenciaForm(null)} disabled={cadenciaSaving}>
                       Limpar
                     </Button>
                   </div>
