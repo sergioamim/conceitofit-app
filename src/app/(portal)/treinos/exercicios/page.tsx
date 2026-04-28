@@ -478,14 +478,16 @@ export default function ExerciciosPage() {
 }
 
 /**
- * Wave D.3: thumb do card de exercício.
+ * Wave D.3 + auditoria #8: thumb do card de exercício.
  *
  * - Renderiza `<img>` real (gif/imagem) quando `midiaUrl`/`thumbnailUrl` houver.
  * - On hover, se houver `videoUrl`, troca por `<video autoPlay muted loop>`.
  * - Sem mídia, mostra placeholder "vídeo demo" com PlayCircle.
+ * - Se img/video 404 ou falham ao carregar, exibe fallback com `<ImageOff>`
+ *   (estado `broken`). Não fica blank silencioso.
  *
- * Hidratação: o estado `hover` só altera após mount (handlers de mouse não
- * rodam no SSR), então não há mismatch.
+ * Hidratação: estados `hover`/`broken` só alteram após mount (handlers de
+ * mouse/error não rodam no SSR), então não há mismatch.
  */
 function ExercicioThumb({
   midiaUrl,
@@ -499,16 +501,32 @@ function ExercicioThumb({
   nome: string;
 }) {
   const [hovering, setHovering] = useState(false);
+  const [imgBroken, setImgBroken] = useState(false);
+  const [videoBroken, setVideoBroken] = useState(false);
   const imageUrl = midiaUrl ?? thumbnailUrl ?? null;
-  const showVideo = hovering && Boolean(videoUrl);
+  const canShowImage = Boolean(imageUrl) && !imgBroken;
+  const canShowVideo = Boolean(videoUrl) && !videoBroken;
+  const showVideo = hovering && canShowVideo;
 
-  if (!imageUrl && !videoUrl) {
+  // Sem nenhuma fonte válida (nem URLs, ou ambas quebradas após carregar).
+  if (!canShowImage && !canShowVideo) {
     return (
       <div className="flex flex-col items-center text-muted-foreground/70">
-        <PlayCircle className="size-8 opacity-50" />
-        <span className="mt-1 font-mono text-[10px] uppercase tracking-wider">
-          vídeo demo
-        </span>
+        {imageUrl || videoUrl ? (
+          <>
+            <ImageOff className="size-8 opacity-50" />
+            <span className="mt-1 font-mono text-[10px] uppercase tracking-wider">
+              mídia indisponível
+            </span>
+          </>
+        ) : (
+          <>
+            <PlayCircle className="size-8 opacity-50" />
+            <span className="mt-1 font-mono text-[10px] uppercase tracking-wider">
+              vídeo demo
+            </span>
+          </>
+        )}
       </div>
     );
   }
@@ -519,7 +537,7 @@ function ExercicioThumb({
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
-      {showVideo && videoUrl ? (
+      {showVideo ? (
         <video
           src={videoUrl}
           autoPlay
@@ -527,24 +545,16 @@ function ExercicioThumb({
           loop
           playsInline
           className="h-full w-full object-cover"
+          onError={() => setVideoBroken(true)}
         />
-      ) : imageUrl ? (
+      ) : canShowImage ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={imageUrl}
+          src={imageUrl ?? undefined}
           alt={nome}
           loading="lazy"
           className="h-full w-full object-cover"
-          onError={(event) => {
-            // Fallback gracioso se o gif/imagem 404 — esconde, deixa o
-            // gradiente do grupo aparecer com o ícone de placeholder.
-            const target = event.currentTarget;
-            target.style.display = "none";
-            const parent = target.parentElement;
-            if (parent) {
-              parent.dataset.broken = "true";
-            }
-          }}
+          onError={() => setImgBroken(true)}
         />
       ) : (
         <div className="flex h-full flex-col items-center justify-center text-muted-foreground/70">
