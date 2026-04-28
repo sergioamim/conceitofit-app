@@ -169,11 +169,8 @@ export default function ExerciciosPage() {
           open={importDialogOpen}
           onOpenChange={setImportDialogOpen}
           tenantId={tenantId}
-          onImportSuccess={(_exercicioId, nome) => {
-            toast({
-              title: "Exercício importado",
-              description: `"${nome}" agora aparece na biblioteca.`,
-            });
+          onImported={() => {
+            // Modal já mostrou toast com a contagem; aqui só invalidamos queries.
             void queryClient.invalidateQueries({ queryKey: ["exercicios"] });
           }}
         />

@@ -62,14 +62,19 @@ interface ImportarDoCatalogoDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tenantId: string;
-  onImportSuccess: (exercicioId: string, nome: string) => void;
+  /**
+   * Disparado após batch importar. Modal já mostra toast com a contagem;
+   * callback serve apenas pra invalidar caches/atualizar UI do caller.
+   * Em fluxos single-select (ex.: editor de treino), use o primeiro item.
+   */
+  onImported: (items: Array<{ exercicioId: string; nome: string }>) => void;
 }
 
 export function ImportarDoCatalogoDialog({
   open,
   onOpenChange,
   tenantId,
-  onImportSuccess,
+  onImported,
 }: ImportarDoCatalogoDialogProps) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -150,10 +155,9 @@ export function ImportarDoCatalogoDialog({
             ? `"${resp.itens[0]?.nome ?? ""}" foi adicionado à biblioteca.`
             : `Os exercícios já estão disponíveis na biblioteca.`,
         });
-        // Notifica callback original (compat com 1 item) — usa o primeiro como sentinel.
-        if (resp.itens.length > 0) {
-          onImportSuccess(resp.itens[0].exercicioId, resp.itens[0].nome);
-        }
+        onImported(
+          resp.itens.map((it) => ({ exercicioId: it.exercicioId, nome: it.nome })),
+        );
         clearSelection();
         onOpenChange(false);
       },
@@ -232,7 +236,8 @@ export function ImportarDoCatalogoDialog({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-1 pb-2 text-sm">
           <label className="flex items-center gap-2">
             <Checkbox
-              checked={allOnPageSelected ? true : someOnPageSelected ? "indeterminate" : false}
+              checked={allOnPageSelected}
+              indeterminate={!allOnPageSelected && someOnPageSelected}
               onCheckedChange={() => togglePage()}
               disabled={items.length === 0}
               aria-label="Selecionar todos da página"

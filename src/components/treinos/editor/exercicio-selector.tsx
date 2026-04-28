@@ -343,8 +343,14 @@ export function ExerciseDrawerDialog({
             open={importDialogOpen}
             onOpenChange={setImportDialogOpen}
             tenantId={tenantId}
-            onImportSuccess={(exercicioId, nome) => {
-              onCatalogImported?.(exercicioId, nome);
+            onImported={(items) => {
+              // Editor de treino é fluxo single-select: o user normalmente
+              // importa 1 exercício pra adicionar à sessão. Em batch, usa
+              // o primeiro como sentinel e fecha o seletor.
+              const first = items[0];
+              if (first) {
+                onCatalogImported?.(first.exercicioId, first.nome);
+              }
               onClose();
             }}
           />
