@@ -110,6 +110,20 @@ export async function criarPagamentoSplitApi(
   return normalize(data);
 }
 
+export async function quitarComSplitApi(
+  tenantId: string,
+  pagamentoId: string,
+  input: { operadorId?: string; parcelas: ParcelaInputDto[] },
+): Promise<PagamentoSplitResponseDto> {
+  const data = await apiRequest<PagamentoSplitResponseDto>({
+    path: `/api/v1/comercial/pagamentos/${pagamentoId}/quitar-com-split`,
+    method: "POST",
+    query: { tenantId },
+    body: input,
+  });
+  return normalize(data);
+}
+
 export async function listarParcelasApi(
   tenantId: string,
   pagamentoId: string,

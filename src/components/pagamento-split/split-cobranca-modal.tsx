@@ -29,6 +29,7 @@ import {
   type ParcelaInputDto,
   type ParcelaResponseDto,
   criarPagamentoSplitApi,
+  quitarComSplitApi,
   type PagamentoSplitResponseDto,
 } from "@/lib/api/pagamentos-split";
 import { ParcelasAcoesPanel } from "./parcelas-acoes-panel";
@@ -65,6 +66,12 @@ interface SplitCobrancaModalProps {
   valorSugerido?: number;
   descricaoSugerida?: string;
   saldoCreditoInternoDisponivel?: number;
+  /**
+   * Quando informado, o modal opera no fluxo "quitar pagamento existente":
+   * valor e descrição ficam bloqueados e o submit usa o endpoint
+   * /pagamentos/{id}/quitar-com-split (em vez de criar pagamento novo).
+   */
+  pagamentoExistenteId?: string;
   onSuccess?: (pagamento: PagamentoSplitResponseDto) => void;
 }
 
@@ -78,8 +85,10 @@ export function SplitCobrancaModal({
   valorSugerido = 0,
   descricaoSugerida = "",
   saldoCreditoInternoDisponivel = 0,
+  pagamentoExistenteId,
   onSuccess,
 }: SplitCobrancaModalProps) {
+  const modoQuitar = Boolean(pagamentoExistenteId);
   const { toast } = useToast();
 
   const [valorTotal, setValorTotal] = useState<string>(
@@ -127,17 +136,25 @@ export function SplitCobrancaModal({
     if (!fechado) return;
     setSubmitting(true);
     try {
-      const result = await criarPagamentoSplitApi(tenantId, {
-        alunoId,
-        operadorId,
-        tipo: "AVULSO",
-        descricao: descricao || "Cobrança split",
-        valor: valorTotalNum,
-        desconto: 0,
-        parcelas: parcelas.map(({ _key: _ignore, ...rest }) => rest),
-      });
+      const parcelasNet: ParcelaInputDto[] = parcelas.map(
+        ({ _key: _ignore, ...rest }) => rest,
+      );
+      const result = modoQuitar
+        ? await quitarComSplitApi(tenantId, pagamentoExistenteId!, {
+            operadorId,
+            parcelas: parcelasNet,
+          })
+        : await criarPagamentoSplitApi(tenantId, {
+            alunoId,
+            operadorId,
+            tipo: "AVULSO",
+            descricao: descricao || "Cobrança split",
+            valor: valorTotalNum,
+            desconto: 0,
+            parcelas: parcelasNet,
+          });
       toast({
-        title: "Pagamento criado",
+        title: modoQuitar ? "Pagamento quitado" : "Pagamento criado",
         description: `${result.parcelas.length} forma(s), total ${formatBRL(result.valor)}.`,
       });
       onSuccess?.(result);
@@ -218,9 +235,15 @@ export function SplitCobrancaModal({
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Cobrança Split</DialogTitle>
+            <DialogTitle>
+              {modoQuitar ? "Receber pagamento via split" : "Cobrança Split"}
+            </DialogTitle>
             <DialogDescription>
-              {alunoNome ? `Cliente: ${alunoNome}` : "Cobrança avulsa multi-forma"}
+              {modoQuitar
+                ? `Distribua o valor entre N formas. ${alunoNome ? `Cliente: ${alunoNome}` : ""}`
+                : alunoNome
+                  ? `Cliente: ${alunoNome}`
+                  : "Cobrança avulsa multi-forma"}
             </DialogDescription>
           </DialogHeader>
 
@@ -229,7 +252,7 @@ export function SplitCobrancaModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label htmlFor="split-valor-total" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Valor total
+                  Valor total {modoQuitar ? "(do pagamento)" : ""}
                 </label>
                 <Input
                   id="split-valor-total"
@@ -240,7 +263,7 @@ export function SplitCobrancaModal({
                   onChange={(e) => setValorTotal(e.target.value)}
                   placeholder="0,00"
                   data-testid="split-valor-total"
-                  disabled={parcelas.length > 0}
+                  disabled={parcelas.length > 0 || modoQuitar}
                   className="font-mono"
                 />
               </div>
@@ -253,6 +276,7 @@ export function SplitCobrancaModal({
                   value={descricao}
                   onChange={(e) => setDescricao(e.target.value)}
                   placeholder="Ex: Mensalidade Abril"
+                  disabled={modoQuitar}
                 />
               </div>
             </div>

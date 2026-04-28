@@ -42,6 +42,8 @@ import {
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { getNfseBloqueioMensagem } from "@/lib/domain/financeiro";
 import { ReceberPagamentoModal } from "@/components/shared/receber-pagamento-modal";
+import { SplitCobrancaModal } from "@/components/pagamento-split/split-cobranca-modal";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { PagamentosSummaryCards } from "./summary-cards/pagamentos-summary-cards";
 import { PagamentosImportSection, IMPORTAR_PAGAMENTOS_EXEMPLO_CSV } from "./import-section/pagamentos-import-section";
 import { PagamentosFilters } from "./pagamentos-filters/pagamentos-filters";
@@ -87,6 +89,13 @@ function PagamentosPageContent() {
   const [convenios, setConvenios] = useState<Convenio[]>([]);
   const [filtro, setFiltro] = useState<WithFilterAll<StatusPagamento>>(FILTER_ALL);
   const [recebendo, setRecebendo] = useState<PagamentoComAluno | null>(null);
+  const [recebendoSplit, setRecebendoSplit] = useState<PagamentoComAluno | null>(null);
+  const [splitTenantId, setSplitTenantId] = useState<string | null>(null);
+
+  // Tenant ativo lido client-side pra abrir modal de split. Mounted-guard.
+  useEffect(() => {
+    setSplitTenantId(getActiveTenantIdFromSession() ?? null);
+  }, []);
   const [emitindo, setEmitindo] = useState<PagamentoComAluno | null>(null);
   const [visualizandoNfse, setVisualizandoNfse] = useState<PagamentoComAluno | null>(null);
   const [emailDestino, setEmailDestino] = useState("");
@@ -143,6 +152,7 @@ function PagamentosPageContent() {
     data: pagamentosPage,
     isFetching,
     error: pagamentosError,
+    refetch,
   } = usePagamentosPage({
     tenantId,
     tenantResolved: Boolean(tenantId),
@@ -570,9 +580,27 @@ function PagamentosPageContent() {
         pagamentos={pagamentos}
         nfseBloqueio={nfseBloqueio}
         onReceber={setRecebendo}
+        onReceberSplit={splitTenantId ? setRecebendoSplit : undefined}
         onEmitirNfse={setEmitindo}
         onDetalhesNfse={handleAbrirDetalheNfse}
       />
+
+      {splitTenantId && recebendoSplit ? (
+        <SplitCobrancaModal
+          open
+          onOpenChange={(o) => !o && setRecebendoSplit(null)}
+          tenantId={splitTenantId}
+          alunoId={recebendoSplit.alunoId ?? undefined}
+          alunoNome={recebendoSplit.aluno?.nome ?? undefined}
+          pagamentoExistenteId={recebendoSplit.id}
+          valorSugerido={recebendoSplit.valorFinal ?? recebendoSplit.valor ?? 0}
+          descricaoSugerida={recebendoSplit.descricao ?? ""}
+          onSuccess={() => {
+            setRecebendoSplit(null);
+            void refetch();
+          }}
+        />
+      ) : null}
 
       {pagamentosTotal > PAGE_SIZE ? (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3 text-sm">

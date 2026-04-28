@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, AlertTriangle } from "lucide-react";
+import { BadgeCheck, AlertTriangle, Split } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { formatBRL, formatDate } from "@/lib/formatters";
@@ -19,6 +19,7 @@ interface PagamentosTableProps {
   pagamentos: PagamentoComAluno[];
   nfseBloqueio: string | null;
   onReceber: (pagamento: PagamentoComAluno) => void;
+  onReceberSplit?: (pagamento: PagamentoComAluno) => void;
   onEmitirNfse: (pagamento: PagamentoComAluno) => void;
   onDetalhesNfse: (pagamento: PagamentoComAluno) => void;
 }
@@ -27,6 +28,7 @@ export function PagamentosTable({
   pagamentos,
   nfseBloqueio,
   onReceber,
+  onReceberSplit,
   onEmitirNfse,
   onDetalhesNfse,
 }: PagamentosTableProps) {
@@ -140,13 +142,28 @@ export function PagamentosTable({
               <td className="px-4 py-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   {isPagamentoEmAberto(p.status) && (
-                    <Button
-                      size="sm"
-                      onClick={() => onReceber(p)}
-                      className="h-7 text-xs"
-                    >
-                      Receber
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => onReceber(p)}
+                        className="h-7 text-xs"
+                      >
+                        Receber
+                      </Button>
+                      {onReceberSplit && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onReceberSplit(p)}
+                          className="h-7 text-xs"
+                          title="Receber dividindo em múltiplas formas"
+                          data-testid={`pagamento-receber-split-${p.id}`}
+                        >
+                          <Split className="mr-1 size-3" />
+                          Split
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               </td>
