@@ -15,10 +15,12 @@ import type {
   CapacidadesPorGrupo,
   FeatureModule,
   GrupoTenant,
+  OverrideState,
   PerfilAcesso,
   PerfilAcessoDetalhe,
   PlanoSaas,
   PlanoSaasDetalhe,
+  UsuarioOverridePatchChange,
   UsuarioPerfil,
   UsuarioPerfilDetalhe,
 } from "./gestao-acessos.types";
@@ -209,6 +211,26 @@ export async function removerOverride(
     ...GA_API_OPTIONS,
     path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}/override/${encodeURIComponent(capacidadeKey)}`,
     method: "DELETE",
+  });
+}
+
+/** `PATCH /api/v1/auth/gestao-acessos/usuarios-perfil/{userId}/tenant/{tenantId}/overrides` */
+export async function atualizarOverridesUsuario(
+  userId: number | string,
+  tenantId: string,
+  changes: UsuarioOverridePatchChange[],
+): Promise<UsuarioPerfilDetalhe> {
+  return apiRequest<UsuarioPerfilDetalhe>({
+    ...GA_API_OPTIONS,
+    path: `/api/v1/auth/gestao-acessos/usuarios-perfil/${encodeURIComponent(String(userId).trim())}/tenant/${encodeURIComponent(tenantId)}/overrides`,
+    method: "PATCH",
+    body: {
+      changes: changes.map((change) => ({
+        capacidadeKey: change.capacidadeKey,
+        state: change.state as OverrideState,
+        motivo: change.motivo,
+      })),
+    },
   });
 }
 

@@ -81,6 +81,14 @@ export interface UsuarioCapacidadeOverride {
   motivo: string | null;
 }
 
+export type OverrideState = "INHERIT" | "GRANT" | "DENY";
+
+export interface UsuarioOverridePatchChange {
+  capacidadeKey: string;
+  state: OverrideState;
+  motivo?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Planos SaaS
 // ---------------------------------------------------------------------------

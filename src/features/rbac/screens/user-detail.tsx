@@ -38,14 +38,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  adicionarOverride,
+  atualizarOverridesUsuario,
   atribuirPerfil,
   listarCapacidades,
   listarPerfisUsuario,
   obterCapacidadesEfetivas,
+  obterPerfil,
   obterPerfilUsuarioTenant,
-  removerOverride,
 } from "@/lib/api/gestao-acessos";
+import type {
+  Capacidade,
+  OverrideState,
+  UsuarioCapacidadeOverride,
+} from "@/lib/api/gestao-acessos.types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +66,28 @@ import { AvatarIniciais } from "../components/avatar-iniciais";
 import { RoleChip } from "../components/role-chip";
 import { StatusChip } from "../components/status-chip";
 import { useRbacHref } from "../context";
+
+const INHERIT_STATE: OverrideState = "INHERIT";
+
+function buildOverrideMap(overrides?: UsuarioCapacidadeOverride[] | null): Record<string, OverrideState> {
+  const next: Record<string, OverrideState> = {};
+  for (const override of overrides ?? []) {
+    next[override.capacidadeKey] = override.tipo;
+  }
+  return next;
+}
+
+function overrideStateLabel(state: OverrideState): string {
+  if (state === "GRANT") return "Conceder";
+  if (state === "DENY") return "Bloquear";
+  return "Herdar";
+}
+
+function overrideStateTone(state: OverrideState): string {
+  if (state === "GRANT") return "border-gym-accent/30 bg-gym-accent/10 text-gym-accent";
+  if (state === "DENY") return "border-gym-danger/30 bg-gym-danger/10 text-gym-danger";
+  return "border-border bg-muted text-muted-foreground";
+}
 
 interface UserDetailProps {
   dominio: Dominio;
@@ -104,6 +131,13 @@ export function RbacUserDetail({
     queryKey: ["rbac", "user-perfil-detalhe", userId, tid],
     queryFn: () => obterPerfilUsuarioTenant(userId, tid),
     enabled: enabled && Boolean(tid),
+  });
+
+  const perfilBaseQ = useQuery({
+    queryKey: ["rbac", "perfil-base-usuario", perfilUserDetalheQ.data?.perfilId],
+    queryFn: () => obterPerfil(perfilUserDetalheQ.data!.perfilId),
+    enabled: Boolean(perfilUserDetalheQ.data?.perfilId),
+    staleTime: 60_000,
   });
 
   const capacidadesGrupoQ = useQuery({
@@ -188,34 +222,40 @@ export function RbacUserDetail({
       }),
   });
 
-  const adicionarOverrideMut = useMutation({
-    mutationFn: (payload: { capKey: string; tipo: "GRANT" | "DENY"; motivo?: string }) =>
-      adicionarOverride(userId, tid, payload.capKey, payload.tipo, payload.motivo),
-    onSuccess: () => {
-      toast({ title: "Override adicionado" });
-      qc.invalidateQueries({ queryKey: ["rbac"] });
-      setOverrideOpen(false);
-      setOverrideCap("");
-      setOverrideTipo("GRANT");
-      setOverrideMotivo("");
+  const salvarOverridesMut = useMutation({
+    mutationFn: async () => {
+      const persistedMap = buildOverrideMap(perfilUserDetalheQ.data?.overrides);
+      const keys = new Set([
+        ...Object.keys(persistedMap),
+        ...Object.keys(draftOverrides),
+      ]);
+      const changes: Array<{ capacidadeKey: string; state: OverrideState; motivo?: string }> = [];
+      for (const capacidadeKey of Array.from(keys)) {
+          const currentState = draftOverrides[capacidadeKey] ?? INHERIT_STATE;
+          const previousState = persistedMap[capacidadeKey] ?? INHERIT_STATE;
+          if (currentState === previousState) {
+            continue;
+          }
+          changes.push({
+            capacidadeKey,
+            state: currentState,
+            motivo:
+              currentState === INHERIT_STATE
+                ? undefined
+                : "Ajuste individual pela matriz de permissões do usuário",
+          });
+      }
+      return atualizarOverridesUsuario(userId, tid, changes);
+    },
+    onSuccess: (data) => {
+      toast({ title: "Permissões individuais atualizadas" });
+      setDraftOverrides(buildOverrideMap(data.overrides));
+      qc.invalidateQueries({ queryKey: ["rbac", "user-caps", userId, tid] });
+      qc.invalidateQueries({ queryKey: ["rbac", "user-perfil-detalhe", userId, tid] });
     },
     onError: (err) =>
       toast({
-        title: "Falha ao adicionar override",
-        description: normalizeErrorMessage(err),
-        variant: "destructive",
-      }),
-  });
-
-  const removerOverrideMut = useMutation({
-    mutationFn: (capKey: string) => removerOverride(userId, tid, capKey),
-    onSuccess: () => {
-      toast({ title: "Override removido" });
-      qc.invalidateQueries({ queryKey: ["rbac"] });
-    },
-    onError: (err) =>
-      toast({
-        title: "Falha ao remover override",
+        title: "Falha ao atualizar permissões do usuário",
         description: normalizeErrorMessage(err),
         variant: "destructive",
       }),
@@ -228,20 +268,67 @@ export function RbacUserDetail({
   const [motivoSuspensao, setMotivoSuspensao] = useState("");
   const [resetarOpen, setResetarOpen] = useState(false);
   const [senhaTemp, setSenhaTemp] = useState<string | null>(null);
-  const [overrideOpen, setOverrideOpen] = useState(false);
-  const [overrideCap, setOverrideCap] = useState("");
-  const [overrideTipo, setOverrideTipo] = useState<"GRANT" | "DENY">("GRANT");
-  const [overrideMotivo, setOverrideMotivo] = useState("");
+  const [draftOverrides, setDraftOverrides] = useState<Record<string, OverrideState>>({});
 
   useEffect(() => {
     if (u?.papel) setNovoPapelId(u.papel.id);
   }, [u?.papel]);
 
+  useEffect(() => {
+    setDraftOverrides(buildOverrideMap(perfilUserDetalheQ.data?.overrides));
+  }, [perfilUserDetalheQ.data]);
+
   const efetivas = new Set<string>(capacidadesEfetivasQ.data ?? []);
+  const baseCapacidades = new Set<string>(perfilBaseQ.data?.capacidades ?? []);
+  const persistedOverrides = buildOverrideMap(perfilUserDetalheQ.data?.overrides);
   const totalCaps = Object.values(capacidadesGrupoQ.data ?? {}).reduce(
     (a, c) => a + c.length,
     0,
   );
+  const overrideKeys = new Set([
+    ...Object.keys(persistedOverrides),
+    ...Object.keys(draftOverrides),
+  ]);
+  let overridesDirty = false;
+  for (const key of overrideKeys) {
+    const currentState = draftOverrides[key] ?? INHERIT_STATE;
+    const previousState = persistedOverrides[key] ?? INHERIT_STATE;
+    if (currentState !== previousState) {
+      overridesDirty = true;
+      break;
+    }
+  }
+  const activeOverrideCount = Object.values(draftOverrides).filter((state) => state !== INHERIT_STATE).length;
+
+  function resolveOverrideState(capacidadeKey: string): OverrideState {
+    return draftOverrides[capacidadeKey] ?? INHERIT_STATE;
+  }
+
+  function overrideChangesCountForGrupo(caps: Capacidade[]): number {
+    return caps.filter((cap) => (draftOverrides[cap.key] ?? INHERIT_STATE) !== INHERIT_STATE).length;
+  }
+
+  function baseGrantedCountForGrupo(caps: Capacidade[]): number {
+    return caps.filter((cap) => baseCapacidades.has(cap.key)).length;
+  }
+
+  function effectiveGranted(capacidadeKey: string): boolean {
+    const overrideState = resolveOverrideState(capacidadeKey);
+    if (overrideState === "GRANT") return true;
+    if (overrideState === "DENY") return false;
+    return baseCapacidades.has(capacidadeKey);
+  }
+
+  function updateOverrideState(capacidadeKey: string, state: OverrideState) {
+    setDraftOverrides((current) => ({
+      ...current,
+      [capacidadeKey]: state,
+    }));
+  }
+
+  function resetDraftOverrides() {
+    setDraftOverrides(buildOverrideMap(perfilUserDetalheQ.data?.overrides));
+  }
 
   return (
     <div className="space-y-6">
@@ -416,70 +503,164 @@ export function RbacUserDetail({
                 </CardContent>
               </Card>
 
-              {/* Overrides individuais (GRANT/DENY) */}
+              {/* Overrides individuais em matriz própria do usuário */}
               <Card className="mt-4">
                 <CardContent className="p-5">
-                  <div className="mb-3 flex items-center justify-between">
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold">Overrides individuais</p>
+                      <p className="text-sm font-bold">Permissões específicas do usuário</p>
                       <p className="text-xs text-muted-foreground">
-                        Concessões ou bloqueios específicos pra este usuário, além do que
-                        o papel concede.
+                        Esta matriz altera apenas os overrides do usuário. O papel base não é modificado.
                       </p>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setOverrideOpen(true)}
-                      disabled={!tid}
-                    >
-                      Adicionar override
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {overridesDirty && (
+                        <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-600">
+                          mudanças não salvas
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={resetDraftOverrides}
+                        disabled={salvarOverridesMut.isPending || !overridesDirty}
+                      >
+                        Reverter
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => salvarOverridesMut.mutate()}
+                        disabled={!tid || salvarOverridesMut.isPending || !overridesDirty}
+                      >
+                        {salvarOverridesMut.isPending ? "Salvando…" : "Salvar overrides"}
+                      </Button>
+                    </div>
                   </div>
-                  {(perfilUserDetalheQ.data?.overrides?.length ?? 0) === 0 ? (
-                    <p className="text-xs italic text-muted-foreground">
-                      Nenhum override ativo.
-                    </p>
+
+                  <div className="mb-4 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Papel base
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">
+                        {perfilUserDetalheQ.data?.perfilNome ?? "Sem papel"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Overrides ativos
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">{activeOverrideCount}</p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Fonte das permissões
+                      </p>
+                      <p className="mt-1 text-sm font-semibold">
+                        Perfil {perfilBaseQ.data ? "+ exceções do usuário" : "(carregando perfil base…)"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {capacidadesGrupoQ.isLoading || perfilBaseQ.isLoading || perfilUserDetalheQ.isLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                    </div>
                   ) : (
-                    <ul className="divide-y divide-border">
-                      {perfilUserDetalheQ.data?.overrides?.map((o) => (
-                        <li
-                          key={o.capacidadeKey}
-                          className="flex items-center justify-between gap-3 py-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm">
-                              <span
-                                className={cn(
-                                  "mr-2 inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                  o.tipo === "GRANT"
-                                    ? "border-gym-accent/30 bg-gym-accent/10 text-gym-accent"
-                                    : "border-gym-danger/30 bg-gym-danger/10 text-gym-danger",
-                                )}
-                              >
-                                {o.tipo}
-                              </span>
-                              <span className="font-mono text-xs">
-                                {o.capacidadeKey}
-                              </span>
-                            </p>
-                            {o.motivo && (
+                    <div className="space-y-4">
+                      {Object.entries(capacidadesGrupoQ.data ?? {}).map(([grupo, caps]) => (
+                        <div key={grupo} className="overflow-hidden rounded-xl border border-border">
+                          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/20 px-4 py-3">
+                            <div>
+                              <p className="text-sm font-semibold">{grupo}</p>
                               <p className="text-xs text-muted-foreground">
-                                {o.motivo}
+                                {baseGrantedCountForGrupo(caps)} herdadas do perfil · {overrideChangesCountForGrupo(caps)} override(s) ativos
                               </p>
-                            )}
+                            </div>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => removerOverrideMut.mutate(o.capacidadeKey)}
-                            disabled={removerOverrideMut.isPending}
-                          >
-                            <X className="size-3" />
-                          </Button>
-                        </li>
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-b border-border text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  <th className="px-4 py-3">Permissão</th>
+                                  <th className="px-4 py-3">Perfil</th>
+                                  <th className="px-4 py-3">Override</th>
+                                  <th className="px-4 py-3">Efetiva</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {caps.map((cap) => {
+                                  const overrideState = resolveOverrideState(cap.key);
+                                  const baseHas = baseCapacidades.has(cap.key);
+                                  const hasEffective = effectiveGranted(cap.key);
+                                  return (
+                                    <tr key={cap.key} className="align-top">
+                                      <td className="px-4 py-3">
+                                        <div className="space-y-1">
+                                          <p className="text-sm font-medium">
+                                            {cap.nome}
+                                            {cap.critica && (
+                                              <span className="ml-1 text-gym-danger">!</span>
+                                            )}
+                                          </p>
+                                          <p className="font-mono text-[11px] text-muted-foreground">
+                                            {cap.key}
+                                          </p>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span
+                                          className={cn(
+                                            "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                                            baseHas
+                                              ? "border-gym-accent/30 bg-gym-accent/10 text-gym-accent"
+                                              : "border-border bg-muted text-muted-foreground",
+                                          )}
+                                        >
+                                          {baseHas ? "Concedida" : "Não concedida"}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {(["INHERIT", "GRANT", "DENY"] as OverrideState[]).map((state) => (
+                                            <button
+                                              key={`${cap.key}-${state}`}
+                                              type="button"
+                                              onClick={() => updateOverrideState(cap.key, state)}
+                                              className={cn(
+                                                "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                                                overrideState === state
+                                                  ? overrideStateTone(state)
+                                                  : "border-border bg-background text-muted-foreground hover:bg-muted/40",
+                                              )}
+                                            >
+                                              {overrideStateLabel(state)}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-3">
+                                        <span
+                                          className={cn(
+                                            "inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium",
+                                            hasEffective
+                                              ? "border-gym-accent/30 bg-gym-accent/10 text-gym-accent"
+                                              : "border-border bg-muted text-muted-foreground",
+                                          )}
+                                        >
+                                          {hasEffective ? "Permitida" : "Bloqueada"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -678,85 +859,6 @@ export function RbacUserDetail({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Adicionar override */}
-      <Dialog open={overrideOpen} onOpenChange={setOverrideOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar override</DialogTitle>
-            <DialogDescription>
-              Override sobrescreve o papel. Use com critério — fica registrado na auditoria.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <div className="space-y-1.5">
-              <Label>Permissão</Label>
-              <Select value={overrideCap} onValueChange={setOverrideCap}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma permissão" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {Object.entries(capacidadesGrupoQ.data ?? {}).flatMap(([grupo, caps]) =>
-                    caps.map((c) => (
-                      <SelectItem key={c.key} value={c.key}>
-                        {grupo} · {c.nome}
-                        {c.critica && (
-                          <span className="ml-1 text-gym-danger">!</span>
-                        )}
-                      </SelectItem>
-                    )),
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tipo</Label>
-              <Select
-                value={overrideTipo}
-                onValueChange={(v) => setOverrideTipo(v as "GRANT" | "DENY")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="GRANT">GRANT — conceder</SelectItem>
-                  <SelectItem value="DENY">DENY — bloquear</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="motivo-override">Motivo (recomendado)</Label>
-              <Input
-                id="motivo-override"
-                placeholder="Ex: substituição temporária, restrição preventiva…"
-                value={overrideMotivo}
-                onChange={(e) => setOverrideMotivo(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setOverrideOpen(false)}
-              disabled={adicionarOverrideMut.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              disabled={!overrideCap || adicionarOverrideMut.isPending}
-              onClick={() =>
-                adicionarOverrideMut.mutate({
-                  capKey: overrideCap,
-                  tipo: overrideTipo,
-                  motivo: overrideMotivo || undefined,
-                })
-              }
-            >
-              {adicionarOverrideMut.isPending ? "Salvando…" : "Adicionar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Senha temporária — mostra após reset bem-sucedido. Só limpa em close real
           pra evitar perda acidental por focus/blur events. */}
