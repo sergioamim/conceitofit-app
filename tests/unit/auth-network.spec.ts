@@ -5,6 +5,7 @@ import {
   changeForcedPasswordApi,
   getAccessNetworkContextApi,
   loginApi,
+  requestFirstAccessApi,
   requestPasswordRecoveryApi,
 } from "../../src/lib/api/auth";
 import { getSessionBootstrapApi } from "../../src/lib/api/contexto-unidades";
@@ -492,6 +493,33 @@ test.describe("auth por rede", () => {
 
       expect(calls[1]?.url).toContain("/api/v1/auth/rede-contexto");
       expect(calls[1]?.headers.get("X-Rede-Identifier")).toBe("rede-invalida");
+    } finally {
+      restore();
+    }
+  });
+
+  test("requestFirstAccessApi usa a rede atual no header correto", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          message: "Convite de primeiro acesso emitido para esta rede.",
+        },
+      },
+    ]);
+
+    try {
+      const response = await requestFirstAccessApi({
+        redeIdentifier: "rede-norte",
+        identifier: "ana@qa.local",
+      });
+
+      expect(response.message).toBe("Convite de primeiro acesso emitido para esta rede.");
+      expect(calls[0]?.url).toContain("/api/v1/auth/first-access");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBe("rede-norte");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        identifier: "ana@qa.local",
+        channel: "APP",
+      });
     } finally {
       restore();
     }

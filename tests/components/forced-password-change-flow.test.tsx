@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ForcedPasswordChangeFlow } from "@/components/auth/forced-password-change-flow";
+import { ApiRequestError } from "@/lib/api/http";
 import { forcedPasswordChangeFormSchema } from "@/lib/tenant/forms/auth-schemas";
 
 const mockReplace = vi.fn();
@@ -35,7 +36,7 @@ vi.mock("@/lib/api/session", () => ({
 }));
 
 vi.mock("@/lib/tenant/auth-redirect", () => ({
-  buildLoginHref: (_next?: string, _subdomain?: string | null) => "/login",
+  buildLoginHref: () => "/login",
   resolvePostLoginPath: (next?: string | null) => next ?? "/dashboard",
 }));
 
@@ -137,5 +138,36 @@ describe("ForcedPasswordChangeFlow", () => {
 
     expect(await screen.findByText("Senha fraca demais.")).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("mapeia fieldErrors do backend inline nos campos", async () => {
+    mockHasActiveSession.mockReturnValue(true);
+    mockGetForcePasswordChangeRequired.mockReturnValue(true);
+    mockChangeForcedPasswordApi.mockRejectedValue(new ApiRequestError({
+      status: 400,
+      message: "Validation Error",
+      fieldErrors: {
+        newPassword: "A senha precisa ter letra maiúscula.",
+        confirmNewPassword: "A confirmação deve ser idêntica.",
+      },
+    }));
+
+    render(<ForcedPasswordChangeFlow />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Nova senha")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText("Nova senha"), {
+      target: { value: "NovaSenha123" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirmar nova senha"), {
+      target: { value: "NovaSenha123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar nova senha" }));
+
+    expect(await screen.findByText("A senha precisa ter letra maiúscula.")).toBeInTheDocument();
+    expect(await screen.findByText("A confirmação deve ser idêntica.")).toBeInTheDocument();
+    expect(screen.queryByText("Validation Error")).not.toBeInTheDocument();
   });
 });

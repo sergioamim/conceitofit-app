@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { changeForcedPasswordApi } from "@/lib/api/auth";
 import {
@@ -32,13 +33,13 @@ export function ForcedPasswordChangeFlow({
 }) {
   const router = useRouter();
   const resolvedNextPath = useMemo(() => resolvePostLoginPath(nextPath), [nextPath]);
-  const passwordChangedRef = useRef(false);
   const [guardStatus, setGuardStatus] = useState<GuardStatus>("checking");
   const [guardError, setGuardError] = useState<string | null>(null);
   const [networkName, setNetworkName] = useState<string>("sua rede");
   const [networkSubdomain, setNetworkSubdomain] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   const form = useForm<ForcedPasswordChangeFormValues>({
     resolver: zodResolver(forcedPasswordChangeFormSchema),
@@ -53,7 +54,7 @@ export function ForcedPasswordChangeFlow({
     let settled = false;
 
     const syncGuard = () => {
-      if (!mounted || passwordChangedRef.current) return;
+      if (!mounted || passwordChanged) return;
 
       const nextNetworkSubdomain = getNetworkSubdomainFromSession() ?? null;
       setNetworkName(getNetworkNameFromSession() ?? "sua rede");
@@ -100,7 +101,7 @@ export function ForcedPasswordChangeFlow({
       window.removeEventListener(AUTH_SESSION_CLEARED_EVENT, syncGuard);
       window.removeEventListener("storage", syncGuard);
     };
-  }, [resolvedNextPath, router]);
+  }, [passwordChanged, resolvedNextPath, router]);
 
   useEffect(() => {
     void router.prefetch(resolvedNextPath);
@@ -110,13 +111,14 @@ export function ForcedPasswordChangeFlow({
   async function handleSubmit(values: ForcedPasswordChangeFormValues) {
     setSaving(true);
     setError(null);
+    form.clearErrors();
 
     try {
       await changeForcedPasswordApi({
         newPassword: values.newPassword,
         confirmNewPassword: values.confirmNewPassword,
       });
-      passwordChangedRef.current = true;
+      setPasswordChanged(true);
 
       // Não chamar setSaving(false) no caminho de sucesso.
       // router.replace() usa startTransition internamente e um setState
@@ -129,7 +131,18 @@ export function ForcedPasswordChangeFlow({
         window.location.replace(resolvedNextPath);
       }, 2000);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Não foi possível atualizar a senha.");
+      const fieldResult = applyApiFieldErrors(submitError, form.setError, {
+        mapField: {
+          newPassword: "newPassword",
+          novaSenha: "newPassword",
+          confirmNewPassword: "confirmNewPassword",
+          confirmarNovaSenha: "confirmNewPassword",
+        },
+      });
+      setError(buildFormApiErrorMessage(submitError, {
+        appliedFields: fieldResult.appliedFields,
+        fallbackMessage: "Não foi possível atualizar a senha.",
+      }));
       setSaving(false);
     }
   }
