@@ -103,13 +103,13 @@ export const queryKeys = {
   },
 
   contratos: {
-    all: (tenantId: string) => ["matriculas", tenantId] as const,
+    all: (tenantId: string) => ["contratos", tenantId] as const,
     byAluno: (tenantId: string, alunoId: string) =>
-      ["matriculas", tenantId, "aluno", alunoId] as const,
+      ["contratos", tenantId, "aluno", alunoId] as const,
     creditosDias: (tenantId: string, contratoId: string) =>
-      ["matriculas", tenantId, "creditos-dias", contratoId] as const,
+      ["contratos", tenantId, "creditos-dias", contratoId] as const,
     dashboard: (tenantId: string, monthKey: string, page: number) =>
-      ["matriculas", "dashboard", tenantId, monthKey, page] as const,
+      ["contratos", "dashboard", tenantId, monthKey, page] as const,
   },
 
   prospects: {

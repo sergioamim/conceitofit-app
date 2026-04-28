@@ -29,7 +29,7 @@
 | **CRM** | Pipeline kanban, tarefas, playbooks, cadências, automações, campanhas, timeline | `src/app/(portal)/crm/` (5 páginas), `src/lib/api/crm.ts` |
 | **Prospects** | CRUD, progressão de status, conversão para aluno | `src/app/(portal)/prospects/` + wizard em `[id]/converter` |
 | **Clientes** | Cadastro, filtros, avatar, detalhe com abas (dados, pagamentos, cartões, NFS-e, presenças) | `src/app/(portal)/clientes/` com dialogs e workspace hook |
-| **Matrículas** | Listagem, cancelamento, alerta de vencimento | `src/app/(portal)/matriculas/` |
+| **Contratos** | Listagem, cancelamento, alerta de vencimento | `src/app/(portal)/contratos/` |
 | **Planos** | CRUD completo, grid de cards, formulário de criação/edição | `src/app/(portal)/planos/` com `novo/`, `[id]/editar/` |
 | **Vendas** | Carrinho unificado (plano/serviço/produto), scanner código barras, recibo | `src/app/(portal)/vendas/nova/` (7 componentes + hook) |
 | **Pagamentos** | Listagem, recebimento manual, emissão NFS-e em lote | `src/app/(portal)/pagamentos/` |

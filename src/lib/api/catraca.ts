@@ -415,6 +415,50 @@ export interface AdminCatracaRemoteCommandResponse {
   pendingAck: boolean;
 }
 
+export interface AdminCatracaLocalSessionResponse {
+  tokenType: string;
+  token: string;
+  expiresAt: string;
+  expiresInSeconds: number;
+  agentId: string;
+  deviceId: string;
+  permissions: string[];
+  localBaseUrlHint?: string;
+}
+
+export interface LocalAgentStatusResponse {
+  status: string;
+  uptimeSeconds?: number;
+  accessesToday?: number;
+  turnstile?: {
+    profile?: string;
+    status?: string;
+    protocol?: string;
+    transport?: string;
+    vendor?: string;
+    model?: string;
+    capabilities?: string[];
+  };
+  biometric?: {
+    fingerprintAvailable?: boolean;
+    fingerprintVendor?: string;
+    facialAvailable?: boolean;
+    facialVendor?: string;
+  };
+  deviceConfiguration?: {
+    deviceId?: string;
+    operationMode?: string;
+    managedByBackend?: boolean;
+    supportsEmbeddedFace?: boolean;
+    supportsEdgeFace?: boolean;
+    supportsFingerprint?: boolean;
+    supportsQrCode?: boolean;
+    supportsFaceTemplateSync?: boolean;
+    localFacialMatchingEnabled?: boolean;
+    embeddedFaceSyncEnabled?: boolean;
+  };
+}
+
 /**
  * Sincroniza fotos dos alunos para a catraca da unidade (face recognition).
  * POST /api/v1/integracoes/catraca/faces/sync
@@ -491,11 +535,50 @@ export async function aplicarAdminCatracaConfiguracaoApi(input: {
   });
 }
 
+export async function gerarAdminCatracaSessaoLocalApi(input: {
+  tenantId: string;
+  deviceId: string;
+  agentId?: string;
+}): Promise<AdminCatracaLocalSessionResponse> {
+  return apiRequest<AdminCatracaLocalSessionResponse>({
+    path: `/api/v1/admin/unidades/${input.tenantId}/catraca/dispositivos/${input.deviceId}/sessao-local`,
+    method: "POST",
+    body: {
+      agentId: input.agentId,
+    },
+  });
+}
+
+export async function consultarAgenteLocalStatusApi(input: {
+  baseUrl: string;
+  bearerToken: string;
+}): Promise<LocalAgentStatusResponse> {
+  const response = await fetch(`${stripTrailingSlash(input.baseUrl)}/api/status`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${input.bearerToken}`,
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `Falha ao consultar agente local (HTTP ${response.status})`);
+  }
+
+  return response.json() as Promise<LocalAgentStatusResponse>;
+}
+
 function toRecord(value: unknown): Record<string, unknown> | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return null;
   }
   return value as Record<string, unknown>;
+}
+
+function stripTrailingSlash(value: string): string {
+  return value.trim().replace(/\/+$/, "");
 }
 
 function toNumber(value: unknown): number | undefined {

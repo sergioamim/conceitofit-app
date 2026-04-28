@@ -28,6 +28,7 @@ const COLUMNS = [
   { label: "Cliente" },
   { label: "CPF" },
   { label: "Telefone" },
+  { label: "Plano/Vínculo ativo" },
   { label: "Nascimento" },
   { label: "Sexo" },
   { label: "Status" },
@@ -112,6 +113,9 @@ export function ClientesTable({
           </td>
           <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{formatCpf(aluno.cpf)}</td>
           <td className="px-4 py-3 text-sm text-muted-foreground">{formatPhone(aluno.telefone)}</td>
+          <td className="px-4 py-3 text-sm text-muted-foreground">
+            {aluno.estadoAtual?.descricaoContratoAtual?.trim() || "-"}
+          </td>
           <td className="px-4 py-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               {formatDate(aluno.dataNascimento)}

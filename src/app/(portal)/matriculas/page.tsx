@@ -1,5 +1,5 @@
-import { MatriculasClient } from "./components/matriculas-client";
+import { redirect } from "next/navigation";
 
 export default function MatriculasPage() {
-  return <MatriculasClient />;
+  redirect("/contratos");
 }

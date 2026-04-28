@@ -829,10 +829,10 @@
       },
       {
         "id": 9,
-        "titulo": "CRUD de Matrículas",
+        "titulo": "CRUD de Contratos",
         "prioridade": "ALTA",
         "dependencias": [5, 7],
-        "rota": "/matriculas",
+        "rota": "/contratos",
         "entregaveis": ["Lista com status", "Indicadores de vencimento", "Wizard de nova matrícula", "Ação de renovar/cancelar"]
       },
       {
@@ -897,7 +897,7 @@
       { "label": "Dashboard", "path": "/", "icon": "Home" },
       { "label": "Prospects", "path": "/prospects", "icon": "UserPlus", "badge": "count:novos" },
       { "label": "Alunos", "path": "/alunos", "icon": "Users" },
-      { "label": "Matrículas", "path": "/matriculas", "icon": "ClipboardList" },
+      { "label": "Contratos", "path": "/contratos", "icon": "ClipboardList" },
       { "label": "Planos", "path": "/planos", "icon": "CreditCard" },
       { "label": "Atividades", "path": "/atividades", "icon": "Activity" },
       { "label": "Pagamentos", "path": "/pagamentos", "icon": "DollarSign", "badge": "count:pendentes" },

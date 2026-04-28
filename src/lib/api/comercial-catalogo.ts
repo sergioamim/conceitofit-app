@@ -21,7 +21,7 @@ type PlanoApiResponse = {
   contratoAssinatura?: Plano["contratoAssinatura"] | null;
   contratoEnviarAutomaticoEmail?: unknown;
   atividadeIds?: string[] | null;
-  atividades?: Array<Pick<Atividade, "id">> | null;
+  atividades?: Array<string | Pick<Atividade, "id">> | null;
   beneficios?: string[] | null;
   ativo?: unknown;
   destaque?: unknown;
@@ -47,7 +47,7 @@ export interface PlanoUpsertApiRequest {
   duracaoDias: number;
   valor: number;
   valorMatricula?: number;
-  atividadeIds?: string[];
+  atividades?: string[];
   beneficios?: string[];
   destaque?: boolean;
   permiteVendaOnline?: boolean;
@@ -117,13 +117,15 @@ function extractPlanoItems(response: PlanoListApiResponse): PlanoApiResponse[] {
 
 function extractPlanoAtividadeIds(input: {
   atividadeIds?: string[] | null;
-  atividades?: Array<Pick<Atividade, "id">> | null;
+  atividades?: Array<string | Pick<Atividade, "id">> | null;
 }): string[] {
   const ids = Array.isArray(input.atividadeIds)
     ? input.atividadeIds
     : Array.isArray(input.atividades)
       ? input.atividades
-          .map((atividade) => cleanString(atividade?.id))
+          .map((atividade) =>
+            typeof atividade === "string" ? cleanString(atividade) : cleanString(atividade?.id)
+          )
           .filter((id): id is string => Boolean(id))
       : [];
 
@@ -146,7 +148,7 @@ export function buildPlanoUpsertApiRequest(
     | "ordem"
   >
 ): PlanoUpsertApiRequest {
-  const atividadeIds = Array.from(
+  const atividades = Array.from(
     new Set(
       toArray(data.atividades)
         .map((atividadeId) => cleanString(atividadeId))
@@ -164,7 +166,7 @@ export function buildPlanoUpsertApiRequest(
     duracaoDias: Math.max(1, Math.floor(toNumber(data.duracaoDias, 1))),
     valor: Math.max(0.01, toNumber(data.valor, 0.01)),
     valorMatricula: Math.max(0, toNumber(data.valorMatricula, 0)),
-    atividadeIds: atividadeIds.length > 0 ? atividadeIds : undefined,
+    atividades: atividades.length > 0 ? atividades : undefined,
     beneficios: beneficios.length > 0 ? beneficios : undefined,
     destaque: Boolean(data.destaque),
     permiteVendaOnline: data.permiteVendaOnline ?? true,

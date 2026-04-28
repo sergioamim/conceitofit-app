@@ -43,6 +43,16 @@ export interface PostAgregadorVinculoInput {
   dataInicio: string;
 }
 
+export interface PutAgregadorVinculoInput {
+  tenantId: string;
+  vinculoId: string;
+  usuarioExternoId: string;
+  customCode?: string;
+  status: AgregadorVinculoStatus;
+  dataInicio?: string;
+  dataFim?: string;
+}
+
 // ─── Error mapper ──────────────────────────────────────────────────────────
 
 /**
@@ -63,7 +73,7 @@ function mapVinculoError(error: ApiRequestError): Error {
     return new Error(
       backendMessage && backendMessage !== `HTTP 409`
         ? backendMessage
-        : "Já existe um vínculo ativo para este aluno neste agregador.",
+        : "Já existe um vínculo usando esse identificador externo neste agregador.",
     );
   }
   if (error.status === 400) {
@@ -79,20 +89,24 @@ function mapVinculoError(error: ApiRequestError): Error {
 // ─── Public API ────────────────────────────────────────────────────────────
 
 /**
- * Lista vínculos ATIVOS de um aluno com agregadores B2B.
+ * Lista vínculos de um aluno com agregadores B2B.
  *
- * Usado no perfil do cliente para exibir ao lado do "Contrato ativo" —
- * mesmo não sendo um contrato próprio, o vínculo com Wellhub/TotalPass
- * é uma fonte de acesso operacional relevante.
+ * Por padrão retorna só os ativos; o perfil pode solicitar também os
+ * inativos para manter edição/reativação disponível sem recriar vínculo.
  */
 export async function listAgregadorVinculosDoAluno(input: {
   tenantId: string;
   alunoId: string;
+  incluirInativos?: boolean;
 }): Promise<AgregadorVinculoResponse[]> {
   try {
     return await apiRequest<AgregadorVinculoResponse[]>({
       path: "/api/v1/agregadores/vinculos",
-      query: { tenantId: input.tenantId, alunoId: input.alunoId },
+      query: {
+        tenantId: input.tenantId,
+        alunoId: input.alunoId,
+        incluirInativos: input.incluirInativos ? "true" : undefined,
+      },
     });
   } catch {
     // Falhas silenciosas — o perfil renderiza o card principal mesmo sem
@@ -121,6 +135,34 @@ export async function postAgregadorVinculo(
         usuarioExternoId: input.usuarioExternoId,
         customCode: input.customCode,
         dataInicio: input.dataInicio,
+      },
+    });
+  } catch (err) {
+    if (err instanceof ApiRequestError) {
+      throw mapVinculoError(err);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Atualiza ou inativa um vínculo B2B já existente.
+ */
+export async function putAgregadorVinculo(
+  input: PutAgregadorVinculoInput,
+): Promise<AgregadorVinculoResponse> {
+  try {
+    return await apiRequest<AgregadorVinculoResponse>({
+      path: `/api/v1/agregadores/vinculos/${encodeURIComponent(input.vinculoId)}`,
+      method: "PUT",
+      query: { tenantId: input.tenantId },
+      body: {
+        tenantId: input.tenantId,
+        usuarioExternoId: input.usuarioExternoId,
+        customCode: input.customCode,
+        status: input.status,
+        dataInicio: input.dataInicio,
+        dataFim: input.dataFim,
       },
     });
   } catch (err) {

@@ -16,6 +16,7 @@ function baseInput(overrides: Partial<BuildSinaisInput> = {}): BuildSinaisInput 
   return {
     planoAtivo: { dataFim: "2027-04-20" },
     planoAtivoInfo: { nome: "Anual Black" },
+    agregadorVinculos: [],
     presencas: [],
     pagamentos: [],
     saldo: 0,
@@ -89,12 +90,33 @@ describe("buildSinaisCliente", () => {
       expect(s.valor).toBe("Venceu há 8d");
     });
 
-    it("sem contrato → tom atencao, valor 'Sem contrato'", () => {
+    it("sem contrato e sem agregador → tom atencao, valor 'Sem contrato'", () => {
       const s = buildSinaisCliente(baseInput({ planoAtivo: null })).find(
         (x) => x.key === "contrato"
       )!;
       expect(s.tom).toBe("atencao");
       expect(s.valor).toBe("Sem contrato");
+    });
+
+    it("sem plano próprio e com agregador ativo → sinal vira 'Vínculo'", () => {
+      const s = buildSinaisCliente(baseInput({
+        planoAtivo: null,
+        agregadorVinculos: [{ agregador: "WELLHUB", usuarioExternoId: "WHB-123", status: "ATIVO" }],
+      })).find((x) => x.key === "contrato")!;
+      expect(s.label).toBe("Vínculo");
+      expect(s.valor).toBe("Wellhub ativo");
+      expect(s.hint).toBe("WHB-123");
+      expect(s.tom).toBe("ok");
+    });
+
+    it("sem plano e só com vínculo inativo → continua 'Sem contrato'", () => {
+      const s = buildSinaisCliente(baseInput({
+        planoAtivo: null,
+        agregadorVinculos: [{ agregador: "WELLHUB", usuarioExternoId: "WHB-123", status: "INATIVO" }],
+      })).find((x) => x.key === "contrato")!;
+      expect(s.label).toBe("Contrato");
+      expect(s.valor).toBe("Sem contrato");
+      expect(s.tom).toBe("atencao");
     });
   });
 

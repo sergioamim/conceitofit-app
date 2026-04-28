@@ -78,7 +78,7 @@ describe("api/comercial-catalogo", () => {
         atividades: ["a1", "a2", "a1", "  "] as never,
         beneficios: [],
       } as never);
-      expect(req.atividadeIds).toEqual(["a1", "a2"]);
+      expect(req.atividades).toEqual(["a1", "a2"]);
     });
 
     it("beneficios vazios → undefined", () => {
@@ -150,6 +150,13 @@ describe("api/comercial-catalogo", () => {
     it("extract atividade IDs de array atividades", () => {
       const result = normalizePlanoApiResponse({
         atividades: [{ id: "a1" }, { id: "a2" }] as never,
+      });
+      expect(result.atividades).toEqual(["a1", "a2"]);
+    });
+
+    it("extract atividade IDs de array UUIDs conforme contrato oficial", () => {
+      const result = normalizePlanoApiResponse({
+        atividades: ["a1", "a2"] as never,
       });
       expect(result.atividades).toEqual(["a1", "a2"]);
     });
@@ -385,12 +392,13 @@ describe("api/comercial-catalogo", () => {
           duracaoDias: 30,
           valor: 100,
           valorMatricula: 0,
-          atividades: [],
+          atividades: ["a1"],
           beneficios: [],
         } as never,
       });
       expect(spy.mock.calls[0][0].method).toBe("POST");
-      expect(spy.mock.calls[0][0].body).toMatchObject({ permiteVendaOnline: true });
+      expect(spy.mock.calls[0][0].body).toMatchObject({ permiteVendaOnline: true, atividades: ["a1"] });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("atividadeIds");
       expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
 
@@ -407,14 +415,15 @@ describe("api/comercial-catalogo", () => {
           duracaoDias: 30,
           valor: 100,
           valorMatricula: 0,
-          atividades: [],
+          atividades: ["a1"],
           beneficios: [],
           ativo: true,
         } as never,
       })).resolves.toBeUndefined();
       expect(spy.mock.calls[0][0].method).toBe("PUT");
       expect(spy.mock.calls[0][0].path).toBe("/api/v1/comercial/planos/p1");
-      expect(spy.mock.calls[0][0].body).toMatchObject({ permiteVendaOnline: true });
+      expect(spy.mock.calls[0][0].body).toMatchObject({ permiteVendaOnline: true, atividades: ["a1"] });
+      expect(spy.mock.calls[0][0].body).not.toHaveProperty("atividadeIds");
       expect(spy.mock.calls[0][0].body).not.toHaveProperty("tenantId");
     });
 

@@ -35,7 +35,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   aplicarAdminCatracaConfiguracaoApi,
+  consultarAgenteLocalStatusApi,
   gerarAdminCatracaCredencialApi,
+  gerarAdminCatracaSessaoLocalApi,
   listarAdminCatracaCredenciaisApi,
   obterAdminCatracaIntegracaoApi,
   revogarAdminCatracaCredencialApi,
@@ -44,9 +46,11 @@ import {
   type AdminCatracaCredentialCreatedResponse,
   type AdminCatracaCredentialResponse,
   type AdminCatracaDeviceResponse,
+  type AdminCatracaLocalSessionResponse,
   type AdminCatracaRemoteCommandResponse,
   type AdminCatracaSyncFacesAcceptedResponse,
   type AdminCatracaUpsertDeviceInput,
+  type LocalAgentStatusResponse,
 } from "@/lib/api/catraca";
 import { listAcademiasApi, listUnidadesApi } from "@/lib/api/contexto-unidades";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -181,6 +185,9 @@ export function CatracaStatusContent() {
   const [deviceForm, setDeviceForm] = useState<DeviceFormState>(createEmptyDeviceForm());
   const [lastSyncResult, setLastSyncResult] = useState<AdminCatracaSyncFacesAcceptedResponse | null>(null);
   const [lastConfigCommand, setLastConfigCommand] = useState<AdminCatracaRemoteCommandResponse | null>(null);
+  const [localAgentBaseUrl, setLocalAgentBaseUrl] = useState("http://127.0.0.1:18080");
+  const [localSessionInfo, setLocalSessionInfo] = useState<AdminCatracaLocalSessionResponse | null>(null);
+  const [localAgentStatus, setLocalAgentStatus] = useState<LocalAgentStatusResponse | null>(null);
 
   const academiasQuery = useQuery<Academia[]>({
     queryKey: ["admin", "catraca-integracao", "academias"],
@@ -323,6 +330,27 @@ export function CatracaStatusContent() {
     },
   });
 
+  const localStatusMutation = useMutation({
+    mutationFn: async (payload: { tenantId: string; deviceId: string; agentId?: string; baseUrl: string }) => {
+      const session = await gerarAdminCatracaSessaoLocalApi({
+        tenantId: payload.tenantId,
+        deviceId: payload.deviceId,
+        agentId: payload.agentId,
+      });
+      const baseUrl = session.localBaseUrlHint?.trim() || payload.baseUrl.trim();
+      const status = await consultarAgenteLocalStatusApi({
+        baseUrl,
+        bearerToken: session.token,
+      });
+      return { session, status, baseUrl };
+    },
+    onSuccess: ({ session, status, baseUrl }) => {
+      setLocalSessionInfo(session);
+      setLocalAgentStatus(status);
+      setLocalAgentBaseUrl(baseUrl);
+    },
+  });
+
   const saveDisabled =
     !selectedTenantId
     || !deviceForm.deviceId.trim()
@@ -341,6 +369,13 @@ export function CatracaStatusContent() {
     || !deviceForm.deviceId.trim()
     || !deviceForm.agentId?.trim()
     || refreshConfigMutation.isPending
+    || saveMutation.isPending;
+
+  const localStatusDisabled =
+    !selectedTenantId
+    || !deviceForm.deviceId.trim()
+    || !localAgentBaseUrl.trim()
+    || localStatusMutation.isPending
     || saveMutation.isPending;
 
   return (
@@ -887,6 +922,84 @@ export function CatracaStatusContent() {
               </div>
             </div>
 
+            <div className="rounded-2xl border border-border/80 bg-secondary/20 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-foreground">Diagnóstico local do agente</p>
+                <ShieldCheck className="size-4 text-muted-foreground" />
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Emite uma sessão curta no backend e usa esse token para consultar o `gestao-acesso` via `localhost`, sem novo login.
+              </p>
+
+              <div className="mt-4 space-y-2">
+                <label className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                  Base URL local
+                </label>
+                <Input
+                  value={localAgentBaseUrl}
+                  onChange={(event) => setLocalAgentBaseUrl(event.target.value)}
+                  placeholder="http://127.0.0.1:18080"
+                />
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Agent vinculado</p>
+                  <p className="mt-2 font-mono text-sm">{deviceForm.agentId?.trim() || "Não informado"}</p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Dispositivo</p>
+                  <p className="mt-2 font-mono text-sm">{deviceForm.deviceId.trim() || "Não configurado"}</p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    localStatusMutation.mutate({
+                      tenantId: selectedTenantId,
+                      deviceId: deviceForm.deviceId.trim(),
+                      agentId: deviceForm.agentId?.trim() || undefined,
+                      baseUrl: localAgentBaseUrl.trim(),
+                    })
+                  }
+                  disabled={localStatusDisabled}
+                >
+                  <Network className="mr-2 size-4" />
+                  {localStatusMutation.isPending ? "Consultando agente..." : "Validar agente local"}
+                </Button>
+              </div>
+
+              {localSessionInfo ? (
+                <div className="mt-4 rounded-xl border border-border/70 bg-background/70 p-3 text-sm">
+                  <p className="font-medium text-foreground">Sessão local emitida</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Expira em {localSessionInfo.expiresInSeconds}s e libera: {localSessionInfo.permissions.join(", ")}.
+                  </p>
+                </div>
+              ) : null}
+
+              {localAgentStatus ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-emerald-200/80">Status runtime</p>
+                    <p className="mt-2 text-lg font-semibold text-emerald-100">{localAgentStatus.status}</p>
+                    <p className="mt-1 text-xs text-emerald-200/70">
+                      Uptime: {localAgentStatus.uptimeSeconds ?? 0}s · acessos hoje: {localAgentStatus.accessesToday ?? 0}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Leitor</p>
+                    <p className="mt-2 text-sm font-medium">{localAgentStatus.turnstile?.vendor ?? "Sem vendor"}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {localAgentStatus.turnstile?.protocol ?? "sem protocolo"} · {localAgentStatus.turnstile?.status ?? "sem status"}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             {lastConfigCommand ? (
               <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4">
                 <p className="text-sm font-semibold text-sky-100">Configuração enviada ao agente</p>
@@ -928,6 +1041,11 @@ export function CatracaStatusContent() {
             {refreshConfigMutation.error ? (
               <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {formatMutationError(refreshConfigMutation.error)}
+              </div>
+            ) : null}
+            {localStatusMutation.error ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {formatMutationError(localStatusMutation.error)}
               </div>
             ) : null}
           </div>

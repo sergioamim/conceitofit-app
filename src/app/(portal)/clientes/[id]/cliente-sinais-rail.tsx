@@ -138,6 +138,7 @@ function parseLocalDate(dateStr: string): Date {
 export interface BuildSinaisInput {
   planoAtivo: { dataFim: string } | null;
   planoAtivoInfo: { nome?: string } | null;
+  agregadorVinculos?: Array<{ agregador: string; usuarioExternoId: string; status?: string }>;
   presencas: Array<{ data: string }>;
   pagamentos: Array<{ status: string; dataVencimento: string; valor?: number }>;
   saldo: number;
@@ -161,6 +162,14 @@ export interface BuildSinaisInput {
 export function buildSinaisCliente(input: BuildSinaisInput): Sinal[] {
   const now = new Date();
   const sinais: Sinal[] = [];
+  const agregadorAtivo = input.agregadorVinculos?.find((item) => item.status === "ATIVO") ?? null;
+  const agregadorLabel = agregadorAtivo
+    ? ({
+        WELLHUB: "Wellhub",
+        TOTALPASS: "TotalPass",
+        OUTRO: "Agregador",
+      } as const)[agregadorAtivo.agregador as "WELLHUB" | "TOTALPASS" | "OUTRO"] ?? "Agregador"
+    : null;
 
   // 1. Contrato
   if (input.planoAtivo) {
@@ -185,6 +194,15 @@ export function buildSinaisCliente(input: BuildSinaisInput): Sinal[] {
         tom: dias <= 14 ? "atencao" : "ok",
       });
     }
+  } else if (agregadorAtivo) {
+    sinais.push({
+      key: "contrato",
+      icon: SinaisIcons.contrato,
+      label: "Vínculo",
+      valor: `${agregadorLabel} ativo`,
+      hint: agregadorAtivo.usuarioExternoId,
+      tom: "ok",
+    });
   } else {
     sinais.push({
       key: "contrato",

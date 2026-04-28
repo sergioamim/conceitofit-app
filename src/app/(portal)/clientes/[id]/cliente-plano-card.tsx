@@ -13,7 +13,17 @@ const AGREGADOR_LABEL: Record<string, string> = {
   OUTRO: "Agregador",
 };
 
-function AgregadorVinculoLine({ vinculo }: { vinculo: AgregadorVinculoResponse }) {
+const AGREGADOR_STATUS_LABEL: Record<string, string> = {
+  ATIVO: "Ativo",
+  INATIVO: "Inativo",
+  SUSPENSO: "Suspenso",
+};
+
+function AgregadorVinculoLine({
+  vinculo,
+}: {
+  vinculo: AgregadorVinculoResponse;
+}) {
   const label = AGREGADOR_LABEL[vinculo.agregador] ?? vinculo.agregador;
   return (
     <div className="flex items-start gap-2 rounded-md border border-gym-teal/30 bg-gym-teal/5 p-2">
@@ -24,6 +34,10 @@ function AgregadorVinculoLine({ vinculo }: { vinculo: AgregadorVinculoResponse }
         </p>
         <p className="mt-0.5 truncate font-mono text-xs text-foreground">
           {vinculo.usuarioExternoId}
+        </p>
+        <p className="mt-0.5 text-[10px] text-muted-foreground">
+          {AGREGADOR_STATUS_LABEL[vinculo.status] ?? vinculo.status}
+          {vinculo.dataFim ? ` · até ${formatDate(vinculo.dataFim)}` : ""}
         </p>
         {vinculo.cicloExpiraEm ? (
           <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -62,26 +76,36 @@ export function ClientePlanoCard({
   hoje?: Date;
 }) {
   const referencia = hoje ?? new Date();
+  const vinculosAtivos = agregadorVinculos.filter((vinculo) => vinculo.status === "ATIVO");
+  const vinculosInativos = agregadorVinculos.filter((vinculo) => vinculo.status !== "ATIVO");
   const temVinculos = agregadorVinculos.length > 0;
+  const temVinculosAtivos = vinculosAtivos.length > 0;
 
   if (!planoAtivo) {
     return (
       <div className="rounded-xl border border-border bg-card p-4">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Plano ativo
+          {temVinculosAtivos ? "Vínculo ativo" : "Plano ativo"}
         </p>
-        {temVinculos ? (
+        {temVinculosAtivos ? (
           <div className="mt-3 space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Sem plano próprio — acesso via agregador:
-            </p>
-            {agregadorVinculos.map((vinculo) => (
+            {vinculosAtivos.map((vinculo) => (
               <AgregadorVinculoLine key={vinculo.id} vinculo={vinculo} />
             ))}
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">Cliente sem contrato ativo</p>
         )}
+        {vinculosInativos.length > 0 ? (
+          <div className="mt-4 space-y-2 border-t border-border pt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Vínculos do agregador
+            </p>
+            {vinculosInativos.map((vinculo) => (
+              <AgregadorVinculoLine key={vinculo.id} vinculo={vinculo} />
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -138,9 +162,19 @@ export function ClientePlanoCard({
 
       {temVinculos ? (
         <div className="mt-3 space-y-2">
-          {agregadorVinculos.map((vinculo) => (
+          {vinculosAtivos.map((vinculo) => (
             <AgregadorVinculoLine key={vinculo.id} vinculo={vinculo} />
           ))}
+          {vinculosInativos.length > 0 ? (
+            <>
+              <p className="pt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Vínculos inativos
+              </p>
+              {vinculosInativos.map((vinculo) => (
+                <AgregadorVinculoLine key={vinculo.id} vinculo={vinculo} />
+              ))}
+            </>
+          ) : null}
         </div>
       ) : null}
 

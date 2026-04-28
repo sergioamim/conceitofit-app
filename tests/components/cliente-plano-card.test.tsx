@@ -22,6 +22,54 @@ describe("ClientePlanoCard", () => {
       render(<ClientePlanoCard planoAtivo={null} hoje={HOJE} />);
       expect(screen.queryByRole("button")).not.toBeInTheDocument();
     });
+
+    it("troca o destaque para vínculo ativo quando há agregador", () => {
+      render(
+        <ClientePlanoCard
+          planoAtivo={null}
+          hoje={HOJE}
+          agregadorVinculos={[
+            {
+              id: "v1",
+              tenantId: "tenant-1",
+              alunoId: "aluno-1",
+              agregador: "WELLHUB",
+              usuarioExternoId: "WHB-1234",
+              status: "ATIVO",
+              dataInicio: "2026-04-20",
+            },
+          ]}
+        />
+      );
+      expect(screen.getByText(/vínculo ativo/i)).toBeInTheDocument();
+      expect(screen.getByText(/vínculo wellhub/i)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /editar/i })).not.toBeInTheDocument();
+    });
+
+    it("mantém vínculo inativo editável mesmo sem contrato ativo", () => {
+      render(
+        <ClientePlanoCard
+          planoAtivo={null}
+          hoje={HOJE}
+          agregadorVinculos={[
+            {
+              id: "v2",
+              tenantId: "tenant-1",
+              alunoId: "aluno-1",
+              agregador: "TOTALPASS",
+              usuarioExternoId: "TP-9876",
+              status: "INATIVO",
+              dataInicio: "2026-04-01",
+              dataFim: "2026-04-15",
+            },
+          ]}
+        />
+      );
+      expect(screen.getByText(/cliente sem contrato ativo/i)).toBeInTheDocument();
+      expect(screen.getByText(/vínculos do agregador/i)).toBeInTheDocument();
+      expect(screen.getByText(/inativo/i)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /editar/i })).not.toBeInTheDocument();
+    });
   });
 
   describe("countdown de vencimento", () => {

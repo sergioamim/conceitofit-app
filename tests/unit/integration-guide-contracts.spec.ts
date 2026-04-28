@@ -314,7 +314,7 @@ test.describe("integration guide contracts", () => {
         duracaoDias: 30,
         valor: 149.9,
         valorMatricula: 10,
-        atividadeIds: ["atividade-1"],
+        atividades: ["atividade-1"],
         beneficios: ["Spa"],
         destaque: true,
         permiteVendaOnline: true,

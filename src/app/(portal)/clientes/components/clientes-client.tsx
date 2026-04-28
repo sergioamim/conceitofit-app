@@ -203,6 +203,7 @@ export function ClientesClient() {
               { label: "Cliente" },
               { label: "CPF" },
               { label: "Telefone" },
+              { label: "Plano/Vínculo ativo" },
               { label: "Nascimento" },
               { label: "Sexo" },
               { label: "Status" },

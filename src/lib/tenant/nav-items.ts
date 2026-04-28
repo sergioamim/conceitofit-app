@@ -92,7 +92,7 @@ export const operationGroup: NavGroup = {
     { href: "/atendimento/inbox", label: "Atendimento", icon: MessageSquare, description: "Inbox WhatsApp", section: "Operação diária" },
     { href: "/clientes", label: "Clientes", icon: Users, description: "Base de alunos" },
     { href: "/planos", label: "Planos", icon: CreditCard, description: "Catálogo de mensalidades" },
-    { href: "/matriculas", label: "Contratos", icon: ClipboardList },
+    { href: "/contratos", label: "Contratos", icon: ClipboardList },
     { href: "/administrativo/convenios", label: "Convênios", icon: Settings, section: "Catálogo" },
     { href: "/administrativo/produtos", label: "Produtos", icon: Settings },
     { href: "/administrativo/servicos", label: "Serviços", icon: Settings },

@@ -210,7 +210,7 @@ export function DashboardContent({
                 <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
                   <div className="p-6 border-b border-border/40 bg-muted/10 flex items-center justify-between">
                     <h2 className="font-display text-lg font-bold">Matrículas vencendo</h2>
-                    <Link href="/matriculas">
+                    <Link href="/contratos">
                       <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
                         Ver todas <ArrowRight size={14} className="ml-1" />
                       </Button>

@@ -29,7 +29,7 @@
 | **CRM Completo** | Pipeline kanban, tarefas com prioridade, playbooks, cadências automatizadas, automações, campanhas, timeline de atividades | `src/app/(app)/crm/` (5 páginas), `src/lib/api/crm.ts` (~1200 LOC) |
 | **Prospects** | CRUD, progressão de status (NOVO→CONVERTIDO), agendamentos, mensagens, conversão para aluno com wizard 3-etapas | `src/app/(app)/prospects/` + `[id]/converter` |
 | **Clientes** | Cadastro completo, filtros, bulk actions, detalhe com abas (dados, pagamentos, cartões, NFS-e, presenças, treinos), suspensão/reativação, migração entre unidades | `src/app/(app)/clientes/` com 578 LOC client component |
-| **Matrículas** | Dashboard mensal, renovação, cancelamento, filtro por status/plano, contrato digital | `src/app/(app)/matriculas/` |
+| **Contratos** | Dashboard mensal, renovação, cancelamento, filtro por status/plano, contrato digital | `src/app/(portal)/contratos/` |
 | **Planos** | CRUD, grid de cards, formulário com atividades associadas, contrato digital, cobrança recorrente | `src/app/(app)/planos/` com `novo/`, `[id]/editar/` |
 | **Vendas** | Carrinho unificado (plano/serviço/produto), desconto, acréscimo, voucher, recibo PDF | `src/app/(app)/vendas/nova/` (hook + 7 componentes) |
 | **Pagamentos** | Listagem, recebimento manual, NFS-e em lote | `src/app/(app)/pagamentos/` |

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ClienteHeader } from "@/components/shared/cliente-header";
 import type { Aluno } from "@/lib/types";
+import type { AgregadorVinculoResponse } from "@/lib/api/agregadores-vinculos";
 
 // Mock next/image
 vi.mock("next/image", () => ({
@@ -41,6 +42,16 @@ const mockAluno: Aluno = {
   tenantId: "tenant-1",
 };
 
+const mockVinculo: AgregadorVinculoResponse = {
+  id: "vinc-1",
+  tenantId: "tenant-1",
+  alunoId: "1",
+  agregador: "WELLHUB",
+  usuarioExternoId: "WHB-123",
+  status: "ATIVO",
+  dataInicio: "2026-04-20",
+};
+
 describe("ClienteHeader", () => {
   const defaultProps = {
     aluno: mockAluno,
@@ -51,6 +62,7 @@ describe("ClienteHeader", () => {
     onReativar: vi.fn(),
     onLiberarAcesso: vi.fn(),
     onVincularAgregador: vi.fn(),
+    onEditarAgregadorVinculo: vi.fn(),
     onEdit: vi.fn(),
   };
 
@@ -130,5 +142,20 @@ describe("ClienteHeader", () => {
     if (menuBtn) fireEvent.click(menuBtn);
     fireEvent.click(screen.getByText("Vincular agregador"));
     expect(defaultProps.onVincularAgregador).toHaveBeenCalled();
+  });
+
+  it("renderiza editar vínculo do agregador no menu do hero", () => {
+    render(
+      <ClienteHeader
+        {...defaultProps}
+        agregadorVinculos={[mockVinculo]}
+      />
+    );
+    const buttons = screen.getAllByRole("button");
+    const menuBtn = buttons.find(b => b.querySelector(".lucide-ellipsis-vertical"));
+    if (menuBtn) fireEvent.click(menuBtn);
+    expect(screen.getByText("Editar vínculo Wellhub")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Editar vínculo Wellhub"));
+    expect(defaultProps.onEditarAgregadorVinculo).toHaveBeenCalledWith(mockVinculo);
   });
 });

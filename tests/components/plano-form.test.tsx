@@ -260,6 +260,33 @@ describe("PlanoForm", () => {
         expect(musculacaoBtn.className).not.toContain("border-gym-accent");
       });
     });
+
+    it("seleciona todas as atividades ao clicar na ação em massa", async () => {
+      renderPlanoForm();
+
+      fireEvent.click(screen.getByRole("tab", { name: /atividades e benefícios/i }));
+      fireEvent.click(screen.getByRole("button", { name: /selecionar todas/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Musculacao").closest("button")?.className).toContain("border-gym-accent");
+        expect(screen.getByText("Yoga").closest("button")?.className).toContain("border-gym-accent");
+        expect(screen.getByText("Natacao").closest("button")?.className).toContain("border-gym-accent");
+      });
+    });
+
+    it("limpa todas as atividades selecionadas ao clicar em limpar", async () => {
+      renderPlanoForm();
+
+      fireEvent.click(screen.getByRole("tab", { name: /atividades e benefícios/i }));
+      fireEvent.click(screen.getByRole("button", { name: /selecionar todas/i }));
+      fireEvent.click(screen.getByRole("button", { name: /limpar/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Musculacao").closest("button")?.className).not.toContain("border-gym-accent");
+        expect(screen.getByText("Yoga").closest("button")?.className).not.toContain("border-gym-accent");
+        expect(screen.getByText("Natacao").closest("button")?.className).not.toContain("border-gym-accent");
+      });
+    });
   });
 
   describe("beneficios", () => {

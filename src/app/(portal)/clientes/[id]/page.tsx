@@ -22,6 +22,7 @@ import {
 } from "@/lib/shared/analytics";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { VincularAgregadorModal } from "@/components/shared/vincular-agregador-modal";
+import { EditarAgregadorVinculoModal } from "@/components/shared/editar-agregador-vinculo-modal";
 
 import { formatBRL, formatDate } from "@/lib/formatters";
 import { bloquearAcessoApi, desbloquearAcessoApi, excluirDadosPessoaisApi, excluirDadosSensiveisApi } from "@/lib/api/alunos";
@@ -68,6 +69,16 @@ const motivoOptions = [
 
 type LgpdDialogTipo = "pessoais" | "sensiveis" | null;
 
+function sortAgregadorVinculos(items: AgregadorVinculoResponse[]): AgregadorVinculoResponse[] {
+  return [...items].sort((a, b) => {
+    const activeDelta = Number(b.status === "ATIVO") - Number(a.status === "ATIVO");
+    if (activeDelta !== 0) {
+      return activeDelta;
+    }
+    return b.dataInicio.localeCompare(a.dataInicio);
+  });
+}
+
 export default function ClienteDetalhePage() {
   const w = useClienteWorkspace();
   const drawerAcoesEnabled = usePerfilDrawerAcoesEnabled();
@@ -77,6 +88,7 @@ export default function ClienteDetalhePage() {
   const [cartoesOpen, setCartoesOpen] = useState(false);
   const [agregadorVinculos, setAgregadorVinculos] = useState<AgregadorVinculoResponse[]>([]);
   const [vincularAgregadorOpen, setVincularAgregadorOpen] = useState(false);
+  const [editandoAgregadorVinculo, setEditandoAgregadorVinculo] = useState<AgregadorVinculoResponse | null>(null);
   const [bloquearAcessoOpen, setBloquearAcessoOpen] = useState(false);
   const [bloquearAcessoJustificativa, setBloquearAcessoJustificativa] = useState("");
   const [bloqueandoAcesso, setBloqueandoAcesso] = useState(false);
@@ -86,16 +98,15 @@ export default function ClienteDetalhePage() {
   const [lgpdProcessando, setLgpdProcessando] = useState(false);
   const [lgpdErro, setLgpdErro] = useState("");
 
-  // Carrega vínculos ATIVOS de agregadores B2B (Wellhub/TotalPass/...) para
-  // exibir no card "Plano ativo" como contrato alternativo — mesmo sem
-  // contrato próprio, o vínculo indica acesso operacional.
+  // Carrega vínculos de agregadores B2B (Wellhub/TotalPass/...) para exibir
+  // o ativo como contrato alternativo e manter vínculos inativos editáveis.
   useEffect(() => {
     const tenantId = w.aluno?.tenantId;
     const alunoId = w.aluno?.id;
     if (!tenantId || !alunoId) return;
     let cancelled = false;
-    void listAgregadorVinculosDoAluno({ tenantId, alunoId }).then((items) => {
-      if (!cancelled) setAgregadorVinculos(items);
+    void listAgregadorVinculosDoAluno({ tenantId, alunoId, incluirInativos: true }).then((items) => {
+      if (!cancelled) setAgregadorVinculos(sortAgregadorVinculos(items));
     });
     return () => { cancelled = true; };
   }, [w.aluno?.tenantId, w.aluno?.id]);
@@ -154,6 +165,7 @@ export default function ClienteDetalhePage() {
     pagamentos: w.pagamentos,
     saldo: w.saldo,
     recorrente: w.recorrente,
+    agregadorVinculos,
     // TODO(VUN-perfil): quando o workspace carregar histórico de avaliações,
     // passar `w.avaliacoes.length > 0`. Por ora, sem dado → sinal omitido.
     temAvaliacoes: false,
@@ -345,11 +357,30 @@ export default function ClienteDetalhePage() {
         alunoId={aluno.id}
         tenantId={aluno.tenantId}
         onSuccess={(vinculo) => {
-          setAgregadorVinculos((current) => [vinculo, ...current.filter((item) => item.id !== vinculo.id)]);
+          setAgregadorVinculos((current) =>
+            sortAgregadorVinculos([vinculo, ...current.filter((item) => item.id !== vinculo.id)]),
+          );
           if (vinculo.status === "ATIVO") {
             w.promoteAlunoStatusToAtivo();
           }
           setVincularAgregadorOpen(false);
+          void w.reload({ silent: true });
+        }}
+      />
+      <EditarAgregadorVinculoModal
+        open={editandoAgregadorVinculo != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditandoAgregadorVinculo(null);
+          }
+        }}
+        tenantId={aluno.tenantId}
+        vinculo={editandoAgregadorVinculo}
+        onSuccess={(vinculo) => {
+          setAgregadorVinculos((current) =>
+            sortAgregadorVinculos([vinculo, ...current.filter((item) => item.id !== vinculo.id)]),
+          );
+          setEditandoAgregadorVinculo(null);
           void w.reload({ silent: true });
         }}
       />
@@ -411,6 +442,8 @@ export default function ClienteDetalhePage() {
         }}
         onCompletarCadastro={() => setEditDrawerOpen(true)}
         onVincularAgregador={() => setVincularAgregadorOpen(true)}
+        agregadorVinculos={agregadorVinculos}
+        onEditarAgregadorVinculo={setEditandoAgregadorVinculo}
         showCartoesAction={false}
         onLiberarAcesso={w.openLiberarAcesso}
         canDeleteCliente={w.canDeleteClient}

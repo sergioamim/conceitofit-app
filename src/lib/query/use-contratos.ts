@@ -55,7 +55,7 @@ export function useRenovarContrato() {
     mutationFn: (input: { tenantId: string; id: string }) =>
       renovarContratoService(input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["matriculas"] });
+      void queryClient.invalidateQueries({ queryKey: ["contratos"] });
     },
   });
 }
@@ -67,7 +67,7 @@ export function useCancelarContrato() {
     mutationFn: (input: { tenantId: string; id: string; assinaturaId?: string }) =>
       cancelarContratoService(input),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["matriculas"] });
+      void queryClient.invalidateQueries({ queryKey: ["contratos"] });
     },
   });
 }

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { Aluno, Plano } from "@/lib/types";
+import type { AgregadorVinculoResponse } from "@/lib/api/agregadores-vinculos";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ export function ClienteHeader({
   showCartoesAction = true,
   onChangeFoto,
   onVincularAgregador,
+  agregadorVinculos = [],
+  onEditarAgregadorVinculo,
   onMigrarUnidadeBase,
   onSyncFace,
   onBloquearAcesso,
@@ -77,6 +80,8 @@ export function ClienteHeader({
   onChangeFoto?: () => void;
   onCompletarCadastro?: () => void;
   onVincularAgregador?: () => void;
+  agregadorVinculos?: AgregadorVinculoResponse[];
+  onEditarAgregadorVinculo?: (vinculo: AgregadorVinculoResponse) => void;
   onMigrarUnidadeBase?: () => void;
   onSyncFace?: () => void;
   onBloquearAcesso?: () => void;
@@ -113,6 +118,13 @@ export function ClienteHeader({
     ? `https://wa.me/55${aluno.telefone.replace(/\D/g, "")}`
     : null;
   const podeVincularAgregador = aluno.status === "INATIVO" && Boolean(onVincularAgregador);
+  const podeEditarAgregador = agregadorVinculos.length > 0 && Boolean(onEditarAgregadorVinculo);
+  const agregadorLabel = (agregador: AgregadorVinculoResponse["agregador"]) =>
+    ({
+      WELLHUB: "Wellhub",
+      TOTALPASS: "TotalPass",
+      OUTRO: "Agregador",
+    } as const)[agregador] ?? agregador;
 
   return (
     <div
@@ -272,6 +284,20 @@ export function ClienteHeader({
               {/* Vincular agregador */}
               {podeVincularAgregador && onVincularAgregador ? (
                 <MenuButton icon={Link2} label="Vincular agregador" onClick={() => { setMenuOpen(false); onVincularAgregador(); }} />
+              ) : null}
+
+              {podeEditarAgregador && onEditarAgregadorVinculo ? (
+                agregadorVinculos.map((vinculo) => (
+                  <MenuButton
+                    key={vinculo.id}
+                    icon={Link2}
+                    label={`Editar vínculo ${agregadorLabel(vinculo.agregador)}`}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onEditarAgregadorVinculo(vinculo);
+                    }}
+                  />
+                ))
               ) : null}
 
               {/* Migrar unidade-base */}

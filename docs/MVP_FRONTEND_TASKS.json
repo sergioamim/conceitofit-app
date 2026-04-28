@@ -355,16 +355,16 @@
         "fields": ["nome*", "categoria*", "descricao", "icone", "cor"]
       }
     },
-    "matriculas": {
+    "contratos": {
       "list": {
-        "path": "/matriculas",
-        "description": "Lista de matrículas",
+        "path": "/contratos",
+        "description": "Lista de contratos",
         "features": ["Filtro por status", "Filtro por período", "Ver vencendo"],
-        "actions": ["Nova Matrícula", "Renovar", "Cancelar"]
+        "actions": ["Novo Contrato", "Renovar", "Cancelar"]
       },
       "form": {
-        "path": "/matriculas/nova",
-        "description": "Wizard de nova matrícula",
+        "path": "/contratos/nova",
+        "description": "Wizard de novo contrato",
         "steps": [
           "1. Selecionar aluno (autocomplete)",
           "2. Selecionar plano",
@@ -402,7 +402,7 @@
       { "label": "Dashboard", "path": "/", "icon": "Home" },
       { "label": "Prospects", "path": "/prospects", "icon": "UserPlus", "badge": "count:novos" },
       { "label": "Alunos", "path": "/alunos", "icon": "Users" },
-      { "label": "Matrículas", "path": "/matriculas", "icon": "ClipboardList" },
+      { "label": "Contratos", "path": "/contratos", "icon": "ClipboardList" },
       { "label": "Planos", "path": "/planos", "icon": "CreditCard" },
       { "label": "Atividades", "path": "/atividades", "icon": "Activity" },
       { "label": "Pagamentos", "path": "/pagamentos", "icon": "DollarSign", "badge": "count:pendentes" },
@@ -541,7 +541,7 @@
     },
     {
       "id": 10,
-      "titulo": "CRUD de Matrículas",
+      "titulo": "CRUD de Contratos",
       "descricao": "Gestão de matrículas",
       "prioridade": "ALTA",
       "dependencias": [6, 8],

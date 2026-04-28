@@ -87,6 +87,14 @@ export function PlanoForm({
     );
   }
 
+  function setTodasAtividadesSelecionadas(selected: boolean) {
+    setValue(
+      "atividades",
+      selected ? atividades.map((atividade) => atividade.id) : [],
+      { shouldDirty: true }
+    );
+  }
+
   function addBeneficio() {
     if (!beneficioInput.trim()) return;
     append({ value: beneficioInput.trim() });
@@ -341,7 +349,31 @@ export function PlanoForm({
           <h2 className="font-display text-base font-semibold text-foreground">Atividades e benefícios</h2>
           <div className="mt-4 space-y-4">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Atividades incluídas</p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Atividades incluídas</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => setTodasAtividadesSelecionadas(true)}
+                    disabled={atividades.length === 0}
+                  >
+                    Selecionar todas
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    onClick={() => setTodasAtividadesSelecionadas(false)}
+                    disabled={(form.atividades ?? []).length === 0}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </div>
               <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
                 {atividades.map((atividade) => (
                   <button
