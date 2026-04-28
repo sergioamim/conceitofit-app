@@ -63,7 +63,7 @@ describe("CaixaContent", () => {
   it("mostra saldo + tabela quando há caixa ativo do dia", () => {
     render(
       <CaixaContent
-        initial={{ caixa: mockCaixa(), saldo: mockSaldo() }}
+        initial={{ caixa: mockCaixa(), saldo: mockSaldo(), movimentos: [] }}
       />,
     );
     expect(screen.getByTestId("caixa-com-caixa")).toBeInTheDocument();
@@ -78,6 +78,7 @@ describe("CaixaContent", () => {
         initial={{
           caixa: mockCaixa({ abertoEm: "2026-04-14T08:00:00" }),
           saldo: mockSaldo(),
+          movimentos: [],
         }}
       />,
     );

@@ -1,9 +1,5 @@
 import { getCaixaAtivo } from "@/lib/api/caixa";
-import type {
-  CaixaResponse,
-  SaldoParcialResponse,
-} from "@/lib/api/caixa.types";
-import { CaixaContent } from "./components/caixa-content";
+import { CaixaContent, type CaixaAtivo } from "./components/caixa-content";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +12,7 @@ export const dynamic = "force-dynamic";
  * e ainda assim faz polling para sincronizar.
  */
 export default async function CaixaPage() {
-  let initial: { caixa: CaixaResponse; saldo: SaldoParcialResponse } | null =
-    null;
+  let initial: CaixaAtivo | null = null;
   try {
     initial = await getCaixaAtivo();
   } catch {

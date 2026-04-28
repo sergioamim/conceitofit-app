@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getCaixaAtivo } from "@/lib/api/caixa";
 import type {
   CaixaResponse,
+  MovimentoResumoResponse,
   SaldoParcialResponse,
 } from "@/lib/api/caixa.types";
 
@@ -23,6 +24,8 @@ const POLL_INTERVAL_MS = 30_000;
 export type CaixaAtivo = {
   caixa: CaixaResponse;
   saldo: SaldoParcialResponse;
+  /** Movimentos do caixa em aberto, mais recente primeiro. */
+  movimentos: MovimentoResumoResponse[];
 };
 
 interface CaixaContentProps {
@@ -65,12 +68,21 @@ export function CaixaContent({ initial }: CaixaContentProps) {
   const [fecharOpen, setFecharOpen] = useState(false);
   const [hojeIso, setHojeIso] = useState<string | null>(null);
 
-  // Movimentos ficam locais ao client — o endpoint dedicado não existe em CXO-105,
-  // então esta tela parte de [] e será populada via futuras integrações (SSE,
-  // atualizações após sangria). Mantemos a table renderizada para que a UI espelhe
-  // a AC do story; se backend expor GET /api/caixas/{id}/movimentos depois, basta
-  // trocar a fonte aqui.
-  const [movimentos, setMovimentos] = useState<MovimentoRow[]>([]);
+  // Movimentos vem direto do GET /api/caixas/ativo (mesmo payload do caixa),
+  // assim a tela inteira se mantem em UMA unica chamada. Filtro NAO eh por dia:
+  // exibe TODOS os movimentos do caixa em aberto (que perdura entre dias enquanto
+  // nao for fechado).
+  const movimentos: MovimentoRow[] = useMemo(
+    () =>
+      (ativo?.movimentos ?? []).map((m) => ({
+        id: m.id,
+        tipo: m.tipo,
+        valor: m.valor,
+        formaPagamento: m.formaPagamento,
+        dataMovimento: m.dataMovimento,
+      })),
+    [ativo?.movimentos],
+  );
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -147,32 +159,18 @@ export function CaixaContent({ initial }: CaixaContentProps) {
     [toast],
   );
 
-  const handleSangriaSuccess = useCallback(
-    (movimentoId: string) => {
-      setSangriaOpen(false);
-      setMovimentos((prev) => [
-        {
-          id: movimentoId,
-          tipo: "SANGRIA",
-          valor: 0,
-          formaPagamento: null,
-          dataMovimento: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-      toast({
-        title: "Sangria registrada",
-        description: "O saldo parcial será recalculado no próximo refresh.",
-      });
-      void refetch();
-    },
-    [refetch, toast],
-  );
+  const handleSangriaSuccess = useCallback(() => {
+    setSangriaOpen(false);
+    toast({
+      title: "Sangria registrada",
+      description: "O saldo parcial será recalculado no próximo refresh.",
+    });
+    void refetch();
+  }, [refetch, toast]);
 
   const handleFecharSuccess = useCallback(() => {
     setFecharOpen(false);
     setAtivo(null);
-    setMovimentos([]);
     toast({
       title: "Caixa fechado",
       description: "Você já pode abrir um novo caixa quando quiser.",

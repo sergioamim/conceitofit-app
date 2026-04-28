@@ -80,6 +80,7 @@ export function AbrirCaixaForm({
           porFormaPagamento: { DINHEIRO: caixa.valorAbertura },
           movimentosCount: 0,
         },
+        movimentos: [],
       });
     } catch (err) {
       if (isCaixaApiError(err)) {

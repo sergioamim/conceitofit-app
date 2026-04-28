@@ -133,16 +133,22 @@ export async function abrirCaixa(
  * Retorna `null` quando 204 (body vazio).
  */
 export async function getCaixaAtivo(): Promise<
-  { caixa: CaixaResponse; saldo: SaldoParcialResponse } | null
+  {
+    caixa: CaixaResponse;
+    saldo: SaldoParcialResponse;
+    movimentos: MovimentoResumoResponse[];
+  } | null
 > {
   // Backend (CaixaAtivoResponse record) serializa o saldo como `saldoParcial`,
   // mas o resto do FE consome via `.saldo`. Normalizamos aqui pra evitar
-  // mudar todos os call sites.
+  // mudar todos os call sites. Tambem garante movimentos = [] quando ausente
+  // (compat com responses anteriores que nao incluiam o campo).
   const response = await apiRequestWithMeta<
     | {
         caixa: CaixaResponse;
         saldo?: SaldoParcialResponse;
         saldoParcial?: SaldoParcialResponse;
+        movimentos?: MovimentoResumoResponse[];
       }
     | null
   >({
@@ -154,7 +160,11 @@ export async function getCaixaAtivo(): Promise<
   if (!("caixa" in response.data)) return null;
   const saldo = response.data.saldo ?? response.data.saldoParcial;
   if (!saldo) return null;
-  return { caixa: response.data.caixa, saldo };
+  return {
+    caixa: response.data.caixa,
+    saldo,
+    movimentos: response.data.movimentos ?? [],
+  };
 }
 
 /** `POST /api/caixas/{id}/fechar` → 200 `FecharCaixaResponse`. */
