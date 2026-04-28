@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import type {
@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatBRL } from "@/lib/formatters";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { cn } from "@/lib/utils";
 
 type EscopoPlanos = "TODOS" | "ESPECIFICOS";
@@ -108,10 +109,12 @@ export function ConvenioModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: Omit<Convenio, "id">, id?: string) => void;
+  onSave: (data: Omit<Convenio, "id">, id?: string) => Promise<void> | void;
   planos: Plano[];
   initial?: Convenio | null;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     control,
@@ -119,6 +122,7 @@ export function ConvenioModal({
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<ConvenioFormValues>({
     resolver: zodResolver(convenioFormSchema),
@@ -205,7 +209,7 @@ export function ConvenioModal({
     setValue("formasPagamentoPermitidas", proximo, { shouldDirty: true, shouldValidate: true });
   }
 
-  function handleSave(values: ConvenioFormValues) {
+  async function handleSave(values: ConvenioFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
 
@@ -213,34 +217,48 @@ export function ConvenioModal({
     const desconto = Number.parseFloat(values.descontoPercentual) || 0;
     const valorFixo = Number.parseFloat(values.descontoValor) || 0;
 
-    onSave(
-      {
-        nome,
-        ativo: values.ativo,
-        permiteVoucherAcumulado: values.permiteVoucherAcumulado,
-        tipoDesconto: values.tipoDesconto,
-        descontoPercentual: isPercentual ? desconto : 0,
-        descontoValor: isPercentual ? undefined : valorFixo,
-        planoIds:
-          values.escopoPlanos === "ESPECIFICOS" && values.planoIds.length > 0
-            ? values.planoIds
-            : undefined,
-        formasPagamentoPermitidas:
-          values.escopoPagamento === "ESPECIFICAS" && values.formasPagamentoPermitidas.length > 0
-            ? (values.formasPagamentoPermitidas as TipoFormaPagamento[])
-            : undefined,
-        validoDe:
-          values.escopoVigencia === "INTERVALO" && values.validoDe.trim()
-            ? values.validoDe
-            : undefined,
-        validoAte:
-          values.escopoVigencia === "INTERVALO" && values.validoAte.trim()
-            ? values.validoAte
-            : undefined,
-        observacoes: values.observacoes.trim() || undefined,
-      },
-      initial?.id,
-    );
+    try {
+      setSaving(true);
+      setSubmitError(null);
+      await onSave(
+        {
+          nome,
+          ativo: values.ativo,
+          permiteVoucherAcumulado: values.permiteVoucherAcumulado,
+          tipoDesconto: values.tipoDesconto,
+          descontoPercentual: isPercentual ? desconto : 0,
+          descontoValor: isPercentual ? undefined : valorFixo,
+          planoIds:
+            values.escopoPlanos === "ESPECIFICOS" && values.planoIds.length > 0
+              ? values.planoIds
+              : undefined,
+          formasPagamentoPermitidas:
+            values.escopoPagamento === "ESPECIFICAS" && values.formasPagamentoPermitidas.length > 0
+              ? (values.formasPagamentoPermitidas as TipoFormaPagamento[])
+              : undefined,
+          validoDe:
+            values.escopoVigencia === "INTERVALO" && values.validoDe.trim()
+              ? values.validoDe
+              : undefined,
+          validoAte:
+            values.escopoVigencia === "INTERVALO" && values.validoAte.trim()
+              ? values.validoAte
+              : undefined,
+          observacoes: values.observacoes.trim() || undefined,
+        },
+        initial?.id,
+      );
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(error, setError);
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        setSubmitError(buildFormApiErrorMessage(error, {
+          appliedFields,
+          fallbackMessage: "Revise os dados do convênio e tente novamente.",
+        }));
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   const todosAtivosSelecionados =
@@ -264,6 +282,11 @@ export function ConvenioModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleSave)} className="space-y-6">
+          {submitError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {submitError}
+            </div>
+          ) : null}
           {/* --------------------- Identificação --------------------- */}
           <section className="space-y-3">
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -773,11 +796,11 @@ export function ConvenioModal({
           </section>
 
           <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+            <Button type="button" variant="outline" onClick={onClose} className="border-border" disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!canSave}>
-              {initial ? "Salvar" : "Criar convênio"}
+            <Button type="submit" disabled={!canSave || saving}>
+              {saving ? "Salvando..." : initial ? "Salvar" : "Criar convênio"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import type { Servico } from "@/lib/types";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { HoverPopover } from "@/components/shared/hover-popover";
@@ -95,61 +96,83 @@ export function ServicoModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: Omit<Servico, "id" | "tenantId">, id?: string) => void;
+  onSave: (data: Omit<Servico, "id" | "tenantId">, id?: string) => Promise<void> | void;
   initial?: Servico | null;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const {
     register,
     control,
     handleSubmit,
     reset,
+    setError,
     setValue,
-    watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ServicoFormValues>({
     resolver: zodResolver(servicoFormSchema),
     mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
 
-  const canSave = Boolean(watch("nome")?.trim());
+  const canSave = isValid && !saving;
   const tipoCobranca = useWatch({ control, name: "tipoCobranca" });
 
   useEffect(() => {
+    setSubmitError("");
     reset(toFormValues(initial));
   }, [initial, open, reset]);
 
-  function handleSave(values: ServicoFormValues) {
+  async function handleSave(values: ServicoFormValues) {
     const nome = values.nome.trim();
     if (!nome) return;
-    onSave(
-      {
-        nome,
-        sku: values.sku.trim().toUpperCase() || undefined,
-        categoria: values.categoria.trim() || undefined,
-        descricao: values.descricao.trim() || undefined,
-        sessoes: values.sessoes ? Math.max(1, Number.parseInt(values.sessoes, 10)) : undefined,
-        valor: values.valor ? Math.max(0, Number.parseFloat(values.valor)) : 0,
-        custo: values.custo ? Math.max(0, Number.parseFloat(values.custo)) : undefined,
-        duracaoMinutos: values.duracaoMinutos ? Math.max(1, Number.parseInt(values.duracaoMinutos, 10)) : undefined,
-        validadeDias: values.validadeDias ? Math.max(1, Number.parseInt(values.validadeDias, 10)) : undefined,
-        comissaoPercentual: values.comissaoPercentual ? Math.max(0, Number.parseFloat(values.comissaoPercentual)) : undefined,
-        aliquotaImpostoPercentual: values.aliquotaImpostoPercentual
-          ? Math.max(0, Number.parseFloat(values.aliquotaImpostoPercentual))
-          : undefined,
-        permiteDesconto: values.permiteDesconto,
-        tipoCobranca: values.tipoCobranca,
-        recorrenciaDias:
-          values.tipoCobranca === "RECORRENTE" && values.recorrenciaDias
-            ? Math.max(1, Number.parseInt(values.recorrenciaDias, 10))
+    setSaving(true);
+    setSubmitError("");
+    try {
+      await onSave(
+        {
+          nome,
+          sku: values.sku.trim().toUpperCase() || undefined,
+          categoria: values.categoria.trim() || undefined,
+          descricao: values.descricao.trim() || undefined,
+          sessoes: values.sessoes ? Math.max(1, Number.parseInt(values.sessoes, 10)) : undefined,
+          valor: values.valor ? Math.max(0, Number.parseFloat(values.valor)) : 0,
+          custo: values.custo ? Math.max(0, Number.parseFloat(values.custo)) : undefined,
+          duracaoMinutos: values.duracaoMinutos ? Math.max(1, Number.parseInt(values.duracaoMinutos, 10)) : undefined,
+          validadeDias: values.validadeDias ? Math.max(1, Number.parseInt(values.validadeDias, 10)) : undefined,
+          comissaoPercentual: values.comissaoPercentual ? Math.max(0, Number.parseFloat(values.comissaoPercentual)) : undefined,
+          aliquotaImpostoPercentual: values.aliquotaImpostoPercentual
+            ? Math.max(0, Number.parseFloat(values.aliquotaImpostoPercentual))
             : undefined,
-        agendavel: values.agendavel,
-        permiteAcessoCatraca: values.permiteAcessoCatraca,
-        permiteVoucher: values.permiteVoucher,
-        ativo: values.ativo,
-      },
-      initial?.id
-    );
+          permiteDesconto: values.permiteDesconto,
+          tipoCobranca: values.tipoCobranca,
+          recorrenciaDias:
+            values.tipoCobranca === "RECORRENTE" && values.recorrenciaDias
+              ? Math.max(1, Number.parseInt(values.recorrenciaDias, 10))
+              : undefined,
+          agendavel: values.agendavel,
+          permiteAcessoCatraca: values.permiteAcessoCatraca,
+          permiteVoucher: values.permiteVoucher,
+          ativo: values.ativo,
+        },
+        initial?.id
+      );
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(error, setError);
+      const hasOnlyMappedFieldErrors =
+        hasFieldErrors &&
+        appliedFields.length > 0 &&
+        Object.keys(unmatchedFieldErrors).length === 0;
+      if (!hasOnlyMappedFieldErrors) {
+        setSubmitError(buildFormApiErrorMessage(error, {
+          appliedFields,
+          fallbackMessage: "Revise os campos destacados e tente novamente.",
+        }));
+      }
+      return;
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -298,12 +321,17 @@ export function ServicoModal({
                 Aceita voucher
               </label>
             </div>
+            {submitError ? (
+              <div className="rounded-2xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+                {submitError}
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+            <Button type="button" variant="outline" onClick={onClose} className="border-border" disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!canSave}>{initial ? "Salvar" : "Criar"}</Button>
+            <Button type="submit" disabled={!canSave}>{saving ? "Salvando..." : initial ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

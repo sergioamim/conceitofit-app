@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { novoVoucherStepSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import type { Plano, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
@@ -80,11 +81,13 @@ export function NovoVoucherModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onNext: (payload: NovoVoucherPayload) => void;
+  onNext: (payload: NovoVoucherPayload) => Promise<void> | void;
   tenantId?: string;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -92,6 +95,7 @@ export function NovoVoucherModal({
     clearErrors,
     control,
     setValue,
+    setError,
     watch,
     formState: { errors },
   } = useForm<NovoVoucherFormValues>({
@@ -129,6 +133,8 @@ export function NovoVoucherModal({
     setStep(1);
     reset(DEFAULT_VALUES);
     clearErrors();
+    setSubmitError(null);
+    setSaving(false);
   }
 
   function handleClose() {
@@ -140,24 +146,62 @@ export function NovoVoucherModal({
     setStep(2);
   }
 
-  function handleGerar(values: NovoVoucherFormValues) {
-    onNext({
-      escopo: values.escopo,
-      tipo: values.tipo,
-      nome: values.nome.trim(),
-      periodoInicio: values.periodoInicio,
-      periodoFim: values.prazoDeterminado ? values.periodoFim : undefined,
-      prazoDeterminado: values.prazoDeterminado,
-      quantidade: values.ilimitada ? undefined : Number(values.quantidade),
-      ilimitado: values.ilimitada,
-      codigoTipo: values.codigoTipo,
-      codigoUnicoCustom: values.codigoTipo === "UNICO" ? values.codigoUnicoCustom.trim().toUpperCase() : undefined,
-      usarNaVenda: values.usarNaVenda,
-      planoIds: values.planoIds,
-      umaVezPorCliente: values.umaVezPorCliente,
-      aplicarEm: values.aplicarEm,
-    });
-    resetAll();
+  async function handleGerar(values: NovoVoucherFormValues) {
+    try {
+      setSaving(true);
+      setSubmitError(null);
+      await onNext({
+        escopo: values.escopo,
+        tipo: values.tipo,
+        nome: values.nome.trim(),
+        periodoInicio: values.periodoInicio,
+        periodoFim: values.prazoDeterminado ? values.periodoFim : undefined,
+        prazoDeterminado: values.prazoDeterminado,
+        quantidade: values.ilimitada ? undefined : Number(values.quantidade),
+        ilimitado: values.ilimitada,
+        codigoTipo: values.codigoTipo,
+        codigoUnicoCustom: values.codigoTipo === "UNICO" ? values.codigoUnicoCustom.trim().toUpperCase() : undefined,
+        usarNaVenda: values.usarNaVenda,
+        planoIds: values.planoIds,
+        umaVezPorCliente: values.umaVezPorCliente,
+        aplicarEm: values.aplicarEm,
+      });
+      resetAll();
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(error, setError, {
+        mapField: (field) => {
+          if (field === "ilimitado") return "ilimitada";
+          return field as keyof NovoVoucherFormValues;
+        },
+      });
+      if (
+        appliedFields.some((field) =>
+          [
+            "escopo",
+            "tipo",
+            "nome",
+            "periodoInicio",
+            "periodoFim",
+            "quantidade",
+            "ilimitado",
+            "ilimitada",
+            "codigoTipo",
+            "codigoUnicoCustom",
+            "usarNaVenda",
+          ].includes(field),
+        )
+      ) {
+        setStep(1);
+      }
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        setSubmitError(buildFormApiErrorMessage(error, {
+          appliedFields,
+          fallbackMessage: "Revise os dados do voucher e tente novamente.",
+        }));
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   function togglePlano(id: string) {
@@ -333,6 +377,11 @@ export function NovoVoucherModal({
           </form>
         ) : (
           <form className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onSubmit={handleSubmit(handleGerar)}>
+            {submitError ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                {submitError}
+              </div>
+            ) : null}
             <div className="rounded-xl border border-border bg-secondary/40 p-4 text-sm">
               <p className="font-medium">{TIPO_LABEL[tipo ?? ""] ?? "Voucher"}</p>
               <p className="mt-1 text-muted-foreground">
@@ -383,8 +432,8 @@ export function NovoVoucherModal({
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setStep(1)} className="border-border">Voltar</Button>
-              <Button type="submit">Gerar voucher</Button>
+              <Button type="button" variant="outline" onClick={() => setStep(1)} className="border-border" disabled={saving}>Voltar</Button>
+              <Button type="submit" disabled={saving}>{saving ? "Gerando..." : "Gerar voucher"}</Button>
             </DialogFooter>
           </form>
         )}

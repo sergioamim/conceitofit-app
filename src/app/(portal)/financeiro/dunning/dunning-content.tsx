@@ -33,6 +33,7 @@ import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 // ---------------------------------------------------------------------------
 // Query keys
@@ -123,6 +125,7 @@ export function DunningContent() {
   const { tenantId } = useTenantContext();
   const queryClient = useQueryClient();
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { toast } = useToast();
 
   // Filters
   const [busca, setBusca] = useState("");
@@ -226,10 +229,17 @@ export function DunningContent() {
       });
       if (result.sucesso && result.link) {
         await navigator.clipboard.writeText(result.link);
-        alert(`Link copiado para a area de transferencia:\n${result.link}`);
+        toast({
+          title: "Link copiado",
+          description: "O link de pagamento foi copiado para a área de transferência.",
+        });
       }
     } catch (err) {
-      alert(`Erro ao gerar link: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+      toast({
+        title: "Erro ao gerar link",
+        description: normalizeErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setActionLoading(null);
     }
@@ -280,7 +290,11 @@ export function DunningContent() {
       invalidate();
       setGatewayDialog({ open: false, contaReceberId: "", gateways: [] });
     } catch (err) {
-      alert(`Erro: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+      toast({
+        title: "Erro ao trocar gateway",
+        description: normalizeErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setGatewayLoading(false);
     }

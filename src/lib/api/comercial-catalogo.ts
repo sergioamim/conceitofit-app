@@ -21,7 +21,7 @@ type PlanoApiResponse = {
   contratoAssinatura?: Plano["contratoAssinatura"] | null;
   contratoEnviarAutomaticoEmail?: unknown;
   atividadeIds?: string[] | null;
-  atividades?: Array<string | Pick<Atividade, "id">> | null;
+  atividades?: Array<Pick<Atividade, "id">> | null;
   beneficios?: string[] | null;
   ativo?: unknown;
   destaque?: unknown;
@@ -47,7 +47,16 @@ export interface PlanoUpsertApiRequest {
   duracaoDias: number;
   valor: number;
   valorMatricula?: number;
-  atividades?: string[];
+  cobraAnuidade?: boolean;
+  valorAnuidade?: number;
+  parcelasMaxAnuidade?: number;
+  permiteRenovacaoAutomatica?: boolean;
+  permiteCobrancaRecorrente?: boolean;
+  diaCobrancaPadrao?: number;
+  contratoTemplateHtml?: string;
+  contratoAssinatura?: Plano["contratoAssinatura"];
+  contratoEnviarAutomaticoEmail?: boolean;
+  atividadeIds?: string[];
   beneficios?: string[];
   destaque?: boolean;
   permiteVendaOnline?: boolean;
@@ -117,15 +126,13 @@ function extractPlanoItems(response: PlanoListApiResponse): PlanoApiResponse[] {
 
 function extractPlanoAtividadeIds(input: {
   atividadeIds?: string[] | null;
-  atividades?: Array<string | Pick<Atividade, "id">> | null;
+  atividades?: Array<Pick<Atividade, "id">> | null;
 }): string[] {
   const ids = Array.isArray(input.atividadeIds)
     ? input.atividadeIds
     : Array.isArray(input.atividades)
       ? input.atividades
-          .map((atividade) =>
-            typeof atividade === "string" ? cleanString(atividade) : cleanString(atividade?.id)
-          )
+          .map((atividade) => cleanString(atividade?.id))
           .filter((id): id is string => Boolean(id))
       : [];
 
@@ -141,6 +148,15 @@ export function buildPlanoUpsertApiRequest(
     | "duracaoDias"
     | "valor"
     | "valorMatricula"
+    | "cobraAnuidade"
+    | "valorAnuidade"
+    | "parcelasMaxAnuidade"
+    | "permiteRenovacaoAutomatica"
+    | "permiteCobrancaRecorrente"
+    | "diaCobrancaPadrao"
+    | "contratoTemplateHtml"
+    | "contratoAssinatura"
+    | "contratoEnviarAutomaticoEmail"
     | "atividades"
     | "beneficios"
     | "destaque"
@@ -148,7 +164,7 @@ export function buildPlanoUpsertApiRequest(
     | "ordem"
   >
 ): PlanoUpsertApiRequest {
-  const atividades = Array.from(
+  const atividadeIds = Array.from(
     new Set(
       toArray(data.atividades)
         .map((atividadeId) => cleanString(atividadeId))
@@ -158,6 +174,7 @@ export function buildPlanoUpsertApiRequest(
   const beneficios = toArray(data.beneficios)
     .map((beneficio) => cleanString(beneficio))
     .filter((beneficio): beneficio is string => Boolean(beneficio));
+  const diaCobrancaPadrao = normalizeDiasCobranca(data.diaCobrancaPadrao)?.[0];
 
   return {
     nome: limitString(cleanString(data.nome) ?? "", MAX_PLANO_NAME_LENGTH) ?? "",
@@ -166,7 +183,20 @@ export function buildPlanoUpsertApiRequest(
     duracaoDias: Math.max(1, Math.floor(toNumber(data.duracaoDias, 1))),
     valor: Math.max(0.01, toNumber(data.valor, 0.01)),
     valorMatricula: Math.max(0, toNumber(data.valorMatricula, 0)),
-    atividades: atividades.length > 0 ? atividades : undefined,
+    cobraAnuidade: Boolean(data.cobraAnuidade),
+    valorAnuidade: data.valorAnuidade == null ? undefined : Math.max(0, toNumber(data.valorAnuidade, 0)),
+    parcelasMaxAnuidade:
+      data.parcelasMaxAnuidade == null ? undefined : Math.max(1, Math.floor(toNumber(data.parcelasMaxAnuidade, 1))),
+    permiteRenovacaoAutomatica:
+      data.tipo === "AVULSO" ? false : Boolean(data.permiteRenovacaoAutomatica),
+    permiteCobrancaRecorrente:
+      data.tipo === "AVULSO" ? false : Boolean(data.permiteCobrancaRecorrente),
+    diaCobrancaPadrao:
+      data.tipo === "AVULSO" || !data.permiteCobrancaRecorrente ? undefined : diaCobrancaPadrao,
+    contratoTemplateHtml: cleanString(data.contratoTemplateHtml),
+    contratoAssinatura: data.contratoAssinatura ?? "AMBAS",
+    contratoEnviarAutomaticoEmail: Boolean(data.contratoEnviarAutomaticoEmail),
+    atividadeIds: atividadeIds.length > 0 ? atividadeIds : undefined,
     beneficios: beneficios.length > 0 ? beneficios : undefined,
     destaque: Boolean(data.destaque),
     permiteVendaOnline: data.permiteVendaOnline ?? true,
@@ -417,7 +447,7 @@ export async function togglePlanoDestaqueApi(input: {
   });
 }
 
-async function deletePlanoApi(input: {
+export async function deletePlanoApi(input: {
   tenantId: string;
   id: string;
 }): Promise<void> {

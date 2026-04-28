@@ -52,15 +52,19 @@ export default function EditarPlanoPage() {
   async function handleSubmit(values: PlanoFormValues) {
     if (!id || !tenantId || !plano) return;
     setSaving(true);
-    await updatePlanoApi({
-      tenantId,
-      id,
-      data: {
-        ...buildPlanoPayload(values),
-        ativo: plano.ativo,
-      },
-    });
-    router.push("/planos");
+    try {
+      await updatePlanoApi({
+        tenantId,
+        id,
+        data: {
+          ...buildPlanoPayload(values),
+          ativo: plano.ativo,
+        },
+      });
+      router.push("/planos");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {

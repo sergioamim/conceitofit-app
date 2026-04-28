@@ -23,6 +23,7 @@ import { Calendar, HelpCircle, Info } from "lucide-react";
 import { HoverPopover } from "@/components/shared/hover-popover";
 import { updateVoucherApi } from "@/lib/api/beneficios";
 import { listPlanosApi } from "@/lib/api/comercial-catalogo";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { editarVoucherFormSchema } from "@/lib/tenant/forms/administrativo-schemas";
 import type { Plano, Voucher, VoucherAplicarEm, VoucherEscopo } from "@/lib/types";
 
@@ -86,6 +87,7 @@ export function EditarVoucherModal({
     setValue,
     watch,
     clearErrors,
+    setError,
     formState: { errors },
   } = useForm<EditarVoucherFormValues>({
     resolver: zodResolver(editarVoucherFormSchema),
@@ -161,7 +163,18 @@ export function EditarVoucherModal({
       });
       onSaved();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : "Erro ao salvar voucher.");
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(error, setError, {
+        mapField: (field) => {
+          if (field === "ilimitado") return "ilimitada";
+          return field as keyof EditarVoucherFormValues;
+        },
+      });
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        setSaveError(buildFormApiErrorMessage(error, {
+          appliedFields,
+          fallbackMessage: "Erro ao salvar voucher.",
+        }));
+      }
     } finally {
       setSaving(false);
     }

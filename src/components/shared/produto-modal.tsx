@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import type { Produto } from "@/lib/types";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -84,27 +85,30 @@ export function ProdutoModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: Omit<Produto, "id" | "tenantId">, id?: string) => void;
+  onSave: (data: Omit<Produto, "id" | "tenantId">, id?: string) => Promise<void> | void;
   initial?: Produto | null;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const {
     register,
     control,
     handleSubmit,
     reset,
+    setError,
     setValue,
-    watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<ProdutoFormValues>({
     resolver: zodResolver(produtoFormSchema),
     mode: "onTouched",
     defaultValues: toFormValues(initial),
   });
 
-  const canSave = Boolean(watch("nome")?.trim()) && Boolean(watch("sku")?.trim());
+  const canSave = isValid && !saving;
   const controlaEstoque = useWatch({ control, name: "controlaEstoque" });
 
   useEffect(() => {
+    setSubmitError("");
     reset(toFormValues(initial));
   }, [initial, open, reset]);
 
@@ -115,35 +119,54 @@ export function ProdutoModal({
     }
   }, [controlaEstoque, setValue]);
 
-  function handleSave(values: ProdutoFormValues) {
+  async function handleSave(values: ProdutoFormValues) {
     const nome = values.nome.trim();
     const sku = values.sku.trim().toUpperCase();
     if (!nome || !sku) return;
-    onSave(
-      {
-        nome,
-        sku,
-        codigoBarras: values.codigoBarras.trim() || undefined,
-        categoria: values.categoria.trim() || undefined,
-        marca: values.marca.trim() || undefined,
-        unidadeMedida: values.unidadeMedida,
-        descricao: values.descricao.trim() || undefined,
-        valorVenda: values.valorVenda ? Math.max(0, Number.parseFloat(values.valorVenda)) : 0,
-        custo: values.custo ? Math.max(0, Number.parseFloat(values.custo)) : undefined,
-        comissaoPercentual: values.comissaoPercentual ? Math.max(0, Number.parseFloat(values.comissaoPercentual)) : undefined,
-        aliquotaImpostoPercentual: values.aliquotaImpostoPercentual
-          ? Math.max(0, Number.parseFloat(values.aliquotaImpostoPercentual))
-          : undefined,
-        controlaEstoque: values.controlaEstoque,
-        estoqueAtual: values.controlaEstoque ? Math.max(0, Number.parseFloat(values.estoqueAtual) || 0) : 0,
-        estoqueMinimo:
-          values.controlaEstoque && values.estoqueMinimo ? Math.max(0, Number.parseFloat(values.estoqueMinimo)) : undefined,
-        permiteDesconto: values.permiteDesconto,
-        permiteVoucher: values.permiteVoucher,
-        ativo: values.ativo,
-      },
-      initial?.id
-    );
+    setSaving(true);
+    setSubmitError("");
+    try {
+      await onSave(
+        {
+          nome,
+          sku,
+          codigoBarras: values.codigoBarras.trim() || undefined,
+          categoria: values.categoria.trim() || undefined,
+          marca: values.marca.trim() || undefined,
+          unidadeMedida: values.unidadeMedida,
+          descricao: values.descricao.trim() || undefined,
+          valorVenda: values.valorVenda ? Math.max(0, Number.parseFloat(values.valorVenda)) : 0,
+          custo: values.custo ? Math.max(0, Number.parseFloat(values.custo)) : undefined,
+          comissaoPercentual: values.comissaoPercentual ? Math.max(0, Number.parseFloat(values.comissaoPercentual)) : undefined,
+          aliquotaImpostoPercentual: values.aliquotaImpostoPercentual
+            ? Math.max(0, Number.parseFloat(values.aliquotaImpostoPercentual))
+            : undefined,
+          controlaEstoque: values.controlaEstoque,
+          estoqueAtual: values.controlaEstoque ? Math.max(0, Number.parseFloat(values.estoqueAtual) || 0) : 0,
+          estoqueMinimo:
+            values.controlaEstoque && values.estoqueMinimo ? Math.max(0, Number.parseFloat(values.estoqueMinimo)) : undefined,
+          permiteDesconto: values.permiteDesconto,
+          permiteVoucher: values.permiteVoucher,
+          ativo: values.ativo,
+        },
+        initial?.id
+      );
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(error, setError);
+      const hasOnlyMappedFieldErrors =
+        hasFieldErrors &&
+        appliedFields.length > 0 &&
+        Object.keys(unmatchedFieldErrors).length === 0;
+      if (!hasOnlyMappedFieldErrors) {
+        setSubmitError(buildFormApiErrorMessage(error, {
+          appliedFields,
+          fallbackMessage: "Revise os campos destacados e tente novamente.",
+        }));
+      }
+      return;
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -269,13 +292,18 @@ export function ProdutoModal({
                 Produto ativo
               </label>
             </div>
+            {submitError ? (
+              <div className="rounded-2xl border border-gym-danger/30 bg-gym-danger/10 px-4 py-3 text-sm text-gym-danger">
+                {submitError}
+              </div>
+            ) : null}
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+            <Button type="button" variant="outline" onClick={onClose} className="border-border" disabled={saving}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!canSave}>{initial ? "Salvar" : "Criar"}</Button>
+            <Button type="submit" disabled={!canSave}>{saving ? "Salvando..." : initial ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

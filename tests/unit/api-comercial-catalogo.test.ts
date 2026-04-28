@@ -120,6 +120,46 @@ describe("api/comercial-catalogo", () => {
       } as never);
       expect(req.ordem).toBeUndefined();
     });
+
+    it("preserva regras financeiras e contrato do plano", () => {
+      const req = buildPlanoUpsertApiRequest({
+        nome: "Plano Premium",
+        descricao: "Anual",
+        tipo: "ANUAL",
+        duracaoDias: 365,
+        valor: 199.9,
+        valorMatricula: 25,
+        cobraAnuidade: true,
+        valorAnuidade: 120,
+        parcelasMaxAnuidade: 6,
+        permiteRenovacaoAutomatica: true,
+        permiteCobrancaRecorrente: true,
+        diaCobrancaPadrao: [20, 5],
+        contratoTemplateHtml: " <p>Contrato</p> ",
+        contratoAssinatura: "DIGITAL",
+        contratoEnviarAutomaticoEmail: true,
+        atividades: ["a1"],
+        beneficios: ["Armário"],
+        destaque: true,
+        permiteVendaOnline: false,
+        ordem: 3,
+      } as never);
+
+      expect(req).toMatchObject({
+        cobraAnuidade: true,
+        valorAnuidade: 120,
+        parcelasMaxAnuidade: 6,
+        permiteRenovacaoAutomatica: true,
+        permiteCobrancaRecorrente: true,
+        diaCobrancaPadrao: 5,
+        contratoTemplateHtml: "<p>Contrato</p>",
+        contratoAssinatura: "DIGITAL",
+        contratoEnviarAutomaticoEmail: true,
+        destaque: true,
+        permiteVendaOnline: false,
+        ordem: 3,
+      });
+    });
   });
 
   describe("normalizePlanoApiResponse", () => {

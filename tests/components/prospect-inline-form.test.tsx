@@ -9,6 +9,7 @@ import {
 import type { Prospect } from "@/lib/types";
 
 import { ProspectInlineForm } from "@/app/(portal)/vendas/nova/components/prospect-inline-form";
+import { ApiRequestError } from "@/lib/api/http";
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 const mocks = vi.hoisted(() => ({
@@ -180,6 +181,45 @@ describe("ProspectInlineForm (VUN-2.4)", () => {
     expect(onCreated).not.toHaveBeenCalled();
     // Form ainda presente
     expect(screen.getByTestId("prospect-inline-form")).toBeInTheDocument();
+  });
+
+  it("aplica fieldErrors do backend inline sem toast duplicado", async () => {
+    mocks.createProspectApi.mockRejectedValueOnce(
+      new ApiRequestError({
+        status: 400,
+        message: "validation failed",
+        fieldErrors: {
+          telefone: "Telefone já cadastrado.",
+        },
+      })
+    );
+
+    render(
+      <ProspectInlineForm
+        cpf={CPF_VALIDO}
+        tenantId="tenant-1"
+        onCreated={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/i), {
+      target: { value: "João da Silva" },
+    });
+    fireEvent.change(screen.getByLabelText(/Telefone/i), {
+      target: { value: "11999990000" },
+    });
+
+    await submitForm();
+
+    await waitFor(() => {
+      expect(screen.getByText("Telefone já cadastrado.")).toBeInTheDocument();
+    });
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Falha ao criar prospect",
+      })
+    );
   });
 
   it("dispara onCancel quando o botão Cancelar é clicado", () => {

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { MessageSquare, Plus, Send, Settings, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -65,6 +66,7 @@ export default function WhatsAppPage() {
   const [tab, setTab] = useState<Tab>("config");
   const [error, setError] = useState<string | null>(null);
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { toast } = useToast();
 
   // Config query + form state
   const { data: config, isLoading: configLoading, isError: configError, error: configErrorObj } = useWhatsAppConfig({
@@ -138,9 +140,24 @@ export default function WhatsAppPage() {
     setTesting(true);
     try {
       const result = await testWhatsAppConnectionApi({ tenantId });
-      alert(result.success ? "Conexao OK!" : `Falha: ${result.message ?? "Erro desconhecido"}`);
+      toast(
+        result.success
+          ? {
+              title: "Conexão validada",
+              description: "O provedor WhatsApp respondeu normalmente.",
+            }
+          : {
+              title: "Falha na conexão",
+              description: result.message ?? "Erro desconhecido",
+              variant: "destructive",
+            }
+      );
     } catch (err) {
-      alert(`Erro: ${normalizeErrorMessage(err)}`);
+      toast({
+        title: "Erro ao testar conexão",
+        description: normalizeErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setTesting(false);
     }

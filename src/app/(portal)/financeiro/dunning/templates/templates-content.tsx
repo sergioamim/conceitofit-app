@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,6 +63,7 @@ const TEMPLATE_VARIABLES = [
 export function DunningTemplatesContent() {
   const { tenantId } = useTenantContext();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const queryKey = ["dunning", "templates", tenantId ?? ""];
 
@@ -96,7 +99,11 @@ export function DunningTemplatesContent() {
       void queryClient.invalidateQueries({ queryKey });
       setEditing(null);
     } catch (err) {
-      alert(`Erro ao salvar: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+      toast({
+        title: "Erro ao salvar template",
+        description: normalizeErrorMessage(err),
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -113,7 +120,11 @@ export function DunningTemplatesContent() {
       });
       void queryClient.invalidateQueries({ queryKey });
     } catch (err) {
-      alert(`Erro: ${err instanceof Error ? err.message : "Erro desconhecido"}`);
+      toast({
+        title: "Erro ao atualizar template",
+        description: normalizeErrorMessage(err),
+        variant: "destructive",
+      });
     }
   }
 

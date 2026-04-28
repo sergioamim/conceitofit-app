@@ -16,7 +16,7 @@ vi.mock("@/components/ui/dialog", () => ({
 
 // Mock Radix Select
 vi.mock("@/components/ui/select", () => ({
-  Select: ({ children, value, onValueChange }: any) => (
+  Select: ({ children }: any) => (
     <div data-testid="select-wrapper">{children}</div>
   ),
   SelectTrigger: ({ children, className }: any) => (
@@ -192,6 +192,19 @@ describe("PlanoForm", () => {
 
       await waitFor(() => {
         expect(screen.getByText("Salvar")).toBeDisabled();
+      });
+    });
+
+    it("mostra erro para dia de cobranca fora do contrato", async () => {
+      renderPlanoForm();
+
+      fireEvent.click(screen.getByLabelText(/permite cobrança recorrente/i));
+      fireEvent.change(screen.getByPlaceholderText("Ex: 5"), {
+        target: { value: "5, 10" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Informe um único dia entre 1 e 28.")).toBeInTheDocument();
       });
     });
   });
@@ -395,6 +408,7 @@ describe("PlanoForm", () => {
       const submitBtn = screen.getByText("Salvar");
       expect(submitBtn).toBeDisabled();
     });
+
   });
 
   describe("valores iniciais", () => {

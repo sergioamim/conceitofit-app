@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useEffect, useId, useMemo, type ChangeEvent, type ReactNode } from "react";
+import { memo, useEffect, useId, useMemo, useState, type ChangeEvent, type ReactNode } from "react";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod";
 import type { CreateProspectInput, Funcionario, Prospect, OrigemProspect } from "@/lib/types";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MaskedInput } from "@/components/shared/masked-input";
@@ -67,17 +68,19 @@ function ProspectModalComponent({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (data: CreateProspectInput) => void;
+  onSave: (data: CreateProspectInput) => void | Promise<void>;
   funcionarios: Funcionario[];
   initial?: Prospect | null;
 }) {
+  const [submitError, setSubmitError] = useState("");
   const {
     register,
     control,
     handleSubmit,
     reset,
+    setError,
     watch,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<ProspectFormValues>({
     resolver: zodResolver(prospectFormSchema),
     mode: "onTouched",
@@ -99,20 +102,31 @@ function ProspectModalComponent({
   );
 
   useEffect(() => {
+    setSubmitError("");
     reset(toFormValues(initial));
   }, [initial, open, reset]);
 
-  function onFormSubmit(values: ProspectFormValues) {
-    onSave({
-      nome: values.nome,
-      telefone: values.telefone,
-      email: values.email || "",
-      cpf: values.cpf || "",
-      origem: values.origem as OrigemProspect,
-      observacoes: values.observacoes || "",
-      responsavelId: values.responsavelId ? values.responsavelId : undefined,
-    });
-    onClose();
+  async function onFormSubmit(values: ProspectFormValues) {
+    setSubmitError("");
+    try {
+      await onSave({
+        nome: values.nome,
+        telefone: values.telefone,
+        email: values.email || "",
+        cpf: values.cpf || "",
+        origem: values.origem as OrigemProspect,
+        observacoes: values.observacoes || "",
+        responsavelId: values.responsavelId ? values.responsavelId : undefined,
+      });
+      onClose();
+    } catch (error) {
+      const applied = applyApiFieldErrors(error, setError);
+      const nextMessage = buildFormApiErrorMessage(error, {
+        appliedFields: applied.appliedFields,
+        fallbackMessage: "Não foi possível salvar o prospect.",
+      });
+      setSubmitError(nextMessage);
+    }
   }
 
   return (
@@ -125,6 +139,11 @@ function ProspectModalComponent({
         </DialogHeader>
         <form onSubmit={handleSubmit(onFormSubmit)}>
           <div className="grid gap-4 py-2">
+            {submitError ? (
+              <div className="rounded-md border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-sm text-gym-danger">
+                {submitError}
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
@@ -256,11 +275,11 @@ function ProspectModalComponent({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-border">
+            <Button type="button" variant="outline" onClick={onClose} className="border-border" disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={!canSave}>
-              Salvar
+            <Button type="submit" disabled={!canSave || isSubmitting}>
+              {isSubmitting ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </form>

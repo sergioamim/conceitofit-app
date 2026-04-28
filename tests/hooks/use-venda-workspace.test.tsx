@@ -49,6 +49,7 @@ const mocks = vi.hoisted(() => {
       addItem: vi.fn(),
       applyCodeToProduct: vi.fn(),
     },
+    toastSpy: vi.fn(),
   };
 });
 
@@ -58,6 +59,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/tenant/comercial/runtime", () => ({
   resolveAlunoTenantService: vi.fn(),
+}));
+
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: mocks.toastSpy }),
 }));
 
 vi.mock("@/lib/tenant/hooks/use-session-context", () => ({

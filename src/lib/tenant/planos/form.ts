@@ -1,12 +1,14 @@
 import type { Atividade, ModoAssinaturaContrato, Plano, TipoPlano } from "@/lib/types";
 
 function parseDiasCobrancaInput(input: string): number[] | undefined {
-  const dias = input
+  const dias = Array.from(new Set(
+    input
     .split(/[,;\s]+/)
     .map((s) => parseInt(s.trim(), 10))
     .filter((n) => Number.isFinite(n) && n >= 1 && n <= 28)
-    .sort((a, b) => a - b);
-  return dias.length > 0 ? dias : undefined;
+    .sort((a, b) => a - b)
+  ));
+  return dias.length > 0 ? [dias[0]] : undefined;
 }
 
 export interface PlanoFormValues {

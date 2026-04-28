@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getAlunoApi } from "@/lib/api/alunos";
+import { useToast } from "@/components/ui/use-toast";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { useSaleItems } from "./use-sale-items";
 export type VendaWorkspace = ReturnType<typeof useVendaWorkspace>;
 
 export function useVendaWorkspace() {
+  const { toast } = useToast();
   const tenantContext = useTenantContext();
   const queryClient = useQueryClient();
   // Fonte única de verdade: o tenant ativo da sessão (via TenantContext).
@@ -240,7 +242,11 @@ export function useVendaWorkspace() {
 
   const handleConfirmPayment = useCallback(async (pagamento: PagamentoVenda) => {
     if (requireCliente && !clienteId) {
-      alert("Cliente é obrigatório para venda de plano/serviço.");
+      toast({
+        variant: "destructive",
+        title: "Cliente obrigatório",
+        description: "Cliente é obrigatório para venda de plano/serviço.",
+      });
       return;
     }
     try {
@@ -294,9 +300,13 @@ export function useVendaWorkspace() {
       // no DialogOverlay. Resetar só após o usuário fechar o recibo deixa
       // o ciclo limpo: venda abre modal → modal fecha → cockpit reseta.
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Erro ao registrar venda");
+      toast({
+        variant: "destructive",
+        title: "Erro ao registrar venda",
+        description: err instanceof Error ? err.message : "Erro ao registrar venda",
+      });
     }
-  }, [alunos, clienteId, flow.cupomAppliedCode, flow.cupomPercent, processSale, queryClient, receipt, requireCliente, selectedPlano, tenantId]);
+  }, [alunos, clienteId, flow.cupomAppliedCode, flow.cupomPercent, processSale, queryClient, receipt, requireCliente, selectedPlano, tenantId, toast]);
 
   /**
    * Handler de fechamento do recibo (VUN-Onda-4 follow-up, 2026-04-22):

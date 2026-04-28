@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RichTextEditor } from "@/components/shared/rich-text-editor";
 import { cn } from "@/lib/utils";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import {
   type PlanoFormValues,
   TIPO_PLANO_LABEL,
   filterAtividadesSelecionadas,
   getDefaultPlanoFormValues,
-  isPlanoFormValid,
 } from "@/lib/tenant/planos/form";
 import { useFormDraft } from "@/hooks/use-form-draft";
 import { FormDraftIndicator, RestoreDraftModal } from "@/components/shared/form-draft-components";
@@ -57,11 +57,21 @@ export function PlanoForm({
   const [beneficioInput, setBeneficioInput] = useState("");
   const [activeTab, setActiveTab] = useState<"CONFIG" | "CONTRATO" | "BENEFICIOS">("CONFIG");
   const [contratoEditorMode, setContratoEditorMode] = useState<"VISUAL" | "HTML">("VISUAL");
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const formMethods = useForm<PlanoFormState>({
     resolver: zodResolver(planoFormSchema),
     defaultValues: toFormState(initial),
+    mode: "onChange",
   });
-  const { register, control, handleSubmit, reset, setValue } = formMethods;
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    setError,
+    formState: { errors, isValid },
+  } = formMethods;
 
   const { hasDraft, restoreDraft, discardDraft, clearDraft, lastModified } = useFormDraft({
     key: initial ? "plano_form_edit" : "plano_form_new",
@@ -103,14 +113,34 @@ export function PlanoForm({
 
   async function submitForm(values: PlanoFormState) {
     const payload = toPayload(values);
-    if (!isPlanoFormValid(payload) || submitting) return;
+    if (submitting) return;
 
-    await onSubmit({
-      ...payload,
-      atividades: filterAtividadesSelecionadas(atividades, payload.atividades),
-    });
-    
-    clearDraft();
+    try {
+      setSubmitError(null);
+      await onSubmit({
+        ...payload,
+        atividades: filterAtividadesSelecionadas(atividades, payload.atividades),
+      });
+      clearDraft();
+    } catch (error) {
+      const fieldResult = applyApiFieldErrors(error, setError);
+      if (fieldResult.appliedFields.length > 0) {
+        if (fieldResult.appliedFields.some((field) => ["contratoTemplateHtml", "contratoAssinatura"].includes(field))) {
+          setActiveTab("CONTRATO");
+        } else if (fieldResult.appliedFields.some((field) => ["atividades", "beneficios"].includes(field))) {
+          setActiveTab("BENEFICIOS");
+        } else {
+          setActiveTab("CONFIG");
+        }
+      }
+
+      const message = buildFormApiErrorMessage(error, {
+        appliedFields: fieldResult.appliedFields,
+      });
+      if (message) {
+        setSubmitError(message);
+      }
+    }
   }
 
   return (
@@ -121,6 +151,11 @@ export function PlanoForm({
         onDiscard={discardDraft}
       />
       <form className="space-y-6" onSubmit={handleSubmit(submitForm)}>
+      {submitError ? (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {submitError}
+        </div>
+      ) : null}
       <div role="tablist" aria-label="Seções do plano" className="flex items-center gap-2 rounded-xl border border-border bg-card p-2">
         <button
           type="button"
@@ -171,6 +206,7 @@ export function PlanoForm({
               <div className="space-y-1.5">
                 <label htmlFor="plano-form-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
                 <Input id="plano-form-nome" {...register("nome")} placeholder="Ex: Mensal Completo" className="border-border bg-secondary" />
+                {errors.nome?.message ? <p className="text-xs text-destructive">{errors.nome.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="plano-form-descricao" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
@@ -207,18 +243,22 @@ export function PlanoForm({
                     </Select>
                   )}
                 />
+                {errors.tipo?.message ? <p className="text-xs text-destructive">{errors.tipo.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="plano-form-duracao-dias" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Duração (dias) *</label>
                 <Input id="plano-form-duracao-dias" type="number" min={1} {...register("duracaoDias")} className="border-border bg-secondary" />
+                {errors.duracaoDias?.message ? <p className="text-xs text-destructive">{errors.duracaoDias.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="plano-form-valor" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor (R$) *</label>
                 <Input id="plano-form-valor" type="number" min={0} step="0.01" {...register("valor")} className="border-border bg-secondary" />
+                {errors.valor?.message ? <p className="text-xs text-destructive">{errors.valor.message}</p> : null}
               </div>
               <div className="space-y-1.5">
                 <label htmlFor="plano-form-valor-matricula" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Matrícula (R$)</label>
                 <Input id="plano-form-valor-matricula" type="number" min={0} step="0.01" {...register("valorMatricula")} className="border-border bg-secondary" />
+                {errors.valorMatricula?.message ? <p className="text-xs text-destructive">{errors.valorMatricula.message}</p> : null}
               </div>
             </div>
           </div>
@@ -243,10 +283,12 @@ export function PlanoForm({
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Valor anuidade (R$)</label>
                     <Input type="number" min={0} step="0.01" {...register("valorAnuidade")} disabled={!form.cobraAnuidade} className="border-border bg-secondary" />
+                    {errors.valorAnuidade?.message ? <p className="text-xs text-destructive">{errors.valorAnuidade.message}</p> : null}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Máx. parcelas anuidade</label>
                     <Input type="number" min={1} max={24} {...register("parcelasMaxAnuidade")} disabled={!form.cobraAnuidade} className="border-border bg-secondary" />
+                    {errors.parcelasMaxAnuidade?.message ? <p className="text-xs text-destructive">{errors.parcelasMaxAnuidade.message}</p> : null}
                   </div>
                 </div>
               </div>
@@ -268,9 +310,10 @@ export function PlanoForm({
                   Permite cobrança recorrente
                 </label>
                 <div className="space-y-1.5 md:max-w-60">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dias de cobranca</label>
-                  <Input placeholder="Ex: 5, 10, 15" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
-                  <p className="text-[10px] text-muted-foreground">Separados por virgula. Vazio = livre.</p>
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Dia de cobrança</label>
+                  <Input placeholder="Ex: 5" {...register("diaCobrancaPadrao")} disabled={!form.permiteCobrancaRecorrente || form.tipo === "AVULSO"} className="border-border bg-secondary" />
+                  <p className="text-[10px] text-muted-foreground">Informe um único dia de 1 a 28. Vazio = livre.</p>
+                  {errors.diaCobrancaPadrao?.message ? <p className="text-xs text-destructive">{errors.diaCobrancaPadrao.message}</p> : null}
                 </div>
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <input type="checkbox" {...register("destaque")} />
@@ -283,6 +326,7 @@ export function PlanoForm({
                 <div className="space-y-1.5 md:max-w-60">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ordem</label>
                   <Input type="number" {...register("ordem")} className="border-border bg-secondary" />
+                  {errors.ordem?.message ? <p className="text-xs text-destructive">{errors.ordem.message}</p> : null}
                 </div>
               </div>
             </div>
@@ -313,6 +357,7 @@ export function PlanoForm({
                   </Select>
                 )}
               />
+              {errors.contratoAssinatura?.message ? <p className="text-xs text-destructive">{errors.contratoAssinatura.message}</p> : null}
             </div>
             <label className="mt-6 flex items-center gap-2 text-sm text-muted-foreground md:mt-0 md:self-end">
               <input type="checkbox" {...register("contratoEnviarAutomaticoEmail")} />
@@ -418,10 +463,10 @@ export function PlanoForm({
       ) : null}
 
       <div className="flex items-center justify-end gap-2">
-        <Button type="button" variant="outline" className="border-border" onClick={onCancel}>
+        <Button type="button" variant="outline" className="border-border" onClick={onCancel} disabled={submitting}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={!isPlanoFormValid(toPayload(form)) || submitting}>
+        <Button type="submit" disabled={!isValid || submitting}>
           {submitLabel}
         </Button>
       </div>

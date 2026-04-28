@@ -26,11 +26,15 @@ export default function NovoPlanoPage() {
   async function handleSubmit(values: PlanoFormValues) {
     if (!tenantId) return;
     setSaving(true);
-    await createPlanoApi({
-      tenantId,
-      data: buildPlanoPayload(values),
-    });
-    router.push("/planos");
+    try {
+      await createPlanoApi({
+        tenantId,
+        data: buildPlanoPayload(values),
+      });
+      router.push("/planos");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

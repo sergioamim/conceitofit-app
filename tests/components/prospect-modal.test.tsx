@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ProspectModal } from "@/components/shared/prospect-modal";
+import { ApiRequestError } from "@/lib/api/http";
 import type { Funcionario, Prospect } from "@/lib/types";
 
 vi.mock("@/components/ui/dialog", () => ({
@@ -10,6 +10,7 @@ vi.mock("@/components/ui/dialog", () => ({
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <h2>{children}</h2>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
+  DialogDescription: ({ children }: any) => <p>{children}</p>,
 }));
 
 vi.mock("@/components/ui/select", () => ({
@@ -135,5 +136,34 @@ describe("ProspectModal", () => {
     render(<ProspectModal {...defaultProps} />);
     expect(screen.getByText("E-mail")).toBeInTheDocument();
     expect(screen.getByText("Observações")).toBeInTheDocument();
+  });
+
+  it("mantém o modal aberto e aplica erro inline quando o save falha", async () => {
+    const onClose = vi.fn();
+    const onSave = vi.fn().mockRejectedValue(
+      new ApiRequestError({
+        status: 400,
+        message: "validation failed",
+        fieldErrors: {
+          telefone: "Telefone já cadastrado.",
+        },
+      })
+    );
+
+    render(<ProspectModal {...defaultProps} onClose={onClose} onSave={onSave} />);
+
+    fireEvent.change(screen.getByPlaceholderText("Nome completo"), {
+      target: { value: "Maria Prospect" },
+    });
+    fireEvent.change(screen.getByTestId("phone-input"), {
+      target: { value: "11999990000" },
+    });
+
+    fireEvent.click(screen.getByText("Salvar"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Telefone já cadastrado.")).toBeInTheDocument();
+    });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

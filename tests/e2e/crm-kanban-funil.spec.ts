@@ -392,16 +392,15 @@ test.describe("CRM — Funil de Vendas (Kanban)", () => {
       },
     });
 
-    // O prompt() é nativo — precisa aceitar antes de disparar
-    page.on("dialog", (dialog) => {
-      void dialog.accept("Não interessado");
-    });
-
     await expect(
       page.locator('[data-testid="kanban-card-p4"]'),
     ).toBeVisible();
 
     await dragCardToColumn(page, "kanban-card-p4", "kanban-column-PERDIDO");
+
+    await expect(page.getByText("Marcar prospect como perdido")).toBeVisible();
+    await page.getByLabel("Motivo da perda").fill("Não interessado");
+    await page.getByRole("button", { name: "Marcar como perdido" }).click();
 
     await expect.poll(() => marcouPerdido, { timeout: 5_000 }).toBe(true);
   });

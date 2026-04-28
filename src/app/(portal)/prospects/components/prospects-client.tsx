@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProspectModal } from "@/components/shared/prospect-modal";
+import { ProspectLossReasonDialog } from "@/components/shared/prospect-loss-reason-dialog";
 import { ProspectTimelineModal } from "@/components/shared/prospect-timeline-modal";
 import type {
   Prospect,
@@ -182,6 +183,7 @@ export function ProspectsClient() {
   const modal = useDialogState();
   const [editing, setEditing] = useState<Prospect | null>(null);
   const [timeline, setTimeline] = useState<Prospect | null>(null);
+  const [lossTargetId, setLossTargetId] = useState<string | null>(null);
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
@@ -295,8 +297,7 @@ export function ProspectsClient() {
         email: data.email,
       });
       if (isDup) {
-        alert("Já existe prospect com este telefone, CPF ou e-mail.");
-        return;
+        throw new Error("Já existe prospect com este telefone, CPF ou e-mail.");
       }
       await createMutation.mutateAsync(data);
     },
@@ -334,12 +335,22 @@ export function ProspectsClient() {
   );
 
   const handlePerdido = useCallback(
-    async (id: string) => {
+    (id: string) => {
       if (!tenantId) return;
-      const motivo = prompt("Motivo da perda (opcional):");
-      await lostMutation.mutateAsync({ id, motivo: motivo ?? undefined });
+      setLossTargetId(id);
     },
-    [tenantId, lostMutation]
+    [tenantId]
+  );
+
+  const handleCloseLossDialog = useCallback(() => setLossTargetId(null), []);
+
+  const handleConfirmLoss = useCallback(
+    async (motivo?: string) => {
+      if (!tenantId || !lossTargetId) return;
+      await lostMutation.mutateAsync({ id: lossTargetId, motivo });
+      setLossTargetId(null);
+    },
+    [lossTargetId, lostMutation, tenantId]
   );
 
   const handleDelete = useCallback(
@@ -362,6 +373,12 @@ export function ProspectsClient() {
         onSave={handleEditSave}
         funcionarios={funcionarios}
         initial={editing}
+      />
+      <ProspectLossReasonDialog
+        open={lossTargetId !== null}
+        submitting={lostMutation.isPending}
+        onClose={handleCloseLossDialog}
+        onConfirm={handleConfirmLoss}
       />
       <ProspectTimelineModal prospect={timeline} onClose={handleCloseTimeline} />
 

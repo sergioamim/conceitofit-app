@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { Play, Square, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/use-toast";
 import {
   listCrmCadenceExecutionsApi,
   cancelCrmCadenceExecutionApi,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/api/crm-cadencias";
 import type { CrmCadenceExecution, CrmCadenceExecutionStatus } from "@/lib/types";
 import { formatDateTime } from "@/lib/formatters";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import {
   CRM_CADENCE_EXECUTION_STATUS_LABEL,
 } from "@/lib/tenant/crm/workspace";
@@ -35,6 +37,7 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
   const [processing, setProcessing] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const { confirm, ConfirmDialog } = useConfirmDialog();
+  const { toast } = useToast();
 
   const load = useCallback(async () => {
     if (!tenantId) return;
@@ -55,10 +58,17 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
     setProcessing(true);
     try {
       const result = await processOverdueCadenceTasksApi({ tenantId });
-      alert(`Processado: ${result.processed} tarefa(s), ${result.escalated} escalação(ões).`);
+      toast({
+        title: "Tarefas vencidas processadas",
+        description: `Processado: ${result.processed} tarefa(s), ${result.escalated} escalação(ões).`,
+      });
       await load();
-    } catch {
-      alert("Não foi possível processar tarefas vencidas.");
+    } catch (error) {
+      toast({
+        title: "Falha ao processar vencidas",
+        description: normalizeErrorMessage(error),
+        variant: "destructive",
+      });
     } finally {
       setProcessing(false);
     }
@@ -70,9 +80,17 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
       setCancellingId(executionId);
       try {
         await cancelCrmCadenceExecutionApi({ tenantId, id: executionId });
+        toast({
+          title: "Execução cancelada",
+          description: "A execução da cadência foi cancelada com sucesso.",
+        });
         await load();
-      } catch {
-        alert("Não foi possível cancelar a execução.");
+      } catch (error) {
+        toast({
+          title: "Falha ao cancelar execução",
+          description: normalizeErrorMessage(error),
+          variant: "destructive",
+        });
       } finally {
         setCancellingId(null);
       }

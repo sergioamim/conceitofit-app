@@ -25,6 +25,7 @@ import type {
   ProspectAgendamento,
   StatusAgendamento,
 } from "@/lib/types";
+import { ProspectLossReasonDialog } from "@/components/shared/prospect-loss-reason-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { cn } from "@/lib/utils";
 import { ORIGEM_LABEL, type Tab } from "./prospect-shared";
@@ -51,6 +52,7 @@ export function ProspectDetailModal({
   const [autorNome, setAutorNome] = useState("Academia");
   const [sendingMsg, setSendingMsg] = useState(false);
   const [agendaOpen, setAgendaOpen] = useState(false);
+  const [lossDialogOpen, setLossDialogOpen] = useState(false);
   const [agForm, setAgForm] = useState<AgForm>({
     titulo: "Visita à academia",
     data: "",
@@ -59,6 +61,7 @@ export function ProspectDetailModal({
     observacoes: "",
   });
   const [savingAg, setSavingAg] = useState(false);
+  const [savingLoss, setSavingLoss] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const tenantId = tenantContext.tenantId || getActiveTenantIdFromSession() || "";
 
@@ -124,12 +127,7 @@ export function ProspectDetailModal({
     if (status === prospect.status) return;
     if (!canTransitionProspectStatus(prospect.status, status)) return;
     if (status === "PERDIDO") {
-      const motivo = prompt("Motivo da perda (opcional):");
-      await marcarProspectPerdidoApi({
-        tenantId,
-        id: prospect.id,
-        motivo: motivo ?? undefined,
-      });
+      setLossDialogOpen(true);
     } else {
       await updateProspectStatusApi({
         tenantId,
@@ -139,6 +137,23 @@ export function ProspectDetailModal({
     }
     onChanged();
     onClose();
+  }
+
+  async function handleConfirmLost(motivo?: string) {
+    if (!prospect || !tenantId) return;
+    setSavingLoss(true);
+    try {
+      await marcarProspectPerdidoApi({
+        tenantId,
+        id: prospect.id,
+        motivo,
+      });
+      setLossDialogOpen(false);
+      onChanged();
+      onClose();
+    } finally {
+      setSavingLoss(false);
+    }
   }
 
   async function handleAdvance() {
@@ -193,15 +208,22 @@ export function ProspectDetailModal({
   const responsavel = prospect.responsavelId ? funcionariosMap.get(prospect.responsavelId) : null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={onClose}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+    <>
+      <ProspectLossReasonDialog
+        open={lossDialogOpen}
+        submitting={savingLoss}
+        onClose={() => setLossDialogOpen(false)}
+        onConfirm={handleConfirmLost}
+      />
       <div
-        className="relative z-10 flex h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
+        className="fixed inset-0 z-50 flex items-center justify-center"
+        onClick={onClose}
       >
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+        <div
+          className="relative z-10 flex h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4 border-b border-border p-5">
           <div className="min-w-0 flex-1">
@@ -290,7 +312,8 @@ export function ProspectDetailModal({
             />
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

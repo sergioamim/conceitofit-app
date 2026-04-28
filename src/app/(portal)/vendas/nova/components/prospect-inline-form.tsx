@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { PhoneInput } from "@/components/shared/phone-input";
 import { useToast } from "@/components/ui/use-toast";
 import { createProspectApi } from "@/lib/api/crm";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { formatCpf } from "@/lib/formatters";
 import type { Prospect } from "@/lib/types";
 
@@ -114,12 +115,17 @@ export function ProspectInlineForm({
       });
       onCreated(prospect);
     } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Falha ao criar prospect",
-        description:
-          err instanceof Error ? err.message : "Tente novamente em instantes.",
-      });
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(err, setError);
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Falha ao criar prospect",
+          description: buildFormApiErrorMessage(err, {
+            appliedFields,
+            fallbackMessage: "Tente novamente em instantes.",
+          }),
+        });
+      }
     } finally {
       setSubmitting(false);
     }

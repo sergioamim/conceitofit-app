@@ -14,6 +14,7 @@ import {
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useProspects, useOptimisticProspectStatus } from "@/lib/query/use-prospects";
 import { useCrmTasksQuery } from "@/lib/query/use-crm-tasks";
+import { ProspectLossReasonDialog } from "@/components/shared/prospect-loss-reason-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 const ProspectDetailModal = dynamic(
   () => import("@/components/shared/prospect-detail-modal").then((mod) => mod.ProspectDetailModal),
@@ -67,6 +68,7 @@ export function ProspectsKanbanContent() {
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>(FILTER_ALL);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+  const [pendingLostChange, setPendingLostChange] = useState<{ id: string } | null>(null);
   const [error, setError] = useState("");
 
   const loading = prospectsLoading || crmTasksLoading;
@@ -123,13 +125,31 @@ export function ProspectsKanbanContent() {
       return;
     }
 
-    const motivo =
-      status === "PERDIDO" ? prompt("Motivo da perda (opcional):") : undefined;
-    if (status === "PERDIDO" && motivo === null) return;
+    if (status === "PERDIDO") {
+      setError("");
+      setPendingLostChange({ id });
+      return;
+    }
 
     try {
       setError("");
-      await statusMutation.mutateAsync({ id, status, motivo: motivo ?? undefined });
+      await statusMutation.mutateAsync({ id, status });
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Falha ao atualizar etapa do prospect.",
+      );
+    }
+  }
+
+  async function handleConfirmLost(motivo?: string) {
+    if (!pendingLostChange) return;
+
+    try {
+      setError("");
+      await statusMutation.mutateAsync({ id: pendingLostChange.id, status: "PERDIDO", motivo });
+      setPendingLostChange(null);
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -145,6 +165,12 @@ export function ProspectsKanbanContent() {
 
   return (
     <div className="space-y-6">
+      <ProspectLossReasonDialog
+        open={pendingLostChange !== null}
+        submitting={statusMutation.isPending}
+        onClose={() => setPendingLostChange(null)}
+        onConfirm={handleConfirmLost}
+      />
       {selectedProspect && (
         <ProspectDetailModal
           key={selectedProspect.id}
