@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import {
   getAccessibleContextsApi,
@@ -164,7 +165,18 @@ export function GlobalLoginFlow({
       setTenantOptions([]);
       setStep("REDE");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Falha ao autenticar.");
+      const fieldResult = applyApiFieldErrors(submitError, loginForm.setError, {
+        mapField: {
+          email: "identifier",
+          identifier: "identifier",
+          identifierProvided: "identifier",
+          password: "password",
+        },
+      });
+      setError(buildFormApiErrorMessage(submitError, {
+        appliedFields: fieldResult.appliedFields,
+        fallbackMessage: "Falha ao autenticar.",
+      }));
     } finally {
       setSaving(false);
     }

@@ -118,10 +118,6 @@ interface AccessNetworkContextApiResponse {
   helpEmail?: string;
 }
 
-interface SwitchTenantApiRequest {
-  tenantId: string;
-}
-
 function normalizeSession(
   response: LoginApiResponse,
   options?: {
@@ -507,20 +503,6 @@ export async function meApi(): Promise<AuthUser> {
     broadAccess: response.broadAccess,
     operationalAccess,
   };
-}
-
-async function switchTenantApi(tenantId: string): Promise<AuthSession> {
-  const response = await apiRequest<LoginApiResponse>({
-    path: "/api/v1/auth/context/tenant",
-    method: "POST",
-    body: { tenantId } satisfies SwitchTenantApiRequest,
-  });
-  const session = normalizeSession(response, {
-    preserveTenantContext: true,
-    fallbackActiveTenantId: tenantId,
-  });
-  saveAuthSession(session);
-  return session;
 }
 
 function buildDefaultAccessNetworkContext(networkSubdomain: string): AccessNetworkContext {

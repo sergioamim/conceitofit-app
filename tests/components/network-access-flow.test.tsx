@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NetworkAccessFlow } from "@/components/auth/network-access-flow";
+import { ApiRequestError } from "@/lib/api/http";
 import {
   parseTenantThemeCookiePayload,
   TENANT_THEME_COOKIE_NAME,
@@ -184,5 +185,30 @@ describe("NetworkAccessFlow", () => {
     });
     expect(mockQueryClear).toHaveBeenCalled();
     expect(mockRefresh).toHaveBeenCalled();
+  });
+
+  it("mapeia fieldErrors do backend no fluxo de recuperação", async () => {
+    mockRequestPasswordRecoveryApi.mockRejectedValueOnce(
+      new ApiRequestError({
+        status: 400,
+        message: "Validation Error",
+        fieldErrors: {
+          identifier: "Identificador inválido.",
+        },
+      }),
+    );
+
+    render(<NetworkAccessFlow networkSubdomain="rede-norte" nextPath="/app" mode="recovery" />);
+
+    fireEvent.change(screen.getByLabelText("Identificador"), {
+      target: { value: "ana@qa.local" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar instruções" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Identificador inválido.")).toBeInTheDocument();
+    });
+
+    expect(mockRequestPasswordRecoveryApi).toHaveBeenCalled();
   });
 });

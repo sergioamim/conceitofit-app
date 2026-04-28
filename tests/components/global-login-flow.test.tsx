@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { GlobalLoginFlow } from "@/components/auth/global-login-flow";
+import { ApiRequestError } from "@/lib/api/http";
 
 const mockReplace = vi.fn();
 const mockRefresh = vi.fn();
@@ -116,5 +117,33 @@ describe("GlobalLoginFlow", () => {
       expect(mockSetPreferredTenantId).toHaveBeenCalledWith("tenant-barra");
       expect(mockReplace).toHaveBeenCalledWith("/dashboard");
     });
+  });
+
+  it("mapeia fieldErrors do backend no login global", async () => {
+    mockLoginApi.mockRejectedValueOnce(
+      new ApiRequestError({
+        status: 400,
+        message: "Validation Error",
+        fieldErrors: {
+          identifier: "Identificador inválido.",
+        },
+      }),
+    );
+
+    render(<GlobalLoginFlow nextPath="/dashboard" />);
+
+    fireEvent.change(screen.getByLabelText("E-mail, CPF ou usuário"), {
+      target: { value: "operador@qa.local" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "12345678" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Entrar" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Identificador inválido.")).toBeInTheDocument();
+    });
+
+    expect(mockGetAccessibleContextsApi).not.toHaveBeenCalled();
   });
 });
