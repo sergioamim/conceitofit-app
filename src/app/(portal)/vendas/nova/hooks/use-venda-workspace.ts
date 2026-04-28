@@ -15,13 +15,18 @@ import type { SuggestionOption } from "@/components/shared/suggestion-input";
 import type { CaixaResponse, SaldoParcialResponse } from "@/lib/api/caixa.types";
 
 /**
- * Wave A1 (Item venda + caixa dia anterior): estado pendente quando o
- * backend rejeita venda com 409 CAIXA_DIA_ANTERIOR. Permite ao consumer
- * (cockpit) renderizar modal com 3 ações: Continuar / Conferir / Cancelar.
+ * Estado pendente quando backend rejeita venda por restrição de caixa
+ * (409 CAIXA_DIA_ANTERIOR ou CAIXA_NAO_ABERTO). Cockpit renderiza modal
+ * com ações dependendo do `kind`:
+ *  - DIA_ANTERIOR: 3 ações (Continuar / Conferir+Fechar+Abrir / Cancelar)
+ *  - NAO_ABERTO:   2 ações (Abrir caixa inline / Cancelar)
+ *
+ * `caixaAtivo` e `saldoAtual` só são populados em DIA_ANTERIOR.
  */
 export interface VendaCaixaDiaAnteriorPendente {
-  caixaAtivo: CaixaResponse;
-  saldoAtual: SaldoParcialResponse;
+  kind: "DIA_ANTERIOR" | "NAO_ABERTO";
+  caixaAtivo: CaixaResponse | null;
+  saldoAtual: SaldoParcialResponse | null;
   pagamentoRetry: PagamentoVenda;
 }
 
@@ -310,14 +315,14 @@ export function useVendaWorkspace() {
     try {
       await executarVenda(pagamento);
     } catch (err) {
-      // Wave A1: 409 CAIXA_DIA_ANTERIOR vira modal com 3 ações.
-      // Carregamos o caixa ativo (com saldo) pra alimentar o FecharCaixaModal
-      // caso o user opte por "Conferir e fechar".
+      // 409 CAIXA_DIA_ANTERIOR: carrega ativo (com saldo) pra alimentar o
+      // FecharCaixaModal caso operador escolha "Conferir e fechar".
       if (isCaixaApiError(err) && err.code === "CAIXA_DIA_ANTERIOR") {
         try {
           const ativo = await getCaixaAtivo();
           if (ativo) {
             setCaixaDiaAnteriorPendente({
+              kind: "DIA_ANTERIOR",
               caixaAtivo: ativo.caixa,
               saldoAtual: ativo.saldo,
               pagamentoRetry: pagamento,
@@ -327,6 +332,17 @@ export function useVendaWorkspace() {
         } catch {
           // Falha ao carregar caixa — cai no toast genérico abaixo.
         }
+      }
+      // 409 CAIXA_NAO_ABERTO: nao ha caixa pra fechar; abre direto o
+      // formulario de abertura inline e re-tenta a venda apos abrir.
+      if (isCaixaApiError(err) && err.code === "CAIXA_NAO_ABERTO") {
+        setCaixaDiaAnteriorPendente({
+          kind: "NAO_ABERTO",
+          caixaAtivo: null,
+          saldoAtual: null,
+          pagamentoRetry: pagamento,
+        });
+        return;
       }
       toast({
         variant: "destructive",
@@ -357,18 +373,29 @@ export function useVendaWorkspace() {
     setCaixaDiaAnteriorPendente(null);
   }, []);
 
-  /** Wave A1: caixa anterior foi fechado — reexecuta venda original. */
-  const handleCaixaAnteriorFechado = useCallback(async () => {
+  /**
+   * Caixa novo aberto inline (apos fechamento ou direto em NAO_ABERTO).
+   * Reexecuta a venda original. Sem flag aceitarCaixaDiaAnterior porque
+   * agora ha um caixa fresco do dia.
+   */
+  const handleNovoCaixaAberto = useCallback(async () => {
     const pendente = caixaDiaAnteriorPendente;
     if (!pendente) return;
     setCaixaDiaAnteriorPendente(null);
-    // Caixa anterior fechado — operador precisa abrir um novo. Por enquanto
-    // mostramos toast guiando: a UI dedicada está em /caixa.
     toast({
-      title: "Caixa anterior encerrado",
-      description: "Abra um novo caixa em Meu Caixa e refaça a venda.",
+      title: "Caixa aberto",
+      description: "Refazendo a venda automaticamente.",
     });
-  }, [caixaDiaAnteriorPendente, toast]);
+    try {
+      await executarVenda(pendente.pagamentoRetry);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao registrar venda",
+        description: err instanceof Error ? err.message : "Erro ao registrar venda",
+      });
+    }
+  }, [caixaDiaAnteriorPendente, executarVenda, toast]);
 
   /**
    * Handler de fechamento do recibo (VUN-Onda-4 follow-up, 2026-04-22):
@@ -428,11 +455,11 @@ export function useVendaWorkspace() {
     handleConfirmPayment,
     handleReceiptClose,
 
-    // Wave A1: caixa de dia anterior — modal 3 ações
+    // Modal de bloqueio por caixa (DIA_ANTERIOR ou NAO_ABERTO)
     caixaDiaAnteriorPendente,
     handleConfirmarVendaDiaAnterior,
     handleCancelarVendaDiaAnterior,
-    handleCaixaAnteriorFechado,
+    handleNovoCaixaAberto,
 
     // VUN-3.3 — Payment panel workspace extras
     formaPagamento,

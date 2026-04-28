@@ -49,7 +49,7 @@ function NovaVendaPageContent() {
     caixaDiaAnteriorPendente,
     handleConfirmarVendaDiaAnterior,
     handleCancelarVendaDiaAnterior,
-    handleCaixaAnteriorFechado,
+    handleNovoCaixaAberto,
     setClienteId,
     clienteId,
     clienteQuery,
@@ -152,16 +152,18 @@ function NovaVendaPageContent() {
         />
       )}
 
-      {/* Wave A1: modal exibido quando backend rejeita venda com 409
-          CAIXA_DIA_ANTERIOR. 3 ações: continuar, conferir+fechar, cancelar. */}
+      {/* Modal exibido quando backend rejeita venda por restricao de caixa
+          (CAIXA_DIA_ANTERIOR ou CAIXA_NAO_ABERTO). Encadeia fechar+abrir
+          inline e reexecuta a venda automaticamente. */}
       {caixaDiaAnteriorPendente ? (
         <CaixaDiaAnteriorVendaModal
           open
+          kind={caixaDiaAnteriorPendente.kind}
           caixaAtivo={caixaDiaAnteriorPendente.caixaAtivo}
           saldoAtual={caixaDiaAnteriorPendente.saldoAtual}
           onContinuar={() => void handleConfirmarVendaDiaAnterior()}
           onCancelar={handleCancelarVendaDiaAnterior}
-          onCaixaFechado={() => void handleCaixaAnteriorFechado()}
+          onCaixaAberto={() => void handleNovoCaixaAberto()}
         />
       ) : null}
 
