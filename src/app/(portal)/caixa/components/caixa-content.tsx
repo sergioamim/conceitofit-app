@@ -1,11 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, LogOut, Minus, RefreshCcw } from "lucide-react";
+import { BarChart3, Loader2, LogOut, Minus, RefreshCcw, Split } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { getCaixaAtivo } from "@/lib/api/caixa";
+import { getActiveTenantIdFromSession } from "@/lib/api/session";
+import { SplitCobrancaModal } from "@/components/pagamento-split/split-cobranca-modal";
+import { RelatorioCaixaDiarioModal } from "@/components/pagamento-split/relatorio-caixa-diario-modal";
 import type {
   CaixaResponse,
   MovimentoResumoResponse,
@@ -66,6 +69,9 @@ export function CaixaContent({ initial }: CaixaContentProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [sangriaOpen, setSangriaOpen] = useState(false);
   const [fecharOpen, setFecharOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
+  const [splitTenantId, setSplitTenantId] = useState<string | null>(null);
   const [hojeIso, setHojeIso] = useState<string | null>(null);
 
   // Movimentos vem direto do GET /api/caixas/ativo (mesmo payload do caixa),
@@ -100,6 +106,11 @@ export function CaixaContent({ initial }: CaixaContentProps) {
     const dd = String(now.getDate()).padStart(2, "0");
     const next = `${yyyy}-${mm}-${dd}`;
     setHojeIso(next);
+  }, []);
+
+  // Tenant ativo precisa ser lido client-side (localStorage). Mounted-guard.
+  useEffect(() => {
+    setSplitTenantId(getActiveTenantIdFromSession() ?? null);
   }, []);
 
   const refetch = useCallback(async (): Promise<void> => {
@@ -235,6 +246,26 @@ export function CaixaContent({ initial }: CaixaContentProps) {
           <Button
             type="button"
             variant="outline"
+            onClick={() => setSplitOpen(true)}
+            disabled={!splitTenantId}
+            data-testid="caixa-cobranca-split"
+          >
+            <Split className="mr-2 size-4" />
+            Cobrança split
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setRelatorioOpen(true)}
+            disabled={!splitTenantId}
+            data-testid="caixa-relatorio-diario"
+          >
+            <BarChart3 className="mr-2 size-4" />
+            Relatório do dia
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => setSangriaOpen(true)}
           >
             <Minus className="mr-2 size-4" />
@@ -272,6 +303,28 @@ export function CaixaContent({ initial }: CaixaContentProps) {
         saldoAtual={ativo.saldo}
         onSuccess={handleFecharSuccess}
       />
+
+      {splitTenantId ? (
+        <>
+          <SplitCobrancaModal
+            open={splitOpen}
+            onOpenChange={setSplitOpen}
+            tenantId={splitTenantId}
+            onSuccess={() => {
+              void refetch();
+              toast({
+                title: "Cobrança split criada",
+                description: "Pagamento registrado com múltiplas formas.",
+              });
+            }}
+          />
+          <RelatorioCaixaDiarioModal
+            open={relatorioOpen}
+            onOpenChange={setRelatorioOpen}
+            tenantId={splitTenantId}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
