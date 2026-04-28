@@ -186,21 +186,21 @@ export function TransacoesContent({ initialData }: TransacoesContentProps) {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Receitas</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">{formatBRL(resumo.receitas)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-teal">{formatBRL(resumo.receitas)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Despesas</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-danger">{formatBRL(resumo.despesas)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-danger">{formatBRL(resumo.despesas)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo Liquido</p>
-          <p className={`mt-2 font-display text-2xl font-extrabold ${resumo.saldoLiquido >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
+          <p className={`mt-2 text-2xl font-extrabold ${resumo.saldoLiquido >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
             {formatBRL(resumo.saldoLiquido)}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pendentes</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">{resumo.pendentes}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-warning">{resumo.pendentes}</p>
         </div>
       </div>
 
@@ -293,7 +293,7 @@ export function TransacoesContent({ initialData }: TransacoesContentProps) {
       <Dialog open={openNova} onOpenChange={setOpenNova}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display">Nova Transacao</DialogTitle>
+            <DialogTitle className="">Nova Transacao</DialogTitle>
             <DialogDescription>Registre uma nova transacao financeira.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">

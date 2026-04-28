@@ -244,7 +244,7 @@ export function AssignmentDialog({
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className="border-border bg-card sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Atribuir treino padrão</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Atribuir treino padrão</DialogTitle>
           <DialogDescription>
             Formalize a atribuição do template {assignmentTemplate ? getTemplateDisplayName(assignmentTemplate) : "-"} para um aluno.
           </DialogDescription>
@@ -402,7 +402,7 @@ export function ArchiveDialog({ template, archiving, onClose, onConfirm }: Archi
     >
       <DialogContent className="border-border bg-card sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Arquivar treino padrão</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Arquivar treino padrão</DialogTitle>
           <DialogDescription>
             {`Confirme o arquivamento de ${getTemplateDisplayName(template)}. A ação remove o template do fluxo ativo de atribuição.`}
           </DialogDescription>

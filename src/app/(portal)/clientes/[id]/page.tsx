@@ -562,7 +562,7 @@ export default function ClienteDetalhePage() {
               {/* Contratos */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="font-display text-base font-bold">Contratos</h2>
+                  <h2 className="text-base font-bold">Contratos</h2>
                   <Button variant="outline" size="sm" onClick={() => w.setTab("matriculas")} className="border-border text-xs">Ver mais</Button>
                 </div>
                 <div className="divide-y divide-border">
@@ -582,7 +582,7 @@ export default function ClienteDetalhePage() {
               {/* Histórico de vendas */}
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="font-display text-base font-bold">Histórico de vendas</h2>
+                  <h2 className="text-base font-bold">Histórico de vendas</h2>
                   <Button variant="outline" size="sm" onClick={() => w.router.push(`/pagamentos?clienteId=${aluno.id}`)} className="border-border text-xs">Ver todas</Button>
                 </div>
                 <div className="divide-y divide-border">
@@ -604,7 +604,7 @@ export default function ClienteDetalhePage() {
 
               {/* Histórico de suspensão */}
               <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="font-display text-base font-bold">Histórico de suspensão</h2>
+                <h2 className="text-base font-bold">Histórico de suspensão</h2>
                 <div className="mt-3 divide-y divide-border">
                   {(aluno.suspensoes?.length ?? 0) === 0 && <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma suspensão registrada</p>}
                   {(aluno.suspensoes ?? []).map((s, idx) => (
@@ -633,7 +633,7 @@ export default function ClienteDetalhePage() {
               />
 
               <div className="rounded-xl border border-border bg-card p-5">
-                <h2 className="font-display text-base font-bold">Histórico de contratos</h2>
+                <h2 className="text-base font-bold">Histórico de contratos</h2>
                 <div className="mt-3 divide-y divide-border">
                   {w.matriculas.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">Nenhum contrato encontrado</p>}
                   {w.matriculas.map((m) => (
@@ -652,7 +652,7 @@ export default function ClienteDetalhePage() {
 
           {w.tab === "financeiro" && (
             <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="font-display text-base font-bold">Financeiro</h2>
+              <h2 className="text-base font-bold">Financeiro</h2>
               <div className="mt-3 divide-y divide-border">
                 {w.pagamentos.length === 0 && <p className="py-6 text-center text-sm text-muted-foreground">Nenhum pagamento encontrado</p>}
                 {w.pagamentos.map((p) => (
@@ -683,7 +683,7 @@ export default function ClienteDetalhePage() {
 
           {w.tab === "nfse" && (
             <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="font-display text-base font-bold">NFS-e do cliente</h2>
+              <h2 className="text-base font-bold">NFS-e do cliente</h2>
               {w.nfseTabState.status === "loading" && <p className="mt-3 text-sm text-muted-foreground">Verificando bloqueios fiscais da unidade...</p>}
               {w.nfseTabState.status === "error" && (
                 <div className="mt-3 rounded-xl border border-gym-warning/40 bg-gym-warning/10 p-3 text-sm text-gym-warning">

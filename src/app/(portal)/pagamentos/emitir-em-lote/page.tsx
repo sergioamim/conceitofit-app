@@ -214,7 +214,7 @@ export default function EmitirNfseEmLotePage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg">Confirmar emissão em lote</DialogTitle>
+            <DialogTitle className="text-lg">Confirmar emissão em lote</DialogTitle>
             <DialogDescription className="flex items-center gap-2">
               <FileText className="size-4" />
               Confirmar emissão da NFS-e para <strong>{totalSelecionado.length}</strong> pagamento(s) selecionado(s).

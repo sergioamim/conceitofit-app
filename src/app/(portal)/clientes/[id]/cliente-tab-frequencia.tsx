@@ -65,7 +65,7 @@ export function ClienteTabFrequencia({ presencas }: { presencas: Presenca[] }) {
       <div className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2">
           <Activity className="size-4 text-muted-foreground" />
-          <h2 className="font-display text-base font-bold">Frequência</h2>
+          <h2 className="text-base font-bold">Frequência</h2>
         </div>
         <div className="flex gap-1" role="tablist" aria-label="Período">
           {(Object.keys(PERIODO_LABEL) as Periodo[]).map((p) => (
@@ -106,7 +106,7 @@ export function ClienteTabFrequencia({ presencas }: { presencas: Presenca[] }) {
       {/* Lista */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-sm font-bold">Linha do tempo</h3>
+          <h3 className="text-sm font-bold">Linha do tempo</h3>
           <span className="text-xs text-muted-foreground">
             {ordenadas.length} registro{ordenadas.length !== 1 ? "s" : ""}
           </span>
@@ -166,7 +166,7 @@ function StatBox({
       </p>
       <p
         className={cn(
-          "mt-1 font-display font-bold leading-tight",
+          "mt-1 font-bold leading-tight",
           mono ? "text-2xl" : "text-sm"
         )}
       >

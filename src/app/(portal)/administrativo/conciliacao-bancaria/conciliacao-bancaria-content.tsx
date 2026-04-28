@@ -452,15 +452,15 @@ export function ConciliacaoBancariaContent() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total</p>
-            <p className="mt-2 font-display text-2xl font-extrabold">{dashboard.total}</p>
+            <p className="mt-2 text-2xl font-extrabold">{dashboard.total}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pendentes</p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">{dashboard.pendentes}</p>
+            <p className="mt-2 text-2xl font-extrabold text-gym-warning">{dashboard.pendentes}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Conciliadas</p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">{dashboard.conciliadas}</p>
+            <p className="mt-2 text-2xl font-extrabold text-gym-teal">{dashboard.conciliadas}</p>
           </div>
         </div>
       ) : null}
@@ -594,7 +594,7 @@ export function ConciliacaoBancariaContent() {
       <Dialog open={conciliarOpen} onOpenChange={setConciliarOpen}>
         <DialogContent className="border-border bg-card sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Conciliar lançamento</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Conciliar lançamento</DialogTitle>
             <DialogDescription>
               Vincule a conta a receber ou a conta a pagar. O vínculo pode ser feito com apenas um lado.
             </DialogDescription>
@@ -679,7 +679,7 @@ export function ConciliacaoBancariaContent() {
       <Dialog open={ofxOpen} onOpenChange={setOfxOpen}>
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">Importar extrato OFX</DialogTitle>
+            <DialogTitle className="">Importar extrato OFX</DialogTitle>
             <DialogDescription>
               Selecione a conta bancária e envie o arquivo .ofx do extrato.
               Linhas duplicadas (mesma chave) são ignoradas automaticamente.

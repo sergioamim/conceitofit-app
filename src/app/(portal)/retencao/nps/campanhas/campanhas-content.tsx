@@ -270,7 +270,7 @@ export function CampanhasContent({
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-display text-base font-bold tracking-tight">
+                    <h3 className="text-base font-bold tracking-tight">
                       {campanha.nome}
                     </h3>
                     <span

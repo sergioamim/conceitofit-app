@@ -30,7 +30,7 @@ export function ClienteTabPlaceholder({
       <div className="mb-3 flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <Icon className="size-6" />
       </div>
-      <h3 className="font-display text-base font-bold text-foreground">{titulo}</h3>
+      <h3 className="text-base font-bold text-foreground">{titulo}</h3>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">{descricao}</p>
       {hint ? (
         <p className="mt-3 text-[11px] uppercase tracking-wider text-muted-foreground">{hint}</p>

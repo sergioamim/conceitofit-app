@@ -39,7 +39,7 @@ export function BulkActionBar({
       aria-label={`${selectedCount} item${selectedCount === 1 ? "" : "s"} selecionado${selectedCount === 1 ? "" : "s"}`}
     >
       <div className="flex items-center gap-2 pl-2 pr-4 border-r border-border">
-        <div className="flex size-5 items-center justify-center rounded-full bg-gym-accent font-display text-[10px] font-bold text-white">
+        <div className="flex size-5 items-center justify-center rounded-full bg-gym-accent text-[10px] font-bold text-white">
           {selectedCount}
         </div>
         <span className="text-sm font-medium text-foreground">

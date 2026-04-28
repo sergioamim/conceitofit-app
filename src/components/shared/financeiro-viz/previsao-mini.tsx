@@ -64,14 +64,14 @@ export function PrevisaoMini({
     <div className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold">{title}</h3>
+          <h3 className="text-[15px] font-bold">{title}</h3>
           <p className="text-[12px] text-muted-foreground mt-0.5">{resolvedSubtitle}</p>
         </div>
       </div>
       <BarChart bars={bars} height={130} defaultColor={futureColor} />
       <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-[12px]">
         <span className="text-muted-foreground">Total 30 dias</span>
-        <span className="font-display font-bold tabular-nums">{formatBRL(total)}</span>
+        <span className="font-bold tabular-nums">{formatBRL(total)}</span>
       </div>
     </div>
   );

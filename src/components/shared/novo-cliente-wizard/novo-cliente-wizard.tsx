@@ -51,7 +51,7 @@ export function NovoClienteWizard({
         <div className="p-6 pb-4 shrink-0 border-b border-border/50">
           <div className="flex items-start justify-between">
             <DialogHeader>
-              <DialogTitle className="font-display text-lg font-bold">
+              <DialogTitle className="text-lg font-bold">
                 Novo cliente
               </DialogTitle>
             </DialogHeader>

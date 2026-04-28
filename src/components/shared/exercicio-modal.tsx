@@ -94,7 +94,7 @@ export function ExercicioModal({
     >
       <DialogContent className="border-border bg-card sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {initial?.id ? "Editar exercício" : "Novo exercício"}
           </DialogTitle>
           <DialogDescription>

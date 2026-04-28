@@ -111,7 +111,7 @@ function ModalBody({
   return (
     <DialogContent className="max-h-[90vh] max-w-[860px] overflow-hidden p-0">
       <DialogHeader className="border-b border-border px-6 pb-4 pt-6">
-        <DialogTitle className="flex items-center gap-2 font-display text-lg font-bold">
+        <DialogTitle className="flex items-center gap-2 text-lg font-bold">
           <UserPlus className="size-5 text-gym-accent" />
           Atribuir treino a um aluno
           </DialogTitle>
@@ -167,7 +167,7 @@ function ModalBody({
                       )}
                     >
                       <div
-                        className="flex size-8 shrink-0 items-center justify-center rounded-full font-display text-xs font-bold text-black"
+                        className="flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-black"
                         style={{ background: cor }}
                         aria-hidden
                       >
@@ -291,7 +291,7 @@ function StepLabel({
     <h3 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider">
       <span
         className={cn(
-          "flex size-5 items-center justify-center rounded-full border font-display text-[10px] font-bold",
+          "flex size-5 items-center justify-center rounded-full border text-[10px] font-bold",
           active
             ? "border-gym-accent bg-gym-accent text-black"
             : "border-border bg-secondary text-muted-foreground",

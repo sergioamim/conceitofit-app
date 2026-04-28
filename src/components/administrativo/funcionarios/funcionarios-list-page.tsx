@@ -203,25 +203,25 @@ export function FuncionariosListPage() {
               <Card className="border-border/70 bg-background/60 backdrop-blur">
                 <CardContent className="p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Ativos</p>
-                  <p className="mt-2 font-display text-2xl font-bold">{stats.ativos}</p>
+                  <p className="mt-2 text-2xl font-bold">{stats.ativos}</p>
                 </CardContent>
               </Card>
               <Card className="border-border/70 bg-background/60 backdrop-blur">
                 <CardContent className="p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Com acesso</p>
-                  <p className="mt-2 font-display text-2xl font-bold">{stats.comAcesso}</p>
+                  <p className="mt-2 text-2xl font-bold">{stats.comAcesso}</p>
                 </CardContent>
               </Card>
               <Card className="border-border/70 bg-background/60 backdrop-blur">
                 <CardContent className="p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Multiunidade</p>
-                  <p className="mt-2 font-display text-2xl font-bold">{stats.multiunidade}</p>
+                  <p className="mt-2 text-2xl font-bold">{stats.multiunidade}</p>
                 </CardContent>
               </Card>
               <Card className="border-border/70 bg-background/60 backdrop-blur">
                 <CardContent className="p-4">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Operação crítica</p>
-                  <p className="mt-2 font-display text-2xl font-bold">{stats.operacaoCritica}</p>
+                  <p className="mt-2 text-2xl font-bold">{stats.operacaoCritica}</p>
                 </CardContent>
               </Card>
             </div>
@@ -541,7 +541,7 @@ function CargoCatalogDialog({
     <Dialog open={cargosModalOpen} onOpenChange={setCargosModalOpen}>
       <DialogContent className="border-border bg-card sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Catálogo de cargos</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Catálogo de cargos</DialogTitle>
         </DialogHeader>
 
         <div className="mb-4 flex justify-end">

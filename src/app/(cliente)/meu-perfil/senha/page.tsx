@@ -43,9 +43,8 @@ export default function TrocarSenhaPage() {
           path: "/api/v1/auth/change-password",
           method: "POST",
           body: {
-            currentPassword: values.senhaAtual,
-            newPassword: values.novaSenha,
-            confirmNewPassword: values.confirmarSenha,
+            senhaAtual: values.senhaAtual,
+            novaSenha: values.novaSenha,
           },
         });
         toast({ title: "Senha alterada com sucesso!" });

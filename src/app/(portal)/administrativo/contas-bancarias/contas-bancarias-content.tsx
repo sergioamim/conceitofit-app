@@ -232,7 +232,7 @@ export function ContasBancariasContent({ initialData: _initialData, tenantId, te
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {editing ? "Editar conta bancária" : "Nova conta bancária"}
             </DialogTitle>
             <DialogDescription>

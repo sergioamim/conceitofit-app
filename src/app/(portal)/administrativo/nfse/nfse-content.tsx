@@ -264,7 +264,7 @@ export function NfseContent() {
           {/* Task #557: seção nova alinhada com o BE NfseConfiguracaoUnidadeRequest */}
           <div className="rounded-xl border border-gym-teal/30 bg-gym-teal/5 p-5">
             <div className="mb-3 flex items-center gap-2">
-              <h2 className="font-display text-base font-bold">Integração do provedor</h2>
+              <h2 className="text-base font-bold">Integração do provedor</h2>
               <span className="rounded-full bg-gym-teal/15 px-2 py-0.5 text-[10px] font-semibold text-gym-teal">
                 Obrigatório
               </span>
@@ -357,7 +357,7 @@ export function NfseContent() {
           <div className="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
             <div className="rounded-xl border border-border bg-card p-5">
               <div className="mb-3">
-                <h2 className="font-display text-base font-bold">Tributação e emissão</h2>
+                <h2 className="text-base font-bold">Tributação e emissão</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Campos com <span className="text-gym-warning">*</span> são obrigatórios no backend. Campos marcados
                   como <span className="italic">(legado)</span> não são persistidos no backend atual — ver Task #557.
@@ -653,7 +653,7 @@ export function NfseContent() {
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="size-4 text-gym-teal" />
-                  <h2 className="font-display text-lg font-bold">Checklist fiscal</h2>
+                  <h2 className="text-lg font-bold">Checklist fiscal</h2>
                 </div>
                 {bloqueioFiscal ? (
                   <div className="mt-4 rounded-lg border border-gym-warning/30 bg-gym-warning/10 px-3 py-2 text-sm text-gym-warning">
@@ -679,7 +679,7 @@ export function NfseContent() {
               <div className="rounded-xl border border-border bg-card p-5">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="size-4 text-gym-warning" />
-                  <h2 className="font-display text-lg font-bold">Observações</h2>
+                  <h2 className="text-lg font-bold">Observações</h2>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                   <li>Após alterar tributação, NBS ou operação, valide a configuração antes de emitir NFSe.</li>

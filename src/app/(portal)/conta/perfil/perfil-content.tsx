@@ -86,7 +86,7 @@ export function PerfilContent() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="font-display text-base font-semibold">Unidade prioritária</h2>
+        <h2 className="text-base font-semibold">Unidade prioritária</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Define qual unidade é aberta automaticamente ao fazer login.
         </p>

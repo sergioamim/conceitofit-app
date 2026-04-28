@@ -91,19 +91,19 @@ export default function ContasContabeisPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total contas</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-accent">{resumo.total}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-accent">{resumo.total}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo Ativos</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">{formatBRL(resumo.totalAtivo)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-teal">{formatBRL(resumo.totalAtivo)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo Passivos</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">{formatBRL(resumo.totalPassivo)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-warning">{formatBRL(resumo.totalPassivo)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Patrimonio Liquido</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-accent">
+          <p className="mt-2 text-2xl font-extrabold text-gym-accent">
             {formatBRL(resumo.totalAtivo - resumo.totalPassivo)}
           </p>
         </div>
@@ -200,7 +200,7 @@ export default function ContasContabeisPage() {
       <Dialog open={openNovaConta} onOpenChange={setOpenNovaConta}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display">Nova Conta Contabil</DialogTitle>
+            <DialogTitle className="">Nova Conta Contabil</DialogTitle>
             <DialogDescription>Preencha os dados da nova conta.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">

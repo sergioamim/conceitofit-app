@@ -100,7 +100,7 @@ export function BibliotecaExerciciosModal({
     <Dialog open={open} onOpenChange={(v) => (!v ? handleClose() : null)}>
       <DialogContent className="max-h-[90vh] max-w-[880px] overflow-hidden p-0">
         <DialogHeader className="border-b border-border px-6 pb-4 pt-6">
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             Adicionar exercícios
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">

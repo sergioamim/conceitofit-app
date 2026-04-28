@@ -396,7 +396,7 @@ export function FidelizacaoContent() {
                   className="rounded-xl border border-border bg-card p-4 transition-colors hover:bg-secondary/30"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-display text-sm font-bold">{c.nome}</h3>
+                    <h3 className="text-sm font-bold">{c.nome}</h3>
                     <span
                       className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                         c.ativo ? "bg-gym-teal/15 text-gym-teal" : "bg-muted text-muted-foreground"
@@ -596,7 +596,7 @@ export function FidelizacaoContent() {
       <Dialog open={Boolean(extratoAlunoId)} onOpenChange={(open) => { if (!open) setExtratoAlunoId(null); }}>
         <DialogContent className="border-border bg-card sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               Extrato — {extratoAlunoNome}
             </DialogTitle>
           </DialogHeader>
@@ -658,7 +658,7 @@ export function FidelizacaoContent() {
       <Dialog open={campanhaModalOpen} onOpenChange={setCampanhaModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {editingCampanha ? "Editar campanha" : "Nova campanha"}
             </DialogTitle>
           </DialogHeader>
@@ -741,7 +741,7 @@ export function FidelizacaoContent() {
       <Dialog open={indicacaoModalOpen} onOpenChange={setIndicacaoModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Nova indicação</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Nova indicação</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={indicacaoForm.handleSubmit(handleSaveIndicacao)} className="grid gap-3">
@@ -827,7 +827,7 @@ export function FidelizacaoContent() {
       <Dialog open={resgateModalOpen} onOpenChange={setResgateModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Resgatar pontos</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Resgatar pontos</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={resgateForm.handleSubmit(handleResgate)} className="grid gap-3">

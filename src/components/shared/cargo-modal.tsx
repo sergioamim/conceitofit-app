@@ -71,7 +71,7 @@ export function CargoModal({
     >
       <DialogContent className="border-border bg-card sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {initial ? "Editar cargo" : "Novo cargo"}
           </DialogTitle>
         </DialogHeader>

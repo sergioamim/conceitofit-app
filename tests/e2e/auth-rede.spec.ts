@@ -109,7 +109,7 @@ async function installAuthNetworkMocks(
       return;
     }
 
-    if (path === "/api/v1/auth/change-password" && method === "POST") {
+    if (path === "/api/v1/auth/first-access/complete" && method === "POST") {
       await route.fulfill({
         status: 200,
         json: {

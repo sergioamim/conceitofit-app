@@ -141,7 +141,7 @@ export function VoucherCodigosModal({
     <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             Voucher · {voucher.nome}
           </DialogTitle>
         </DialogHeader>

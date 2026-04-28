@@ -256,7 +256,7 @@ export function ClienteEditForm({
 
   return (
     <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-      <h2 className="font-display text-lg font-bold">Editar cliente</h2>
+      <h2 className="text-lg font-bold">Editar cliente</h2>
       <div className="rounded-xl border border-border bg-card p-6">
         <h3 className="text-sm font-semibold text-muted-foreground">Dados pessoais</h3>
         <div className="mt-4 space-y-4">

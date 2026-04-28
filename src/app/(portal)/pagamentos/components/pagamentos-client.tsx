@@ -409,7 +409,7 @@ function PagamentosPageContent() {
         <Dialog open onOpenChange={(open) => !open && setEmitindo(null)}>
           <DialogContent className="border-border bg-card sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-display text-lg">Confirmar emissão de NF</DialogTitle>
+              <DialogTitle className="text-lg">Confirmar emissão de NF</DialogTitle>
               <DialogDescription>
                 Confirma a emissão da NFS-e para <strong>{emitindo.aluno?.nome ?? "este pagamento"}</strong>? Isso marca
                 o documento fiscal como emitido e ficará visível na aba NFS-e.
@@ -436,7 +436,7 @@ function PagamentosPageContent() {
         <Dialog open onOpenChange={(open) => !open && setVisualizandoNfse(null)}>
           <DialogContent className="border-border bg-card sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-display text-lg">Detalhes da NFS-e</DialogTitle>
+              <DialogTitle className="text-lg">Detalhes da NFS-e</DialogTitle>
               <DialogDescription>
                 Documento fiscal emitido para {visualizandoNfse.aluno?.nome ?? "cliente"}.
               </DialogDescription>

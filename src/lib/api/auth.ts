@@ -617,7 +617,7 @@ export async function changeForcedPasswordApi(input: {
   confirmNewPassword: string;
 }): Promise<{ message: string }> {
   const response = await apiRequest<Partial<LoginApiResponse> & { message?: string }>({
-    path: "/api/v1/auth/change-password",
+    path: "/api/v1/auth/first-access/complete",
     method: "POST",
     includeContextHeader: false,
     headers: buildNetworkHeader(getNetworkSubdomainFromSession()),

@@ -197,7 +197,7 @@ export function NovoCartaoModal({
     >
       <DialogContent className="border-border bg-card sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Novo cartão</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Novo cartão</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="grid gap-4 py-2">

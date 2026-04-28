@@ -67,7 +67,7 @@ export function ClienteAcoesDrawer({
               Próximas ações
             </span>
           </div>
-          <SheetTitle className="mt-1 font-display text-lg">
+          <SheetTitle className="mt-1 text-lg">
             {sugestoes.length} oportunidade{sugestoes.length !== 1 ? "s" : ""}
           </SheetTitle>
           <SheetDescription>

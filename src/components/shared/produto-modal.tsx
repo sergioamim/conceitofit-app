@@ -178,7 +178,7 @@ export function ProdutoModal({
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">{initial ? "Editar produto" : "Novo produto"}</DialogTitle>
+          <DialogTitle className="text-lg font-bold">{initial ? "Editar produto" : "Novo produto"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleSave)}>

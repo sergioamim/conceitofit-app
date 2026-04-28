@@ -123,7 +123,7 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
       <Dialog open={bloquearAcessoOpen} onOpenChange={(next) => { if (!next) closeBloquearAcessoModal(); }}>
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               Bloquear acesso
             </DialogTitle>
           </DialogHeader>
@@ -176,7 +176,7 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
       >
         <DialogContent className="bg-card border-border sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               Liberar acesso (catraca)
             </DialogTitle>
           </DialogHeader>
@@ -228,7 +228,7 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
       <Dialog open={lgpdDialogTipo !== null} onOpenChange={(next) => { if (!next) closeLgpdModal(); }}>
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {lgpdDialogTipo === "pessoais" ? "Excluir dados pessoais" : "Excluir dados sensíveis"}
             </DialogTitle>
           </DialogHeader>
@@ -279,7 +279,7 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
       <Dialog open={excluirOpen} onOpenChange={(next) => { if (!next) closeExcluirModal(); }}>
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               Excluir cliente
             </DialogTitle>
           </DialogHeader>
@@ -337,7 +337,7 @@ export function ClienteDialogs(props: ClienteDialogsProps) {
       <Dialog open={migracaoOpen} onOpenChange={(next) => { if (!next) closeMigracaoModal(); }}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               Migrar unidade-base do cliente
             </DialogTitle>
           </DialogHeader>

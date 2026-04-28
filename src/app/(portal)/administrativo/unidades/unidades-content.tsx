@@ -268,7 +268,7 @@ export function UnidadesContent() {
       <Dialog open={modalOpen} onOpenChange={handleModalOpenChange}>
         <DialogContent className="border-border bg-card sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {editing ? "Editar unidade" : "Nova unidade"}
             </DialogTitle>
           </DialogHeader>
@@ -426,7 +426,7 @@ export function UnidadesContent() {
         <Dialog open onOpenChange={closeCatracaModal}>
           <DialogContent className="border-border bg-card sm:max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-display text-lg font-bold">Gerar credencial do Tray</DialogTitle>
+              <DialogTitle className="text-lg font-bold">Gerar credencial do Tray</DialogTitle>
               <DialogDescription>
                 Isto vai gerar um novo secret. Atualize o System Tray com o token gerado.
               </DialogDescription>

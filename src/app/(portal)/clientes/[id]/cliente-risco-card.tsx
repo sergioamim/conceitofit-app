@@ -114,7 +114,7 @@ export function ClienteRiscoCard({
         <SheetContent side="right" className="w-full sm:max-w-md p-0">
           <SheetHeader className="border-b border-border p-5">
             <div className="flex items-center justify-between">
-              <SheetTitle className="font-display text-lg">
+              <SheetTitle className="text-lg">
                 Risco de evasão
                 {clienteNome ? <span className="ml-2 text-sm font-normal text-muted-foreground">· {clienteNome}</span> : null}
               </SheetTitle>

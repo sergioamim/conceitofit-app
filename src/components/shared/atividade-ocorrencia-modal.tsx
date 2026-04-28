@@ -87,7 +87,7 @@ export function AtividadeOcorrenciaModal({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="border-border bg-card sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             Criar ocorrência
           </DialogTitle>
         </DialogHeader>

@@ -261,7 +261,7 @@ export function CadenciaEditorDrawer({
         className="flex w-full flex-col gap-0 p-0 sm:max-w-xl"
       >
         <SheetHeader className="border-b border-border px-6 py-4">
-          <SheetTitle className="font-display text-xl">
+          <SheetTitle className="text-xl">
             {isEdit ? "Editar cadência" : "Nova cadência"}
           </SheetTitle>
           <SheetDescription>

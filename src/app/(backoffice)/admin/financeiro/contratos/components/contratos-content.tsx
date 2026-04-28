@@ -649,7 +649,7 @@ export function ContratosContent({ initialContratos, initialAcademias, initialPl
       >
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Suspender contrato</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Suspender contrato</DialogTitle>
             <DialogDescription>
               Confirme a suspensão e registre o motivo para auditoria operacional.
             </DialogDescription>

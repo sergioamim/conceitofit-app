@@ -249,7 +249,7 @@ export default function WhatsAppPage() {
           {/* Config tab */}
           {tab === "config" ? (
             <div className="rounded-xl border border-border bg-card p-5 space-y-5">
-              <h2 className="font-display text-base font-semibold">Configuracao do provedor</h2>
+              <h2 className="text-base font-semibold">Configuracao do provedor</h2>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Provedor</label>
@@ -300,7 +300,7 @@ export default function WhatsAppPage() {
           {tab === "templates" ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-base font-semibold">Templates de mensagem</h2>
+                <h2 className="text-base font-semibold">Templates de mensagem</h2>
                 <Button onClick={openNewTemplate} size="sm"><Plus className="size-4" /> Novo template</Button>
               </div>
               {templates.length === 0 ? (
@@ -342,7 +342,7 @@ export default function WhatsAppPage() {
               <Dialog open={openTemplateModal} onOpenChange={setOpenTemplateModal}>
                 <DialogContent className="border-border bg-card sm:max-w-lg">
                   <DialogHeader>
-                    <DialogTitle className="font-display">{editingTemplateId ? "Editar template" : "Novo template"}</DialogTitle>
+                    <DialogTitle className="">{editingTemplateId ? "Editar template" : "Novo template"}</DialogTitle>
                     <DialogDescription>Use {`{{NOME}}`}, {`{{TELEFONE}}`}, {`{{PLANO}}`} etc. como variaveis.</DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-2">
@@ -387,7 +387,7 @@ export default function WhatsAppPage() {
           {/* Logs tab */}
           {tab === "logs" ? (
             <div className="space-y-4">
-              <h2 className="font-display text-base font-semibold">Historico de envios</h2>
+              <h2 className="text-base font-semibold">Historico de envios</h2>
               {logs.length === 0 ? (
                 <div className="rounded-xl border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground">
                   Nenhuma mensagem enviada ainda.

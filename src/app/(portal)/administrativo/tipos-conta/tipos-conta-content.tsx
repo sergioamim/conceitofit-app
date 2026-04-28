@@ -142,7 +142,7 @@ export function TiposContaContent({ initialData: _initialData }: { initialData: 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="bg-card border-border sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {editing ? "Editar tipo de conta" : "Novo tipo de conta"}
             </DialogTitle>
             <DialogDescription>

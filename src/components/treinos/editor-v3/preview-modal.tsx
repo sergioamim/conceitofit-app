@@ -49,7 +49,7 @@ export function PreviewModal({ open, onClose, editor, catalog }: PreviewModalPro
     <Dialog open={open} onOpenChange={(v) => (!v ? onClose() : null)}>
       <DialogContent className="max-h-[90vh] max-w-[760px] overflow-hidden p-0">
         <DialogHeader className="border-b border-border px-6 pb-4 pt-6">
-          <DialogTitle className="flex items-center gap-2 font-display text-lg font-bold">
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
             <Eye className="size-5 text-gym-accent" />
             Pré-visualização do treino
           </DialogTitle>
@@ -76,11 +76,11 @@ export function PreviewModal({ open, onClose, editor, catalog }: PreviewModalPro
                   className="overflow-hidden rounded-xl border border-border bg-card"
                 >
                   <header className="flex items-center gap-3 border-b border-border p-3">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gym-accent bg-gym-accent font-display text-sm font-bold text-black">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-gym-accent bg-gym-accent text-sm font-bold text-black">
                       {letter}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-display text-sm font-bold">
+                      <div className="text-sm font-bold">
                         {sessao.nome || `Sessão ${idx + 1}`}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
@@ -150,7 +150,7 @@ function PreviewItem({
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <span className="font-display text-xs font-bold text-muted-foreground">
+          <span className="text-xs font-bold text-muted-foreground">
             {String(index + 1).padStart(2, "0")}
           </span>
           <span className="truncate text-sm font-medium">{exNome}</span>

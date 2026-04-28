@@ -60,7 +60,7 @@ export function RestoreDraftModal({
           <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-gym-accent/15 mb-4">
             <History className="size-6 text-gym-accent" />
           </div>
-          <DialogTitle className="text-center font-display text-lg">Retomar preenchimento?</DialogTitle>
+          <DialogTitle className="text-center text-lg">Retomar preenchimento?</DialogTitle>
           <DialogDescription className="text-center">
             Identificamos que você não concluiu um formulário recentemente. Deseja recuperar os dados digitados ou começar de novo?
           </DialogDescription>

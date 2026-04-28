@@ -249,13 +249,13 @@ export function NfseOperacaoContent() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Total
             </p>
-            <p className="mt-2 font-display text-2xl font-extrabold">{resumo.total}</p>
+            <p className="mt-2 text-2xl font-extrabold">{resumo.total}</p>
           </div>
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Emitidas
             </p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">
+            <p className="mt-2 text-2xl font-extrabold text-gym-teal">
               {resumo.porStatus?.EMITIDA ?? 0}
             </p>
           </div>
@@ -263,7 +263,7 @@ export function NfseOperacaoContent() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Em processamento
             </p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">
+            <p className="mt-2 text-2xl font-extrabold text-gym-warning">
               {resumo.porStatus?.EM_PROCESSAMENTO ?? 0}
             </p>
           </div>
@@ -271,7 +271,7 @@ export function NfseOperacaoContent() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Falhas
             </p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-gym-danger">
+            <p className="mt-2 text-2xl font-extrabold text-gym-danger">
               {resumo.porStatus?.FALHA ?? 0}
             </p>
           </div>
@@ -279,7 +279,7 @@ export function NfseOperacaoContent() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Canceladas
             </p>
-            <p className="mt-2 font-display text-2xl font-extrabold text-muted-foreground">
+            <p className="mt-2 text-2xl font-extrabold text-muted-foreground">
               {resumo.porStatus?.CANCELADA ?? 0}
             </p>
           </div>
@@ -439,7 +439,7 @@ export function NfseOperacaoContent() {
       >
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display">
+            <DialogTitle className="">
               Timeline — {selectedSolicitacao?.numeroNota ?? "Solicitação"}
             </DialogTitle>
             <DialogDescription>
@@ -489,7 +489,7 @@ export function NfseOperacaoContent() {
       <Dialog open={cancelarOpen} onOpenChange={setCancelarOpen}>
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2">
               <AlertCircle className="size-5 text-gym-danger" />
               Cancelar NFS-e
             </DialogTitle>

@@ -520,7 +520,7 @@ test.describe("auth por rede", () => {
       });
 
       expect(response.message).toBe("Senha alterada com sucesso.");
-      expect(calls[0]?.url).toContain("/api/v1/auth/change-password");
+      expect(calls[0]?.url).toContain("/api/v1/auth/first-access/complete");
       expect(calls[0]?.method).toBe("POST");
       expect(calls[0]?.headers.get("X-Rede-Identifier")).toBe("rede-norte");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
@@ -528,7 +528,7 @@ test.describe("auth por rede", () => {
         confirmNewPassword: "NovaSenha123",
       });
       // Task 458: getForcePasswordChangeRequiredFromSession é reset implicitamente pelo backend
-      // via novo cookie fc_session_claims após change-password. Em teste unit não há ciclo de
+      // via novo cookie fc_session_claims após conclusão do primeiro acesso. Em teste unit não há ciclo de
       // re-emissão de cookie — valida-se apenas a chamada e o response.
     } finally {
       restore();

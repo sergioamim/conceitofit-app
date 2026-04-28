@@ -570,7 +570,7 @@ export function TreinoV3Editor({
                         ),
                       )
                     }
-                    className="border-0 bg-transparent px-0 font-display text-base font-bold focus-visible:ring-0"
+                    className="border-0 bg-transparent px-0 text-base font-bold focus-visible:ring-0"
                   />
                   <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span>

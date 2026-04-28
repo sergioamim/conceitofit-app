@@ -133,7 +133,7 @@ function ProspectModalComponent({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {initial ? "Editar Prospect" : "Novo Prospect"}
           </DialogTitle>
         </DialogHeader>

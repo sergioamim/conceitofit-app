@@ -32,7 +32,7 @@ export function ExcluirCobrancaModal({
     >
       <DialogContent className="border-border bg-card sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Excluir cobrança?</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Excluir cobrança?</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="rounded-lg border border-border bg-secondary/40 p-3 text-sm">

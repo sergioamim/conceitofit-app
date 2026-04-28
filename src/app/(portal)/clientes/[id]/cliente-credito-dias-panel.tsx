@@ -152,7 +152,7 @@ export function ClienteCreditoDiasPanel({
           <div>
             <div className="flex items-center gap-2">
               <ShieldCheck className="size-4 text-gym-teal" />
-              <h2 className="font-display text-base font-bold">Crédito de dias</h2>
+              <h2 className="text-base font-bold">Crédito de dias</h2>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               Ajuste operacional do vencimento com histórico e estorno auditável.

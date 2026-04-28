@@ -184,7 +184,7 @@ export function ServicoModal({
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-card sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {initial ? "Editar serviço" : "Novo serviço"}
           </DialogTitle>
           <DialogDescription className="sr-only">

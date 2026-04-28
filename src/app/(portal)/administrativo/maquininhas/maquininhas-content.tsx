@@ -243,7 +243,7 @@ export function MaquininhasContent() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {editing ? "Editar maquininha" : "Nova maquininha"}
             </DialogTitle>
             <DialogDescription>

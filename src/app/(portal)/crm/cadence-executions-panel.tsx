@@ -118,7 +118,7 @@ export function CadenceExecutionsPanel({ tenantId }: { tenantId: string }) {
       {ConfirmDialog}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-base font-semibold">Cadências em execução</h2>
+          <h2 className="text-base font-semibold">Cadências em execução</h2>
           <p className="text-xs text-muted-foreground">{active.length} ativa(s) · {executions.length} total</p>
         </div>
         <Button variant="outline" size="sm" onClick={handleProcessOverdue} disabled={processing} className="border-border text-xs">

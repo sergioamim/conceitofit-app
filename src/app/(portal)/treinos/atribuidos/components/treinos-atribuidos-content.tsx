@@ -301,7 +301,7 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="font-display text-lg">Filtros operacionais</CardTitle>
+          <CardTitle className="text-lg">Filtros operacionais</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
           <div className="relative xl:col-span-2">
@@ -372,7 +372,7 @@ export function TreinosAtribuidosContent({ initialData }: TreinosAtribuidosConte
 
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="font-display text-lg">Operacao de treinos atribuidos</CardTitle>
+          <CardTitle className="text-lg">Operacao de treinos atribuidos</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -569,7 +569,7 @@ function AlunoAvatar({ nome }: { nome?: string }) {
   return (
     <div
       aria-hidden
-      className="flex size-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold text-black"
+      className="flex size-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-black"
       style={{ background: cor }}
       title={nome}
     >

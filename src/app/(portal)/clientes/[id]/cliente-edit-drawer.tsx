@@ -36,7 +36,7 @@ export function ClienteEditDrawer({ open, aluno, onClose, onSaved }: ClienteEdit
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border px-6 py-4">
             <div>
-              <h2 className="font-display text-lg font-bold">Editar cadastro</h2>
+              <h2 className="text-lg font-bold">Editar cadastro</h2>
               <p className="text-xs text-muted-foreground">{aluno.nome}</p>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">

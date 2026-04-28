@@ -50,7 +50,7 @@ export function CategoriaBreakdown({
     <div className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold">{title}</h3>
+          <h3 className="text-[15px] font-bold">{title}</h3>
           <p className="text-[12px] text-muted-foreground mt-0.5">{subtitle}</p>
         </div>
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-secondary text-muted-foreground text-[11px] font-semibold">
@@ -70,7 +70,7 @@ export function CategoriaBreakdown({
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                 Total
               </div>
-              <div className="font-display font-bold text-[15px] tabular-nums">
+              <div className="font-bold text-[15px] tabular-nums">
                 {formatBRL(total)}
               </div>
             </div>

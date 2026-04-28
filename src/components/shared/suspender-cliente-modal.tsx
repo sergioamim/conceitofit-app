@@ -59,7 +59,7 @@ export function SuspenderClienteModal({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg">
+          <DialogTitle className="text-lg">
             Suspender cliente
           </DialogTitle>
         </DialogHeader>

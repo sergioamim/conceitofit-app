@@ -236,7 +236,7 @@ export function NovoVoucherModal({
     <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); }}>
       <DialogContent className="max-w-lg border-border bg-card">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             Novo voucher
             <span className="ml-2 text-sm font-normal text-muted-foreground">Passo {step} de 2</span>
           </DialogTitle>

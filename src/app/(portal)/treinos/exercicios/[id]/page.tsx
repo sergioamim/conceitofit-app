@@ -201,7 +201,7 @@ export default function ExercicioDetalhePage() {
           {/* Como executar */}
           <Card className="border-border bg-card">
             <CardHeader className="pb-2">
-              <CardTitle className="font-display text-sm font-bold">
+              <CardTitle className="text-sm font-bold">
                 Como executar
               </CardTitle>
             </CardHeader>
@@ -235,7 +235,7 @@ export default function ExercicioDetalhePage() {
           {/* Erros comuns */}
           <Card className="border-border bg-card">
             <CardHeader className="pb-2">
-              <CardTitle className="font-display text-sm font-bold">
+              <CardTitle className="text-sm font-bold">
                 Erros comuns
               </CardTitle>
             </CardHeader>
@@ -394,7 +394,7 @@ function Stat({
       <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
         {label}
       </div>
-      <div className="mt-0.5 font-display text-sm font-bold text-foreground">
+      <div className="mt-0.5 text-sm font-bold text-foreground">
         {value}
       </div>
       {children}

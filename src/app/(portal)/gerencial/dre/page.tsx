@@ -177,21 +177,21 @@ export default function DrePage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Receita líquida</p>
-          <p className="mt-2 font-display text-3xl font-extrabold text-gym-teal">{formatBRL(dre?.receitaLiquida ?? 0)}</p>
+          <p className="mt-2 text-3xl font-extrabold text-gym-teal">{formatBRL(dre?.receitaLiquida ?? 0)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Margem de contribuição</p>
-          <p className="mt-2 font-display text-3xl font-extrabold text-gym-accent">{formatBRL(dre?.margemContribuicao ?? 0)}</p>
+          <p className="mt-2 text-3xl font-extrabold text-gym-accent">{formatBRL(dre?.margemContribuicao ?? 0)}</p>
           <p className="mt-1 text-xs text-muted-foreground">{percentLabel(margins.margem)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">EBITDA</p>
-          <p className="mt-2 font-display text-3xl font-extrabold text-foreground">{formatBRL(dre?.ebitda ?? 0)}</p>
+          <p className="mt-2 text-3xl font-extrabold text-foreground">{formatBRL(dre?.ebitda ?? 0)}</p>
           <p className="mt-1 text-xs text-muted-foreground">{percentLabel(margins.ebitda)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Resultado líquido</p>
-          <p className={`mt-2 font-display text-3xl font-extrabold ${(dre?.resultadoLiquido ?? 0) >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
+          <p className={`mt-2 text-3xl font-extrabold ${(dre?.resultadoLiquido ?? 0) >= 0 ? "text-gym-teal" : "text-gym-danger"}`}>
             {formatBRL(dre?.resultadoLiquido ?? 0)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{percentLabel(margins.resultado)}</p>
@@ -205,7 +205,7 @@ export default function DrePage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[2fr_1fr]">
         <div className="rounded-xl border border-border bg-card">
           <div className="border-b border-border px-4 py-3">
-            <h2 className="font-display text-base font-semibold text-foreground">Estrutura DRE</h2>
+            <h2 className="text-base font-semibold text-foreground">Estrutura DRE</h2>
             <p className="text-xs text-muted-foreground">
               Período: {dre ? `${formatDate(dre.periodoInicio)} até ${formatDate(dre.periodoFim)}` : "—"}
             </p>
@@ -254,7 +254,7 @@ export default function DrePage() {
 
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-display text-sm font-semibold text-foreground">Indicadores financeiros</h3>
+            <h3 className="text-sm font-semibold text-foreground">Indicadores financeiros</h3>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Ticket médio recebido</span>
@@ -276,7 +276,7 @@ export default function DrePage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-display text-sm font-semibold text-foreground">Despesas pagas por grupo DRE</h3>
+            <h3 className="text-sm font-semibold text-foreground">Despesas pagas por grupo DRE</h3>
             <div className="mt-3 space-y-2">
               {(dre?.despesasPorGrupo ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">{loading ? "Carregando..." : "Sem despesas pagas no período."}</p>
@@ -291,7 +291,7 @@ export default function DrePage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-display text-sm font-semibold text-foreground">Despesas pagas por categoria</h3>
+            <h3 className="text-sm font-semibold text-foreground">Despesas pagas por categoria</h3>
             <div className="mt-3 space-y-2">
               {(dre?.despesasPorCategoria ?? []).length === 0 && (
                 <p className="text-sm text-muted-foreground">{loading ? "Carregando..." : "Sem despesas pagas no período."}</p>
@@ -306,7 +306,7 @@ export default function DrePage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-display text-sm font-semibold text-foreground">Saneamento de classificação</h3>
+            <h3 className="text-sm font-semibold text-foreground">Saneamento de classificação</h3>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Despesas sem tipo</span>
@@ -327,7 +327,7 @@ export default function DrePage() {
         <div className="border-b border-border px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-display text-base font-semibold text-foreground">Projeção DRE por competência</h2>
+              <h2 className="text-base font-semibold text-foreground">Projeção DRE por competência</h2>
               <p className="text-xs text-muted-foreground">
                 Visão futuro: realizado, projetado e consolidado no período selecionado.
               </p>
@@ -399,7 +399,7 @@ export default function DrePage() {
           </div>
         </div>
         <div className="border-t border-border p-4">
-          <h3 className="mb-2 font-display text-sm font-semibold">Linhas da projeção</h3>
+          <h3 className="mb-2 text-sm font-semibold">Linhas da projeção</h3>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead>

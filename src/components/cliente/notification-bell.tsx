@@ -100,7 +100,7 @@ export function NotificationBell({ tenantId, alunoId }: NotificationBellProps) {
       </SheetTrigger>
       <SheetContent side="right" className="w-80 sm:w-96 p-0">
         <SheetHeader className="flex flex-row items-center justify-between border-b border-border/40 px-4 py-3">
-          <SheetTitle className="text-base font-display font-bold">
+          <SheetTitle className="text-base font-bold">
             Notificações
           </SheetTitle>
           {unreadCount > 0 && (

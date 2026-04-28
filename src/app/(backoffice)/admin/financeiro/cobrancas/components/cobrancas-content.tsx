@@ -665,7 +665,7 @@ export function CobrancasContent({ initialCobrancas, initialContratos }: Cobranc
       >
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Baixa manual</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Baixa manual</DialogTitle>
             <DialogDescription>
               Registre o pagamento manual da cobrança selecionada com data, forma e observação.
             </DialogDescription>

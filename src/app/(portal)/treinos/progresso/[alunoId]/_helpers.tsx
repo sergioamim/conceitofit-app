@@ -153,7 +153,7 @@ export function ChartStat({
       </div>
       <div
         className={cn(
-          "mt-0.5 font-display text-base font-bold",
+          "mt-0.5 text-base font-bold",
           accent && "text-gym-accent",
           positive && "text-emerald-400",
         )}

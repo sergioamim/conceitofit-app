@@ -201,7 +201,7 @@ export function PlanoForm({
       {activeTab === "CONFIG" ? (
         <div role="tabpanel" aria-label="Configurações">
           <div className="rounded-xl border border-border bg-card p-4 md:p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">Dados do plano</h2>
+            <h2 className="text-base font-semibold text-foreground">Dados do plano</h2>
             <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
                 <label htmlFor="plano-form-nome" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
@@ -264,7 +264,7 @@ export function PlanoForm({
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 md:p-5">
-            <h2 className="font-display text-base font-semibold text-foreground">Regras financeiras</h2>
+            <h2 className="text-base font-semibold text-foreground">Regras financeiras</h2>
             <div className="mt-4 space-y-4">
               <div className="space-y-3 rounded-md border border-border bg-secondary/40 p-3">
                 <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -337,7 +337,7 @@ export function PlanoForm({
       {activeTab === "CONTRATO" ? (
         <div role="tabpanel" aria-label="Contrato">
         <div className="rounded-xl border border-border bg-card p-4 md:p-5">
-          <h2 className="font-display text-base font-semibold text-foreground">Contrato do plano</h2>
+          <h2 className="text-base font-semibold text-foreground">Contrato do plano</h2>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Assinatura</label>
@@ -391,7 +391,7 @@ export function PlanoForm({
       {activeTab === "BENEFICIOS" ? (
         <div role="tabpanel" aria-label="Atividades e benefícios">
         <div className="rounded-xl border border-border bg-card p-4 md:p-5">
-          <h2 className="font-display text-base font-semibold text-foreground">Atividades e benefícios</h2>
+          <h2 className="text-base font-semibold text-foreground">Atividades e benefícios</h2>
           <div className="mt-4 space-y-4">
             <div>
               <div className="flex items-center justify-between gap-2">

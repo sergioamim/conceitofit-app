@@ -112,7 +112,7 @@ export function PagarContaModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-card border-border sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Baixar conta</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Baixar conta</DialogTitle>
           <DialogDescription>
             Registrar pagamento para {conta?.fornecedor ?? "fornecedor"}.
           </DialogDescription>

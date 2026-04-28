@@ -46,7 +46,7 @@ export function CheckoutPayment({
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <h3 className="font-display text-base font-bold">Pagamento</h3>
+      <h3 className="text-base font-bold">Pagamento</h3>
       <div className="mt-3 space-y-3">
         <div className="space-y-1.5">
           <label htmlFor="checkout-payment-forma" className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Forma de pagamento</label>

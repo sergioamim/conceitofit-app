@@ -256,7 +256,7 @@ export function LivrosRazaoContent({ initialData }: LivrosRazaoContentProps) {
       <Dialog open={openNovo} onOpenChange={setOpenNovo}>
         <DialogContent className="border-border bg-card sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display">Novo Livro Razao</DialogTitle>
+            <DialogTitle className="">Novo Livro Razao</DialogTitle>
             <DialogDescription>Crie um novo livro contabil para o periodo.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">

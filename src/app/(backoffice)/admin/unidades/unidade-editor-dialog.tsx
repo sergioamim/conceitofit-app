@@ -43,7 +43,7 @@ export function UnidadeEditorDialog({
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <DialogContent className="border-border bg-card sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {isEditing ? "Editar unidade" : "Nova unidade"}
           </DialogTitle>
           <DialogDescription className="sr-only">

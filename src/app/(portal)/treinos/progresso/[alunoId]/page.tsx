@@ -139,14 +139,14 @@ export default function ProgressoAlunoPage() {
       <Card className="border-border bg-card">
         <CardContent className="flex flex-wrap items-center gap-4 p-4">
           <div
-            className="flex size-14 shrink-0 items-center justify-center rounded-full font-display text-xl font-bold text-black"
+            className="flex size-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-black"
             style={{ background: alunoCor }}
             aria-hidden
           >
             {alunoInicial}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="truncate font-display text-xl font-bold tracking-tight">
+            <h1 className="truncate text-xl font-bold tracking-tight">
               {alunoNome}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -205,7 +205,7 @@ export default function ProgressoAlunoPage() {
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-row items-start justify-between gap-2 pb-3">
           <div>
-            <CardTitle className="font-display text-sm font-bold">
+            <CardTitle className="text-sm font-bold">
               Progressão · Supino reto
             </CardTitle>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -322,7 +322,7 @@ export default function ProgressoAlunoPage() {
                       y={p.y - 8}
                       textAnchor="middle"
                       fill="currentColor"
-                      className="fill-foreground font-display text-[10px] font-bold"
+                      className="fill-foreground text-[10px] font-bold"
                     >
                       {p.cargaKg}
                     </text>
@@ -349,7 +349,7 @@ export default function ProgressoAlunoPage() {
       {/* Heatmap de adesão (CSS grid 7×12) */}
       <Card className="border-border bg-card">
         <CardHeader>
-          <CardTitle className="font-display text-base">
+          <CardTitle className="text-base">
             Heatmap de adesão · últimas 12 semanas
           </CardTitle>
         </CardHeader>
@@ -394,7 +394,7 @@ export default function ProgressoAlunoPage() {
       {/* Histórico de execuções */}
       <Card className="border-border bg-card">
         <CardHeader className="pb-3">
-          <CardTitle className="font-display text-sm font-bold">
+          <CardTitle className="text-sm font-bold">
             Histórico de execuções
           </CardTitle>
         </CardHeader>
@@ -418,11 +418,11 @@ export default function ProgressoAlunoPage() {
                     key={h.id}
                     className="border-b border-border/40 hover:bg-secondary/40"
                   >
-                    <td className="px-2 py-2 font-display text-xs font-bold">
+                    <td className="px-2 py-2 text-xs font-bold">
                       {formatDate(h.data)}
                     </td>
                     <td className="px-2 py-2">
-                      <span className="inline-flex size-6 items-center justify-center rounded-md border border-border bg-secondary font-display text-[11px] font-bold">
+                      <span className="inline-flex size-6 items-center justify-center rounded-md border border-border bg-secondary text-[11px] font-bold">
                         {h.sessaoLetra}
                       </span>
                       <span className="ml-2 text-xs text-muted-foreground">
@@ -432,7 +432,7 @@ export default function ProgressoAlunoPage() {
                     <td className="px-2 py-2 text-xs text-muted-foreground">
                       {h.duracaoMin} min
                     </td>
-                    <td className="px-2 py-2 text-right font-display font-semibold tabular-nums">
+                    <td className="px-2 py-2 text-right font-semibold tabular-nums">
                       {h.volume.toLocaleString("pt-BR")}
                     </td>
                     <td className="px-2 py-2">
@@ -478,4 +478,3 @@ export default function ProgressoAlunoPage() {
     </div>
   );
 }
-

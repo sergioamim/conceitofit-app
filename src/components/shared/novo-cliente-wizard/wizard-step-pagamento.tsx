@@ -230,7 +230,7 @@ export function Step3Pagamento({
           )}
           <div className="flex justify-between border-t border-border pt-1.5 font-semibold">
             <span>Total final</span>
-            <span className="font-display text-base font-bold text-gym-accent">{formatBRL(dryRun.total)}</span>
+            <span className="text-base font-bold text-gym-accent">{formatBRL(dryRun.total)}</span>
           </div>
         </div>
       )}

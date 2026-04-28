@@ -140,7 +140,7 @@ export function ProspectInlineForm({
       data-testid="prospect-inline-form"
     >
       <header className="space-y-1">
-        <h3 className="font-display text-sm font-semibold text-foreground">
+        <h3 className="text-sm font-semibold text-foreground">
           Cadastro rápido de prospect
         </h3>
         <p className="text-xs text-muted-foreground">

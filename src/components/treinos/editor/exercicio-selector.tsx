@@ -70,7 +70,7 @@ export function ExercicioSelector({
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <CardTitle className="font-display text-lg">Biblioteca lateral</CardTitle>
+            <CardTitle className="text-lg">Biblioteca lateral</CardTitle>
             <p className="text-sm text-muted-foreground">
               Busca, filtros e inserção rápida no bloco ativo.
             </p>
@@ -191,7 +191,7 @@ export function ExerciseDrawerDialog({
         <DialogHeader>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DialogTitle className="font-display text-lg font-bold">
+              <DialogTitle className="text-lg font-bold">
                 {drawer.editingId ? "Editar exercício" : "Novo exercício"}
               </DialogTitle>
               <DialogDescription>

@@ -34,7 +34,7 @@ export function UnidadeDeleteDialog({
     <Dialog open={Boolean(unit)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="border-border bg-card sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Excluir unidade</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Excluir unidade</DialogTitle>
           <DialogDescription>
             {unit
               ? `Essa ação remove ${unit.nome} do backoffice global.`

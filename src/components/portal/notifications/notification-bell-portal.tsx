@@ -183,7 +183,7 @@ export function NotificationBellPortal() {
       >
         <SheetHeader className="border-b border-border/40 px-4 py-3">
           <div className="flex items-center justify-between gap-2 pr-6">
-            <SheetTitle className="font-display text-base font-bold">
+            <SheetTitle className="text-base font-bold">
               Notificacoes
             </SheetTitle>
             {naoLidas > 0 ? (

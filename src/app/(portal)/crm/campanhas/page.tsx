@@ -244,7 +244,7 @@ export default function CampanhasCrmPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               {editing ? "Editar campanha CRM" : "Nova campanha CRM"}
             </DialogTitle>
           </DialogHeader>
@@ -412,10 +412,10 @@ export default function CampanhasCrmPage() {
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Campanhas</p><p className="mt-1 font-display text-2xl font-bold">{summary.total}</p></div>
-        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Ativas</p><p className="mt-1 font-display text-2xl font-bold text-gym-teal">{summary.ativas}</p></div>
-        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Rascunho</p><p className="mt-1 font-display text-2xl font-bold text-gym-warning">{summary.rascunho}</p></div>
-        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Disparos</p><p className="mt-1 font-display text-2xl font-bold">{summary.disparos}</p></div>
+        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Campanhas</p><p className="mt-1 text-2xl font-bold">{summary.total}</p></div>
+        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Ativas</p><p className="mt-1 text-2xl font-bold text-gym-teal">{summary.ativas}</p></div>
+        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Rascunho</p><p className="mt-1 text-2xl font-bold text-gym-warning">{summary.rascunho}</p></div>
+        <div className="rounded-lg border border-border bg-card p-3"><p className="text-[11px] uppercase tracking-wider text-muted-foreground">Disparos</p><p className="mt-1 text-2xl font-bold">{summary.disparos}</p></div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-border">

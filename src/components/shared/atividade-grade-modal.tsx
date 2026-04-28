@@ -191,7 +191,7 @@ export function AtividadeGradeModal({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {initial ? "Editar Atividade - Grade" : "Nova Atividade - Grade"}
           </DialogTitle>
         </DialogHeader>

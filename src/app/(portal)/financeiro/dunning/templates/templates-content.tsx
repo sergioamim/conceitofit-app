@@ -184,7 +184,7 @@ export function DunningTemplatesContent() {
       {/* Grouped cards */}
       {Object.entries(grouped).map(([evento, items]) => (
         <div key={evento} className="space-y-3">
-          <h2 className="font-display text-base font-semibold text-foreground">
+          <h2 className="text-base font-semibold text-foreground">
             {EVENTO_LABELS[evento] ?? evento}
           </h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

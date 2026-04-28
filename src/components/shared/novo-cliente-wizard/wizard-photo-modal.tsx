@@ -144,7 +144,7 @@ export function WizardPhotoModal({
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
       <DialogContent className="bg-card border-border w-[96vw] max-w-2xl p-0">
         <DialogHeader>
-          <DialogTitle className="px-6 pt-6 font-display text-lg">
+          <DialogTitle className="px-6 pt-6 text-lg">
             Foto do cliente
           </DialogTitle>
         </DialogHeader>

@@ -46,7 +46,7 @@ export function SessaoSidebar({
   return (
     <aside className="space-y-1 rounded-xl border border-border bg-card p-3">
       <div className="mb-2 flex items-center justify-between border-b border-border px-1 pb-2.5">
-        <span className="font-display text-[13px] font-bold">Sessões</span>
+        <span className="text-[13px] font-bold">Sessões</span>
         <Button
           variant="ghost"
           size="icon"
@@ -122,7 +122,7 @@ function SessaoTab({
     >
       <div
         className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-lg border font-display text-sm font-bold",
+          "flex size-8 shrink-0 items-center justify-center rounded-lg border text-sm font-bold",
           ativa
             ? "border-gym-accent bg-gym-accent text-black"
             : "border-border bg-secondary text-foreground",

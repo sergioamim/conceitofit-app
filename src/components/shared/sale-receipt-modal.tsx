@@ -289,7 +289,7 @@ export function SaleReceiptModal({
     }
     const tituloPagina = `Contrato — ${cliente.nome ?? "Cliente"}`;
     win.document.write(
-      `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tituloPagina}</title><style>@media print { body { margin: 0; } } body { font-family: system-ui, sans-serif; padding: 2rem; line-height: 1.5; }</style></head><body>${htmlPreenchido}</body></html>`,
+      `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${tituloPagina}</title><style>@media print { body { margin: 0; } } body { font-family: IBM Plex Sans, Arial, sans-serif; padding: 2rem; line-height: 1.5; }</style></head><body>${htmlPreenchido}</body></html>`,
     );
     win.document.close();
     win.focus();

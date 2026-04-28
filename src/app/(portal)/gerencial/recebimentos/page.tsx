@@ -198,23 +198,23 @@ export default function RecebimentosPage() {
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recebido</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">{formatBRL(resumo.recebido)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-teal">{formatBRL(resumo.recebido)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Em aberto</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">{formatBRL(resumo.emAberto)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-warning">{formatBRL(resumo.emAberto)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Inadimplência</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-danger">{formatBRL(resumo.inadimplencia)}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-danger">{formatBRL(resumo.inadimplencia)}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">NFSe pendente</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-accent">{resumo.nfsePendente}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-accent">{resumo.nfsePendente}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Repasse divergente</p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-foreground">{resumo.repasseDivergente}</p>
+          <p className="mt-2 text-2xl font-extrabold text-foreground">{resumo.repasseDivergente}</p>
         </div>
       </div>
 
@@ -352,7 +352,7 @@ export default function RecebimentosPage() {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="border-border bg-card sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">Novo recebimento avulso</DialogTitle>
+            <DialogTitle className="text-lg font-bold">Novo recebimento avulso</DialogTitle>
             <DialogDescription>
               Lance uma cobrança manual e, se necessário, já registre a baixa financeira.
             </DialogDescription>

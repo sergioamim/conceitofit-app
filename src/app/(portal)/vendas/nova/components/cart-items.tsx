@@ -16,7 +16,7 @@ export function CartItems({ workspace }: CartItemsProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-base font-bold">Itens da venda</h3>
+        <h3 className="text-base font-bold">Itens da venda</h3>
         <span className="text-xs text-muted-foreground">{cart.length} item(ns)</span>
       </div>
 

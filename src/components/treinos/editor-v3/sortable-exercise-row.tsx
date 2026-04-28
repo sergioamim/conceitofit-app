@@ -78,7 +78,7 @@ export function SortableExerciseRow({
           <GripVertical className="size-4" />
         </button>
       </td>
-      <td className="px-2 py-2 font-display text-xs font-bold text-muted-foreground">
+      <td className="px-2 py-2 text-xs font-bold text-muted-foreground">
         {String(index + 1).padStart(2, "0")}
       </td>
       <td className="px-2 py-2">

@@ -45,7 +45,7 @@ export function LogoutDialog({
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gym-danger/10 text-gym-danger">
             <LogOut className="h-6 w-6" />
           </div>
-          <DialogTitle className="text-center text-xl font-display font-bold">
+          <DialogTitle className="text-center text-xl font-bold">
             {title}
           </DialogTitle>
           <DialogDescription className="text-center text-muted-foreground pt-2">

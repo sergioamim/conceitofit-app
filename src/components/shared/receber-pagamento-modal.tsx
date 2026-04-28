@@ -96,7 +96,7 @@ export function ReceberPagamentoModal({
     >
       <DialogContent className="border-border bg-card sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Receber pagamento</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Receber pagamento</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4 py-2">

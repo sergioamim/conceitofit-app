@@ -158,7 +158,7 @@ export function ClienteTabRelacionamento({ aluno, matriculas, pagamentos, presen
 
       {/* Timeline */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="font-display text-base font-bold">Timeline</h2>
+        <h2 className="text-base font-bold">Timeline</h2>
         <div className="mt-4 space-y-0">
           {filtered.length === 0 && (
             <p className="py-6 text-center text-sm text-muted-foreground">Nenhum evento encontrado.</p>
@@ -210,7 +210,7 @@ export function ClienteTabRelacionamento({ aluno, matriculas, pagamentos, presen
 
       {/* Observacoes */}
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="font-display text-base font-bold">Observacoes</h2>
+        <h2 className="text-base font-bold">Observacoes</h2>
         <div className="mt-3">
           {aluno.observacoesMedicas ? (
             <p className="text-sm text-foreground whitespace-pre-wrap">{aluno.observacoesMedicas}</p>
@@ -223,7 +223,7 @@ export function ClienteTabRelacionamento({ aluno, matriculas, pagamentos, presen
       {/* Interesses (placeholder) */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-base font-bold">Interesses</h2>
+          <h2 className="text-base font-bold">Interesses</h2>
           <button className="text-xs text-gym-accent hover:underline">Cadastrar</button>
         </div>
         <div className="mt-3">

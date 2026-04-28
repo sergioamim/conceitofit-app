@@ -521,7 +521,7 @@ export function CommandPalette() {
       >
         <DialogContent className="border-border bg-card sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="font-display text-lg font-bold">
+            <DialogTitle className="text-lg font-bold">
               Cliente localizado em outra unidade
             </DialogTitle>
             <DialogDescription>

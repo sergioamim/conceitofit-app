@@ -151,7 +151,7 @@ export function EditarContaPagarModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto bg-card border-border sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Editar conta a pagar</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Editar conta a pagar</DialogTitle>
           <DialogDescription>
             Atualize os dados da conta selecionada.
           </DialogDescription>

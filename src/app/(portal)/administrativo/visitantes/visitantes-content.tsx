@@ -311,19 +311,19 @@ export function VisitantesContent() {
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Total ativos
           </p>
-          <p className="mt-2 font-display text-2xl font-extrabold">{stats.total}</p>
+          <p className="mt-2 text-2xl font-extrabold">{stats.total}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Já entraram
           </p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-teal">{stats.hoje}</p>
+          <p className="mt-2 text-2xl font-extrabold text-gym-teal">{stats.hoje}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Aguardando
           </p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-warning">
+          <p className="mt-2 text-2xl font-extrabold text-gym-warning">
             {stats.pendentes}
           </p>
         </div>
@@ -331,7 +331,7 @@ export function VisitantesContent() {
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Revogados
           </p>
-          <p className="mt-2 font-display text-2xl font-extrabold text-gym-danger">
+          <p className="mt-2 text-2xl font-extrabold text-gym-danger">
             {stats.revogados}
           </p>
         </div>
@@ -433,7 +433,7 @@ export function VisitantesContent() {
       <Dialog open={registrarOpen} onOpenChange={setRegistrarOpen}>
         <DialogContent className="border-border bg-card sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="font-display">Novo visitante</DialogTitle>
+            <DialogTitle className="">Novo visitante</DialogTitle>
             <DialogDescription>
               Cadastre um acesso temporário. Um código será gerado para liberação na catraca.
             </DialogDescription>
@@ -566,7 +566,7 @@ export function VisitantesContent() {
       >
         <DialogContent className="border-border bg-card sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display">Validar código de visitante</DialogTitle>
+            <DialogTitle className="">Validar código de visitante</DialogTitle>
             <DialogDescription>
               Informe o código de acesso do visitante para validar e liberar a catraca.
             </DialogDescription>

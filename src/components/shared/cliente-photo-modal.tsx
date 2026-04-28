@@ -143,7 +143,7 @@ export function ClientePhotoModal({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="bg-card border-border w-[96vw] max-w-4xl p-0">
         <DialogHeader>
-          <DialogTitle className="px-6 pt-6 font-display text-lg">
+          <DialogTitle className="px-6 pt-6 text-lg">
             Foto do cliente
           </DialogTitle>
         </DialogHeader>

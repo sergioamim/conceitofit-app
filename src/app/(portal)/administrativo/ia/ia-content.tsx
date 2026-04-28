@@ -74,7 +74,7 @@ export function IaContent() {
     <div className="flex flex-col gap-6">
       <header className="space-y-2">
         <p className="text-sm font-medium text-gym-accent">Administrativo &gt; Integração com IA</p>
-        <h1 className="text-3xl font-display font-bold leading-tight">Integração com IA</h1>
+        <h1 className="text-3xl font-bold leading-tight">Integração com IA</h1>
         <p className="text-sm text-muted-foreground">
           Visualize o prompt gerado para a unidade (tenant) atual e use-o nos agentes de IA.
         </p>
@@ -83,7 +83,7 @@ export function IaContent() {
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-lg font-display">Prompt atualizado</CardTitle>
+            <CardTitle className="text-lg ">Prompt atualizado</CardTitle>
             <p className="text-sm text-muted-foreground">
               Fonte: GET /api/v1/bot/prompt — gerado em {generatedLabel}
             </p>
@@ -114,7 +114,7 @@ export function IaContent() {
       <Card className="border-border bg-card">
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <CardTitle className="text-base font-display">Template bruto</CardTitle>
+            <CardTitle className="text-base">Template bruto</CardTitle>
             <p className="text-sm text-muted-foreground">GET /api/v1/bot/prompt/template</p>
           </div>
           <Button variant="outline" onClick={loadTemplate} disabled={loadingTemplate}>

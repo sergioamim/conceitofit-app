@@ -184,7 +184,7 @@ export function EditarVoucherModal({
     <Dialog open onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
       <DialogContent className="max-w-lg border-border bg-card">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Editar voucher</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Editar voucher</DialogTitle>
         </DialogHeader>
 
         <form className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onSubmit={handleSubmit(handleSalvar)}>

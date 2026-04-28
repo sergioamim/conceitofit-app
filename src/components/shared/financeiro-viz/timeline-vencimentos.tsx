@@ -88,7 +88,7 @@ export function TimelineVencimentos({
     <div className={`rounded-xl border border-border bg-card p-5 ${className ?? ""}`}>
       <div className="flex items-start justify-between mb-4 gap-4">
         <div>
-          <h3 className="font-display text-[15px] font-bold flex items-center gap-2">
+          <h3 className="text-[15px] font-bold flex items-center gap-2">
             <Calendar size={15} className="text-gym-accent" aria-hidden="true" />
             Linha do tempo — próximos vencimentos
           </h3>
@@ -151,7 +151,7 @@ export function TimelineVencimentos({
                   {diaSemana(g.iso)}
                 </div>
                 <div
-                  className={`text-[18px] font-display font-bold text-center tabular-nums leading-tight ${
+                  className={`text-[18px] font-bold text-center tabular-nums leading-tight ${
                     isToday
                       ? "text-gym-warning"
                       : isPast

@@ -3667,7 +3667,7 @@ export async function installAdminCrudApiMocks(page: Page) {
       return;
     }
 
-    if (path === "/api/v1/auth/change-password" && method === "POST") {
+    if (path === "/api/v1/auth/first-access/complete" && method === "POST") {
       const payload = parseBody<{ newPassword?: string }>(request);
       const account = provisionedAdminAccounts.find((item) => item.email === currentAuthProfile.email);
 

@@ -61,7 +61,7 @@ export function ClienteCartoesPanel({
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-display text-base font-bold">Cartões</h2>
+          <h2 className="text-base font-bold">Cartões</h2>
           <p className="mt-1 text-sm text-muted-foreground">Formas de pagamento salvas do cliente.</p>
         </div>
         <Button onClick={() => setModalOpen(true)} disabled={loading}>
@@ -96,7 +96,7 @@ export function ClienteCartoesPanel({
                         {bandeira?.nome ?? "Crédito"}
                       </span>
                     </div>
-                    <div className="mt-6 font-display text-xl tracking-[0.2em]">{maskCard(cartao.ultimos4)}</div>
+                    <div className="mt-6 text-xl tracking-[0.2em]">{maskCard(cartao.ultimos4)}</div>
                     <div className="mt-6 flex items-center justify-between text-xs text-white/80">
                       <div>
                         <p className="text-[10px] uppercase tracking-widest text-white/60">Titular</p>

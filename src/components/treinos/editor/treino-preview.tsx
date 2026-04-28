@@ -41,7 +41,7 @@ export function ValidationCard({ validationIssues }: ValidationCardProps) {
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="font-display text-lg">Validação técnica</CardTitle>
+        <CardTitle className="text-lg">Validação técnica</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {validationIssues.map((issue) => (
@@ -80,7 +80,7 @@ export function GovernanceCard({
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="font-display text-lg">Governança operacional</CardTitle>
+        <CardTitle className="text-lg">Governança operacional</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <StatLabel label="Status atual" value={templateReviewLabel} />
@@ -112,7 +112,7 @@ export function AssignmentHistoryCard({
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="font-display text-lg">Histórico de atribuições</CardTitle>
+        <CardTitle className="text-lg">Histórico de atribuições</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {assignment.processing ? (
@@ -208,7 +208,7 @@ export function SnapshotCard({ editor, assignedTraceability }: SnapshotCardProps
   return (
     <Card className="border-border bg-card">
       <CardHeader>
-        <CardTitle className="font-display text-lg">Snapshot e rastreabilidade</CardTitle>
+        <CardTitle className="text-lg">Snapshot e rastreabilidade</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <StatLabel label="Template origem" value={editor.snapshot.templateNome} />
@@ -250,7 +250,7 @@ export function AssignmentDialog({
     >
       <DialogContent className="border-border bg-card sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Atribuir treino padrão</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Atribuir treino padrão</DialogTitle>
           <DialogDescription>
             Selecione um cliente ou um lote, defina vigência e aplique o snapshot da versão atual do template.
           </DialogDescription>

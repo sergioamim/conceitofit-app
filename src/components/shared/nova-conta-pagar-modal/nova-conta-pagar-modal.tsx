@@ -132,7 +132,7 @@ export function NovaContaPagarModal({
     >
       <DialogContent className="max-h-[85vh] overflow-y-auto bg-card border-border sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">Nova conta a pagar</DialogTitle>
+          <DialogTitle className="text-lg font-bold">Nova conta a pagar</DialogTitle>
           <DialogDescription>
             Cadastre compromissos financeiros da unidade com classificação obrigatória para DRE.
           </DialogDescription>

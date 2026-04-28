@@ -75,7 +75,7 @@ function SessaoCard({
     <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-border/80">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <p className="font-display text-sm font-bold">{sessao.atividadeNome}</p>
+          <p className="text-sm font-bold">{sessao.atividadeNome}</p>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><Clock className="size-3" />{formatHora(sessao.horaInicio)} – {formatHora(sessao.horaFim)}</span>
             <span className="flex items-center gap-1"><CalendarDays className="size-3" />{DIA_SEMANA_LABEL[sessao.diaSemana] ?? sessao.diaSemana} · {formatDataCurta(sessao.data)}</span>

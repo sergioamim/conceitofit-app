@@ -104,7 +104,7 @@ export function ClienteMesclarDialog({ open, onClose, aluno, tenantId, onMerged 
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <DialogContent className="border-border bg-card sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold flex items-center gap-2">
+          <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <Users className="size-5" />
             Mesclar clientes
           </DialogTitle>

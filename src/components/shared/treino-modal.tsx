@@ -211,7 +211,7 @@ export function TreinoModal({
     >
       <DialogContent className="border-border bg-card sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="font-display text-lg font-bold">
+          <DialogTitle className="text-lg font-bold">
             {title ?? (mode === "PRE_MONTADO" ? "Novo template de treino" : "Novo treino")}
           </DialogTitle>
           <DialogDescription>

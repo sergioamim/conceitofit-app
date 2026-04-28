@@ -390,7 +390,7 @@ export function CrudModal<T extends FieldValues>({
         aria-describedby={resolvedDescription ? descriptionId : undefined}
       >
         <DialogHeader>
-          <DialogTitle id={titleId} className="font-display text-lg font-bold">
+          <DialogTitle id={titleId} className="text-lg font-bold">
             {isEditing ? (editTitle ?? title) : title}
           </DialogTitle>
           {resolvedDescription ? (
