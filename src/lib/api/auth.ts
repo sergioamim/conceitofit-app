@@ -612,6 +612,31 @@ export async function requestFirstAccessApi(input: {
   };
 }
 
+export async function changePasswordApi(input: {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}): Promise<{ message: string }> {
+  const response = await apiRequest<Partial<LoginApiResponse> & { message?: string }>({
+    path: "/api/v1/auth/change-password",
+    method: "POST",
+    body: {
+      currentPassword: input.currentPassword,
+      newPassword: input.newPassword,
+      confirmNewPassword: input.confirmNewPassword,
+    },
+  });
+
+  if (response.token && response.refreshToken) {
+    const session = normalizeSession(response as LoginApiResponse, { preserveTenantContext: true });
+    saveAuthSession(session);
+  }
+
+  return {
+    message: response.message?.trim() || "Senha atualizada com sucesso.",
+  };
+}
+
 export async function changeForcedPasswordApi(input: {
   newPassword: string;
   confirmNewPassword: string;

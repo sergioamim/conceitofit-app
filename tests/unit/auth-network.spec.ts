@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   adminEntrarComoUnidadeApi,
   adminLoginApi,
+  changePasswordApi,
   changeForcedPasswordApi,
   getAccessNetworkContextApi,
   loginApi,
@@ -519,6 +520,43 @@ test.describe("auth por rede", () => {
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
         identifier: "ana@qa.local",
         channel: "APP",
+      });
+    } finally {
+      restore();
+    }
+  });
+
+  test("changePasswordApi envia o payload canônico de troca de senha", async () => {
+    seedTestSession({
+      token: "token-rede",
+      refreshToken: "refresh-rede",
+      networkSubdomain: "rede-norte",
+      forcePasswordChangeRequired: false,
+    });
+
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: buildJwt({ sub: "uid:1", userId: "1" }),
+          refreshToken: "novo-refresh",
+        },
+      },
+    ]);
+
+    try {
+      const response = await changePasswordApi({
+        currentPassword: "SenhaAtual1",
+        newPassword: "NovaSenha123",
+        confirmNewPassword: "NovaSenha123",
+      });
+
+      expect(response.message).toBe("Senha atualizada com sucesso.");
+      expect(calls[0]?.url).toContain("/api/v1/auth/change-password");
+      expect(calls[0]?.method).toBe("POST");
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        currentPassword: "SenhaAtual1",
+        newPassword: "NovaSenha123",
+        confirmNewPassword: "NovaSenha123",
       });
     } finally {
       restore();

@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { apiRequest } from "@/lib/api/http";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
+import { changePasswordApi } from "@/lib/api/auth";
 import {
   trocarSenhaSchema,
   type TrocarSenhaFormValues,
@@ -23,7 +23,7 @@ export default function TrocarSenhaPage() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [wrongPassword, setWrongPassword] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm<TrocarSenhaFormValues>({
     resolver: zodResolver(trocarSenhaSchema),
@@ -34,44 +34,39 @@ export default function TrocarSenhaPage() {
     },
   });
 
-  const handleSubmit = useCallback(
-    async (values: TrocarSenhaFormValues) => {
-      setSaving(true);
-      setWrongPassword(null);
-      try {
-        await apiRequest<{ message: string }>({
-          path: "/api/v1/auth/change-password",
-          method: "POST",
-          body: {
-            senhaAtual: values.senhaAtual,
-            novaSenha: values.novaSenha,
-          },
-        });
-        toast({ title: "Senha alterada com sucesso!" });
-        router.push("/meu-perfil");
-      } catch (err: unknown) {
-        const msg = normalizeErrorMessage(err);
-        // Check if it's a 401/wrong password
-        if (
-          msg.toLowerCase().includes("senha") ||
-          msg.toLowerCase().includes("password") ||
-          msg.toLowerCase().includes("401") ||
-          msg.toLowerCase().includes("unauthorized")
-        ) {
-          setWrongPassword("Senha atual incorreta.");
-        } else {
-          toast({
-            title: "Erro ao alterar senha",
-            description: msg,
-            variant: "destructive",
-          });
-        }
-      } finally {
-        setSaving(false);
-      }
-    },
-    [toast, router],
-  );
+  async function handleSubmit(values: TrocarSenhaFormValues) {
+    setSaving(true);
+    setSubmitError(null);
+    form.clearErrors();
+
+    try {
+      const response = await changePasswordApi({
+        currentPassword: values.senhaAtual,
+        newPassword: values.novaSenha,
+        confirmNewPassword: values.confirmarSenha,
+      });
+      toast({ title: response.message });
+      router.push("/meu-perfil");
+    } catch (error) {
+      const fieldResult = applyApiFieldErrors(error, form.setError, {
+        mapField: {
+          currentPassword: "senhaAtual",
+          senhaAtual: "senhaAtual",
+          newPassword: "novaSenha",
+          novaSenha: "novaSenha",
+          confirmNewPassword: "confirmarSenha",
+          confirmarSenha: "confirmarSenha",
+          confirmarNovaSenha: "confirmarSenha",
+        },
+      });
+      setSubmitError(buildFormApiErrorMessage(error, {
+        appliedFields: fieldResult.appliedFields,
+        fallbackMessage: "Não foi possível alterar a senha.",
+      }));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="space-y-6 py-4 pb-20">
@@ -113,9 +108,6 @@ export default function TrocarSenhaPage() {
           </div>
           {form.formState.errors.senhaAtual && (
             <p className="text-xs text-gym-danger">{form.formState.errors.senhaAtual.message}</p>
-          )}
-          {wrongPassword && (
-            <p className="text-xs text-gym-danger">{wrongPassword}</p>
           )}
         </div>
 
@@ -181,6 +173,12 @@ export default function TrocarSenhaPage() {
             "Alterar Senha"
           )}
         </Button>
+
+        {submitError ? (
+          <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-sm text-gym-danger">
+            {submitError}
+          </div>
+        ) : null}
       </form>
     </div>
   );
