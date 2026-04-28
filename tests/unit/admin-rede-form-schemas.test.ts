@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildAcademiaPayload,
-  mapAcademiaFieldError,
-  academiaFormSchema,
-} from "@/app/(portal)/administrativo/academia/academia-form";
-import {
   buildUnidadePayload,
   mapUnidadeFieldError,
   unidadeFormSchema,
 } from "@/app/(portal)/administrativo/unidades/unidade-form";
+import {
+  backofficeAcademiaCreateSchema,
+  backofficeAcademiaDetailSchema,
+  buildBackofficeAcademiaCreateDefaults,
+  buildBackofficeAcademiaDetailDefaults,
+} from "@/lib/forms/backoffice-academia-form";
 import { buildZodFieldErrors } from "@/lib/forms/zod-helpers";
 
 describe("admin rede form schemas", () => {
@@ -63,104 +64,60 @@ describe("admin rede form schemas", () => {
     expect(mapUnidadeFieldError("configuracoes.impressaoCupom.larguraCustomMm")).toBe("cupomCustomWidthMm");
   });
 
-  it("bloqueia email inválido e cor HEX inválida da academia", () => {
-    const result = academiaFormSchema.safeParse({
+  it("bloqueia nome vazio no create e email inválido no detalhe da academia", () => {
+    const createResult = backofficeAcademiaCreateSchema.safeParse({
+      nome: "   ",
+      documento: "",
+    });
+    const detailResult = backofficeAcademiaDetailSchema.safeParse({
       nome: "Academia Central",
       razaoSocial: "",
       documento: "",
       email: "academia",
       telefone: "",
-      endereco: {
-        cep: "",
-        logradouro: "",
-        numero: "",
-        complemento: "",
-        bairro: "",
-        cidade: "",
-        estado: "",
-      },
-      branding: {
-        appName: "",
-        logoUrl: "",
-        themePreset: "CONCEITO_DARK",
-        useCustomColors: true,
-        colors: {
-          accent: "#123456",
-          primary: "123456",
-          secondary: "",
-          background: "",
-          surface: "",
-          border: "",
-          foreground: "",
-          mutedForeground: "",
-          danger: "",
-          warning: "",
-          teal: "",
-        },
-      },
+      ativo: "ATIVA",
     });
 
-    expect(result.success).toBe(false);
-    if (result.success) {
+    expect(createResult.success).toBe(false);
+    expect(detailResult.success).toBe(false);
+    expect(createResult.error?.flatten().fieldErrors.nome).toContain("Informe o nome da academia.");
+    expect(detailResult.error?.flatten().fieldErrors.email).toContain("Informe um e-mail válido.");
+  });
+
+  it("trima valores válidos da academia e expõe defaults estáveis do backoffice", () => {
+    const result = backofficeAcademiaDetailSchema.safeParse({
+      nome: " Academia Central ",
+      razaoSocial: " Razão Social LTDA ",
+      documento: " 46.208.771/0001-70 ",
+      email: " financeiro@academia.com ",
+      telefone: " (11) 98888-7777 ",
+      ativo: "ATIVA",
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
       return;
     }
 
-    const messages = buildZodFieldErrors(result.error);
-    expect(messages.email).toContain("Informe um e-mail válido.");
-    expect(messages["branding.colors.primary"]).toContain("Informe uma cor HEX no formato #RRGGBB.");
-  });
-
-  it("normaliza payload da academia e preserva paths para fieldErrors", () => {
-    const payload = buildAcademiaPayload({
-      nome: " Academia Central ",
-      razaoSocial: "",
-      documento: "",
+    expect(result.data).toMatchObject({
+      nome: "Academia Central",
+      razaoSocial: "Razão Social LTDA",
+      documento: "46.208.771/0001-70",
       email: "financeiro@academia.com",
       telefone: "(11) 98888-7777",
-      endereco: {
-        cep: "01310-100",
-        logradouro: "Av. Paulista",
-        numero: "1000",
-        complemento: "",
-        bairro: "Bela Vista",
-        cidade: "São Paulo",
-        estado: "SP",
-      },
-      branding: {
-        appName: " Conceito Fit ",
-        logoUrl: "",
-        themePreset: "CONCEITO_DARK",
-        useCustomColors: true,
-        colors: {
-          accent: "123456",
-          primary: "",
-          ring: "",
-          secondary: "",
-          background: "",
-          surface: "",
-          border: "",
-          foreground: "",
-          mutedForeground: "",
-          danger: "",
-          warning: "",
-          teal: "",
-        },
-      },
+      ativo: "ATIVA",
     });
-
-    expect(payload).toMatchObject({
-      nome: "Academia Central",
-      branding: {
-        appName: "Conceito Fit",
-        colors: {
-          accent: "#123456",
-        },
-      },
-      endereco: {
-        logradouro: "Av. Paulista",
-      },
+    expect(buildBackofficeAcademiaCreateDefaults()).toEqual({
+      nome: "",
+      documento: "",
     });
-    expect(mapAcademiaFieldError("branding.colors.accent")).toBe("branding.colors.accent");
-    expect(mapAcademiaFieldError("endereco.cep")).toBe("endereco.cep");
+    expect(buildBackofficeAcademiaDetailDefaults()).toEqual({
+      nome: "",
+      razaoSocial: "",
+      documento: "",
+      email: "",
+      telefone: "",
+      ativo: "ATIVA",
+    });
   });
 });

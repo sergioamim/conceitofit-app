@@ -3,7 +3,8 @@ import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 import { isValidCnpj, normalizeCnpjDigits } from "@/lib/utils/cnpj";
 
 function hasValidPhone(value: string) {
-  return value.replace(/\D/g, "").length >= 10;
+  const digits = value.replace(/\D/g, "");
+  return digits.length >= 10 && digits.length <= 15;
 }
 
 export const adminOnboardingProvisionFormSchema = z.object({

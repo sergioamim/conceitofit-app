@@ -161,26 +161,13 @@ export default function AdminProvisionarAcademiaPage() {
     register,
     reset,
     setError,
+    setFocus,
     watch,
-    formState: { errors },
+    formState: { errors, isValid },
   } = form;
 
-  // Manual watch dos required fields para evitar rodar o zodResolver no mount.
-  const watchedAcademiaNome = watch("academiaNome");
-  const watchedCnpj = watch("cnpj");
-  const watchedUnidadePrincipal = watch("unidadePrincipalNome");
-  const watchedAdminNome = watch("adminNome");
-  const watchedAdminEmail = watch("adminEmail");
-  const watchedTelefone = watch("telefone");
-  const canSave =
-    Boolean(watchedAcademiaNome?.trim()) &&
-    Boolean(watchedCnpj?.trim()) &&
-    Boolean(watchedUnidadePrincipal?.trim()) &&
-    Boolean(watchedAdminNome?.trim()) &&
-    Boolean(watchedAdminEmail?.trim()) &&
-    Boolean(watchedTelefone?.trim());
-
   const values = watch();
+  const canSave = isValid && !submitting;
   const credentialsText = useMemo(
     () => (credentials ? buildCredentialsText(credentials, values) : ""),
     [credentials, values],
@@ -210,19 +197,36 @@ export default function AdminProvisionarAcademiaPage() {
         description: "As credenciais iniciais já estão prontas para envio ao administrador.",
       });
     } catch (error) {
-      const { appliedFields } = applyApiFieldErrors(error, setError, {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(error, setError, {
         mapField: mapFieldError,
       });
+      const firstMappedField = appliedFields
+        .map((field) => mapFieldError(field))
+        .find((field): field is keyof AdminOnboardingProvisionFormValues => field !== null);
+      const hasOnlyMappedFieldErrors =
+        hasFieldErrors &&
+        appliedFields.length > 0 &&
+        Object.keys(unmatchedFieldErrors).length === 0;
+
+      if (hasOnlyMappedFieldErrors && firstMappedField) {
+        setFocus(firstMappedField);
+      }
+
       const message = buildFormApiErrorMessage(error, {
         appliedFields,
         fallbackMessage: "Revise os campos destacados e tente novamente.",
       });
-      setSubmitError(message);
-      toast({
-        title: "Falha ao provisionar academia",
-        description: message,
-        variant: "destructive",
-      });
+
+      if (hasOnlyMappedFieldErrors) {
+        setSubmitError("");
+      } else {
+        setSubmitError(message);
+        toast({
+          title: "Falha ao provisionar academia",
+          description: message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setSubmitting(false);
     }

@@ -28,6 +28,14 @@ export const backofficeUnidadeSchema = z.object({
   cupomPrintMode: z.enum(["58MM", "80MM", "CUSTOM"] as const).default("80MM"),
   cupomCustomWidthMm: optionalFormString.default("80"),
 }).superRefine((values, ctx) => {
+  if (values.groupId && values.groupId !== values.academiaId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["groupId"],
+      message: "O groupId deve corresponder à academia selecionada.",
+    });
+  }
+
   if (values.cupomPrintMode !== "CUSTOM") {
     return;
   }
