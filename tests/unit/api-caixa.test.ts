@@ -7,7 +7,6 @@ import {
   getCaixaAtivo,
   getDashboard,
   getDiferencas,
-  listCaixaCatalogos,
   listarCaixas,
 } from "@/lib/api/caixa";
 import { ApiRequestError } from "@/lib/api/http";
@@ -47,32 +46,18 @@ describe("api/caixa", () => {
   });
 
   // -------------------------------------------------------------------------
-  // listCaixaCatalogos
-  // -------------------------------------------------------------------------
-  describe("listCaixaCatalogos", () => {
-    it("GET /api/caixas/catalogo", async () => {
-      const spy = mockApiRequest([]);
-      await listCaixaCatalogos();
-      expect(spy.mock.calls[0][0].path).toBe("/api/caixas/catalogo");
-      expect(spy.mock.calls[0][0].method).toBe("GET");
-    });
-  });
-
-  // -------------------------------------------------------------------------
   // abrirCaixa
   // -------------------------------------------------------------------------
   describe("abrirCaixa", () => {
     it("POST /api/caixas/abrir com body tipado", async () => {
       const spy = mockApiRequest({ id: "c1" });
       await abrirCaixa({
-        caixaCatalogoId: "cc1",
         valorAbertura: 100,
         observacoes: "abertura",
       });
       expect(spy.mock.calls[0][0].path).toBe("/api/caixas/abrir");
       expect(spy.mock.calls[0][0].method).toBe("POST");
       expect(spy.mock.calls[0][0].body).toEqual({
-        caixaCatalogoId: "cc1",
         valorAbertura: 100,
         observacoes: "abertura",
       });

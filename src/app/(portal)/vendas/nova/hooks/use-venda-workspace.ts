@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getAlunoApi } from "@/lib/api/alunos";
+import { getCaixaAtivo } from "@/lib/api/caixa";
+import { isCaixaApiError } from "@/lib/api/caixa-error-handler";
 import { useToast } from "@/components/ui/use-toast";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useCommercialFlow } from "@/lib/tenant/hooks/use-commercial-flow";
@@ -10,6 +12,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query/keys";
 import type { PagamentoVenda, Plano, Tenant, TipoFormaPagamento, TipoVenda } from "@/lib/types";
 import type { SuggestionOption } from "@/components/shared/suggestion-input";
+import type { CaixaResponse, SaldoParcialResponse } from "@/lib/api/caixa.types";
+
+/**
+ * Wave A1 (Item venda + caixa dia anterior): estado pendente quando o
+ * backend rejeita venda com 409 CAIXA_DIA_ANTERIOR. Permite ao consumer
+ * (cockpit) renderizar modal com 3 ações: Continuar / Conferir / Cancelar.
+ */
+export interface VendaCaixaDiaAnteriorPendente {
+  caixaAtivo: CaixaResponse;
+  saldoAtual: SaldoParcialResponse;
+  pagamentoRetry: PagamentoVenda;
+}
 
 import { useBarcodeScanner } from "./use-barcode-scanner";
 import { useSaleReceipt } from "./use-sale-receipt";
@@ -240,6 +254,50 @@ export function useVendaWorkspace() {
     addPlanoToCart(plano, parcelas);
   }
 
+  // Wave A1: estado pendente quando backend rejeita venda com 409
+  // CAIXA_DIA_ANTERIOR. Cockpit renderiza modal com 3 ações.
+  const [caixaDiaAnteriorPendente, setCaixaDiaAnteriorPendente] =
+    useState<VendaCaixaDiaAnteriorPendente | null>(null);
+
+  const executarVenda = useCallback(async (
+    pagamento: PagamentoVenda,
+    options?: { aceitarCaixaDiaAnterior?: boolean },
+  ) => {
+    const venda = await processSale(pagamento, options);
+    let selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
+    if (!selectedCliente && venda.clienteId && tenantId) {
+      try {
+        selectedCliente = await getAlunoApi({ tenantId, id: venda.clienteId });
+      } catch {
+        selectedCliente = null;
+      }
+    }
+    const contratoAutoMsg =
+      selectedPlano?.contratoTemplateHtml && selectedPlano.contratoEnviarAutomaticoEmail && selectedCliente?.email
+        ? `Contrato enviado automaticamente para ${selectedCliente.email}.`
+        : "";
+    receipt.showReceipt({
+      venda,
+      cliente: selectedCliente,
+      plano: selectedPlano ?? null,
+      contratoAutoMsg,
+      voucherCodigo: flow.cupomAppliedCode,
+      voucherPercent: flow.cupomPercent,
+    });
+    if (tenantId) {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
+      const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
+      if (criouContrato) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.contratos.all(tenantId) });
+        if (venda.clienteId) {
+          void queryClient.invalidateQueries({
+            queryKey: queryKeys.contratos.byAluno(tenantId, venda.clienteId),
+          });
+        }
+      }
+    }
+  }, [alunos, flow.cupomAppliedCode, flow.cupomPercent, processSale, queryClient, receipt, selectedPlano, tenantId]);
+
   const handleConfirmPayment = useCallback(async (pagamento: PagamentoVenda) => {
     if (requireCliente && !clienteId) {
       toast({
@@ -250,55 +308,41 @@ export function useVendaWorkspace() {
       return;
     }
     try {
-      const venda = await processSale(pagamento);
-      let selectedCliente = alunos.find((a) => a.id === venda.clienteId) ?? null;
-      // Fallback: prefill (?clienteId=X) busca aluno via getAlunoApi e não
-      // popula a lista cached. Ao finalizar a venda, buscamos por ID pra
-      // garantir que o recibo receba o cliente (pra renderizar o botão
-      // "Ver perfil do cliente" ao lado de "Nova venda").
-      if (!selectedCliente && venda.clienteId && tenantId) {
+      await executarVenda(pagamento);
+    } catch (err) {
+      // Wave A1: 409 CAIXA_DIA_ANTERIOR vira modal com 3 ações.
+      // Carregamos o caixa ativo (com saldo) pra alimentar o FecharCaixaModal
+      // caso o user opte por "Conferir e fechar".
+      if (isCaixaApiError(err) && err.code === "CAIXA_DIA_ANTERIOR") {
         try {
-          selectedCliente = await getAlunoApi({ tenantId, id: venda.clienteId });
-        } catch {
-          selectedCliente = null;
-        }
-      }
-      const contratoAutoMsg =
-        selectedPlano?.contratoTemplateHtml && selectedPlano.contratoEnviarAutomaticoEmail && selectedCliente?.email
-          ? `Contrato enviado automaticamente para ${selectedCliente.email}.`
-          : "";
-      receipt.showReceipt({
-        venda,
-        cliente: selectedCliente,
-        plano: selectedPlano ?? null,
-        contratoAutoMsg,
-        voucherCodigo: flow.cupomAppliedCode,
-        voucherPercent: flow.cupomPercent,
-      });
-      // Cache invalidations podem (e devem) rodar logo — o usuário pode
-      // abrir `/vendas` ou o perfil do cliente em outra aba enquanto o
-      // recibo está aberto e esperar dados frescos. Nada aqui mexe em
-      // state do PaymentPanel.
-      if (tenantId) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.vendas.all(tenantId) });
-        const criouContrato = venda.tipo === "PLANO" && Boolean(venda.clienteId);
-        if (criouContrato) {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.contratos.all(tenantId) });
-          if (venda.clienteId) {
-            void queryClient.invalidateQueries({
-              queryKey: queryKeys.contratos.byAluno(tenantId, venda.clienteId),
+          const ativo = await getCaixaAtivo();
+          if (ativo) {
+            setCaixaDiaAnteriorPendente({
+              caixaAtivo: ativo.caixa,
+              saldoAtual: ativo.saldo,
+              pagamentoRetry: pagamento,
             });
+            return;
           }
+        } catch {
+          // Falha ao carregar caixa — cai no toast genérico abaixo.
         }
       }
-      // NOTA: resets de carrinho/forma-pagamento/parcelas/autorização/
-      // dataInício foram movidos pro `handleReceiptClose` (abaixo). Motivo:
-      // fazer esses resets aqui — no mesmo tick em que o modal abre —
-      // disparava cascata com os 6 useEffects de sync form↔workspace do
-      // PaymentPanel E ainda re-renderizava o modal recém-montado. Na 2ª
-      // venda consecutiva a cadeia batia "Maximum update depth exceeded"
-      // no DialogOverlay. Resetar só após o usuário fechar o recibo deixa
-      // o ciclo limpo: venda abre modal → modal fecha → cockpit reseta.
+      toast({
+        variant: "destructive",
+        title: "Erro ao registrar venda",
+        description: err instanceof Error ? err.message : "Erro ao registrar venda",
+      });
+    }
+  }, [clienteId, executarVenda, requireCliente, toast]);
+
+  /** Wave A1: usuário confirmou "Continuar venda assim mesmo". */
+  const handleConfirmarVendaDiaAnterior = useCallback(async () => {
+    const pendente = caixaDiaAnteriorPendente;
+    if (!pendente) return;
+    setCaixaDiaAnteriorPendente(null);
+    try {
+      await executarVenda(pendente.pagamentoRetry, { aceitarCaixaDiaAnterior: true });
     } catch (err) {
       toast({
         variant: "destructive",
@@ -306,7 +350,25 @@ export function useVendaWorkspace() {
         description: err instanceof Error ? err.message : "Erro ao registrar venda",
       });
     }
-  }, [alunos, clienteId, flow.cupomAppliedCode, flow.cupomPercent, processSale, queryClient, receipt, requireCliente, selectedPlano, tenantId, toast]);
+  }, [caixaDiaAnteriorPendente, executarVenda, toast]);
+
+  /** Wave A1: usuário cancelou — fecha modal sem efeito. */
+  const handleCancelarVendaDiaAnterior = useCallback(() => {
+    setCaixaDiaAnteriorPendente(null);
+  }, []);
+
+  /** Wave A1: caixa anterior foi fechado — reexecuta venda original. */
+  const handleCaixaAnteriorFechado = useCallback(async () => {
+    const pendente = caixaDiaAnteriorPendente;
+    if (!pendente) return;
+    setCaixaDiaAnteriorPendente(null);
+    // Caixa anterior fechado — operador precisa abrir um novo. Por enquanto
+    // mostramos toast guiando: a UI dedicada está em /caixa.
+    toast({
+      title: "Caixa anterior encerrado",
+      description: "Abra um novo caixa em Meu Caixa e refaça a venda.",
+    });
+  }, [caixaDiaAnteriorPendente, toast]);
 
   /**
    * Handler de fechamento do recibo (VUN-Onda-4 follow-up, 2026-04-22):
@@ -365,6 +427,12 @@ export function useVendaWorkspace() {
     handleAddPlano,
     handleConfirmPayment,
     handleReceiptClose,
+
+    // Wave A1: caixa de dia anterior — modal 3 ações
+    caixaDiaAnteriorPendente,
+    handleConfirmarVendaDiaAnterior,
+    handleCancelarVendaDiaAnterior,
+    handleCaixaAnteriorFechado,
 
     // VUN-3.3 — Payment panel workspace extras
     formaPagamento,

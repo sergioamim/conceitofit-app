@@ -135,6 +135,8 @@ export async function createVendaService(input: {
     acrescimoTotal?: number;
     pagamento: PagamentoVenda;
   };
+  /** Wave A1: força backend a aceitar caixa de dia anterior. */
+  aceitarCaixaDiaAnterior?: boolean;
 }): Promise<Venda> {
   return createVendaApi(input);
 }

@@ -28,7 +28,6 @@ function mockCaixa(overrides: Partial<CaixaResponse> = {}): CaixaResponse {
     valorInformado: null,
     operadorId: "op1",
     operadorNome: "Operador",
-    caixaCatalogoId: "cat1",
     ...overrides,
   };
 }

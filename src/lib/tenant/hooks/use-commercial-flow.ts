@@ -352,15 +352,18 @@ export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }
   }, [tenantId, clienteId, selectedPlanoId]);
 
   // Checkout Action
-  const processSale = useCallback(async (pagamento: PagamentoVenda) => {
+  const processSale = useCallback(async (
+    pagamento: PagamentoVenda,
+    options?: { aceitarCaixaDiaAnterior?: boolean },
+  ) => {
     if (!tenantId) throw new Error("Tenant ativo não encontrado.");
     if (cart.length === 0) throw new Error("Adicione ao menos um item à venda.");
 
     setSaving(true);
     try {
-      const tipoFinal = cart.some(i => i.tipo === "PLANO") ? "PLANO" : 
+      const tipoFinal = cart.some(i => i.tipo === "PLANO") ? "PLANO" :
                          cart.some(i => i.tipo === "SERVICO") ? "SERVICO" : "PRODUTO";
-      
+
       // VUN-Onda3 — só envia dataInicioPlano quando há plano no carrinho.
       // Backend resolve o default (max(hoje, ultimoAtivo.dataFim+1)) se vier
       // ausente; para vendas de produto/serviço puras o campo não faz sentido.
@@ -370,6 +373,7 @@ export function useCommercialFlow({ tenantId, initialClienteId, formaPagamento }
 
       const venda = await createVendaService({
         tenantId,
+        aceitarCaixaDiaAnterior: options?.aceitarCaixaDiaAnterior,
         data: {
           tipo: tipoFinal as TipoVenda,
           clienteId: clienteId || undefined,

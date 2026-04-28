@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import type { CartItem } from "@/lib/tenant/hooks/use-commercial-flow";
 import type { Prospect } from "@/lib/types";
 import { useVendaWorkspace } from "./hooks/use-venda-workspace";
+import { CaixaDiaAnteriorVendaModal } from "./components/caixa-dia-anterior-venda-modal";
 import { CatalogTabs } from "./components/catalog-tabs";
 import { CartItems } from "./components/cart-items";
 import { PaymentPanel } from "./components/payment-panel";
@@ -45,6 +46,10 @@ function NovaVendaPageContent() {
     receiptVoucherPercent,
     handleConfirmPayment,
     handleReceiptClose,
+    caixaDiaAnteriorPendente,
+    handleConfirmarVendaDiaAnterior,
+    handleCancelarVendaDiaAnterior,
+    handleCaixaAnteriorFechado,
     setClienteId,
     clienteId,
     clienteQuery,
@@ -146,6 +151,19 @@ function NovaVendaPageContent() {
           voucherDescontoPercent={receiptVoucherPercent || undefined}
         />
       )}
+
+      {/* Wave A1: modal exibido quando backend rejeita venda com 409
+          CAIXA_DIA_ANTERIOR. 3 ações: continuar, conferir+fechar, cancelar. */}
+      {caixaDiaAnteriorPendente ? (
+        <CaixaDiaAnteriorVendaModal
+          open
+          caixaAtivo={caixaDiaAnteriorPendente.caixaAtivo}
+          saldoAtual={caixaDiaAnteriorPendente.saldoAtual}
+          onContinuar={() => void handleConfirmarVendaDiaAnterior()}
+          onCancelar={handleCancelarVendaDiaAnterior}
+          onCaixaFechado={() => void handleCaixaAnteriorFechado()}
+        />
+      ) : null}
 
       <CockpitShell
         headerLeft={

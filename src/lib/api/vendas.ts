@@ -347,12 +347,17 @@ export async function listVendasApi(
 export async function createVendaApi(input: {
   tenantId: string;
   data: CreateVendaApiInput;
+  /** Wave A1: força aceitar caixa de dia anterior. Default false. */
+  aceitarCaixaDiaAnterior?: boolean;
 }): Promise<Venda> {
   const itens = normalizeCreateVendaItems(input.data.itens);
   const response = await apiRequest<VendaApiResponse>({
     path: "/api/v1/comercial/vendas",
     method: "POST",
-    query: { tenantId: input.tenantId },
+    query: {
+      tenantId: input.tenantId,
+      ...(input.aceitarCaixaDiaAnterior ? { aceitarCaixaDiaAnterior: true } : {}),
+    },
     body: {
       tipo: input.data.tipo,
       clienteId: input.data.clienteId,

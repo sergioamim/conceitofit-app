@@ -12,24 +12,14 @@ describe("caixa-schemas", () => {
   describe("AbrirCaixaSchema", () => {
     it("aceita payload válido", () => {
       const result = AbrirCaixaSchema.safeParse({
-        caixaCatalogoId: VALID_UUID,
         valorAbertura: 100,
         observacoes: "abertura",
       });
       expect(result.success).toBe(true);
     });
 
-    it("rejeita catálogo não-UUID", () => {
-      const result = AbrirCaixaSchema.safeParse({
-        caixaCatalogoId: "not-uuid",
-        valorAbertura: 100,
-      });
-      expect(result.success).toBe(false);
-    });
-
     it("rejeita valor negativo", () => {
       const result = AbrirCaixaSchema.safeParse({
-        caixaCatalogoId: VALID_UUID,
         valorAbertura: -1,
       });
       expect(result.success).toBe(false);
