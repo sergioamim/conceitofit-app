@@ -1,92 +1,81 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@/lib/forms/zod-resolver";
+import { ApiRequestError } from "@/lib/api/http";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
 import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { getBusinessTodayIso } from "@/lib/business-date";
-import {
-  buildDefaultCrmPipelineStages,
-  CRM_TASK_PRIORITY_LABEL,
-  CRM_TASK_STATUS_LABEL,
-  CRM_TASK_TYPE_LABEL,
-} from "@/lib/tenant/crm/workspace";
-import {
-  useCrmTasksQuery,
-  useCreateCrmTask,
-  useUpdateCrmTask,
-} from "@/lib/query/use-crm-tasks";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
+import { buildDefaultCrmPipelineStages } from "@/lib/tenant/crm/workspace";
+import { useCreateCrmTask, useCrmTasksQuery, useUpdateCrmTask } from "@/lib/query/use-crm-tasks";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
-import type {
-  CrmPipelineStage,
-  CrmTask,
-  CrmTaskPrioridade,
-  CrmTaskStatus,
-  CrmTaskTipo,
-  StatusProspect,
-} from "@/lib/types";
+import type { CrmPipelineStage, CrmTask, CrmTaskPrioridade, CrmTaskStatus, Funcionario } from "@/lib/types";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { formatDateTime } from "@/lib/formatters";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+  crmTarefaFormSchema,
+  type CrmTarefaFormValues,
+  EMPTY_CRM_TAREFA_FORM_VALUES,
+} from "./tarefas-form-schema";
+import { CrmTaskFormCard, CrmTaskQueueCard } from "./tarefas-sections";
 
-type FormState = {
-  titulo: string;
-  descricao: string;
-  prospectId: string;
-  responsavelId: string;
-  stageStatus: StatusProspect;
-  tipo: CrmTaskTipo;
-  prioridade: CrmTaskPrioridade;
-  status: Exclude<CrmTaskStatus, "ATRASADA">;
-  vencimentoData: string;
-  vencimentoHora: string;
-};
-
-const EMPTY_FORM: FormState = {
-  titulo: "",
-  descricao: "",
-  prospectId: "",
-  responsavelId: "",
-  stageStatus: "NOVO",
-  tipo: "LIGACAO",
-  prioridade: "MEDIA",
-  status: "PENDENTE",
-  vencimentoData: "",
-  vencimentoHora: "09:00",
-};
-
-function buildEmptyForm(todayIso: string): FormState {
+function buildEmptyForm(todayIso: string): CrmTarefaFormValues {
   return {
-    ...EMPTY_FORM,
+    ...EMPTY_CRM_TAREFA_FORM_VALUES,
     vencimentoData: todayIso,
   };
 }
 
-function toForm(task?: CrmTask | null, todayIso = ""): FormState {
+function resolveResponsavelIdByName(funcionarios: Funcionario[], responsavelNome?: string): string {
+  if (!responsavelNome) return "";
+  const funcionario = funcionarios.find((item) => item.nome === responsavelNome);
+  return funcionario?.id ?? "";
+}
+
+function toForm(task: CrmTask | null | undefined, todayIso: string, funcionarios: Funcionario[]): CrmTarefaFormValues {
   if (!task) return buildEmptyForm(todayIso);
   const [date = todayIso, time = "09:00"] = task.vencimentoEm.split("T");
   return {
     titulo: task.titulo,
     descricao: task.descricao ?? "",
     prospectId: task.prospectId ?? "",
-    responsavelId: task.responsavelId ?? "",
-    stageStatus: task.stageStatus ?? "NOVO",
-    tipo: task.tipo,
+    responsavelId: task.responsavelId ?? resolveResponsavelIdByName(funcionarios, task.responsavelNome),
     prioridade: task.prioridade,
     status: task.status === "ATRASADA" ? "PENDENTE" : task.status,
     vencimentoData: date,
     vencimentoHora: time.slice(0, 5),
+  };
+}
+
+function resolveResponsavelNome(funcionarios: Funcionario[], responsavelId?: string): string | undefined {
+  if (!responsavelId) return undefined;
+  return funcionarios.find((item) => item.id === responsavelId)?.nome;
+}
+
+function buildTaskPayload(values: CrmTarefaFormValues, funcionarios: Funcionario[]) {
+  return {
+    prospectId: values.prospectId || undefined,
+    titulo: values.titulo.trim(),
+    descricao: values.descricao?.trim() || undefined,
+    prioridade: values.prioridade,
+    status: values.status,
+    responsavel: resolveResponsavelNome(funcionarios, values.responsavelId),
+    vencimentoEm: `${values.vencimentoData}T${values.vencimentoHora}:00`,
+  };
+}
+
+function buildConcluirPayload(task: CrmTask) {
+  return {
+    prospectId: task.prospectId || undefined,
+    titulo: task.titulo,
+    descricao: task.descricao,
+    prioridade: task.prioridade,
+    status: "CONCLUIDA" as const,
+    responsavel: task.responsavelNome,
+    vencimentoEm: task.vencimentoEm,
   };
 }
 
@@ -115,72 +104,91 @@ export default function CrmTarefasPage() {
   const [filterStatus, setFilterStatus] = useState<CrmTaskStatus | "TODAS">("TODAS");
   const [filterResponsavel, setFilterResponsavel] = useState<string>(FILTER_ALL);
   const [filterPrioridade, setFilterPrioridade] = useState<CrmTaskPrioridade | "TODAS">("TODAS");
-  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [writeUnavailable, setWriteUnavailable] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, getValues } = useForm<FormState>({
-    defaultValues: EMPTY_FORM,
+  const form = useForm<CrmTarefaFormValues>({
+    resolver: zodResolver(crmTarefaFormSchema),
+    defaultValues: EMPTY_CRM_TAREFA_FORM_VALUES,
+    mode: "onChange",
   });
+  const { handleSubmit, reset, setValue, setError, control } = form;
 
   useEffect(() => {
     reset(buildEmptyForm(getBusinessTodayIso()));
   }, [reset]);
 
-  const stages = useMemo<CrmPipelineStage[]>(
-    () => buildDefaultCrmPipelineStages(tenantId || "tenant-runtime"),
-    [tenantId],
-  );
+  const stages: CrmPipelineStage[] = buildDefaultCrmPipelineStages(tenantId || "tenant-runtime");
+  const funcionariosById = new Map(funcionarios.map((funcionario) => [funcionario.id, funcionario] as const));
+  const selectedProspectId = useWatch({ control, name: "prospectId" });
+  const selectedProspect = prospects.find((prospect) => prospect.id === selectedProspectId);
+  const displayError = submitError || (queryError ? normalizeErrorMessage(queryError) : "");
 
-  // Derive error from query or local mutation errors
-  const displayError = error || (queryError ? normalizeErrorMessage(queryError) : "");
+  const filteredRows = rows.filter((row) => {
+    if (filterStatus !== "TODAS" && row.status !== filterStatus) return false;
+    if (filterPrioridade !== "TODAS" && row.prioridade !== filterPrioridade) return false;
+    if (filterResponsavel !== FILTER_ALL) {
+      const selectedFuncionario = funcionariosById.get(filterResponsavel);
+      const matchesById = row.responsavelId === filterResponsavel;
+      const matchesByName = selectedFuncionario ? row.responsavelNome === selectedFuncionario.nome : false;
+      if (!matchesById && !matchesByName) return false;
+    }
+    return true;
+  });
 
-  const filteredRows = useMemo(() => {
-    return rows.filter((row) => {
-      if (filterStatus !== "TODAS" && row.status !== filterStatus) return false;
-      if (filterResponsavel !== FILTER_ALL && row.responsavelId !== filterResponsavel) return false;
-      if (filterPrioridade !== "TODAS" && row.prioridade !== filterPrioridade) return false;
-      return true;
-    });
-  }, [filterPrioridade, filterResponsavel, filterStatus, rows]);
-
-  const metrics = useMemo(() => {
-    return {
-      abertas: rows.filter((row) => !["CONCLUIDA", "CANCELADA"].includes(row.status)).length,
-      atrasadas: rows.filter((row) => row.status === "ATRASADA").length,
-      concluidas: rows.filter((row) => row.status === "CONCLUIDA").length,
-    };
-  }, [rows]);
+  const metrics = {
+    abertas: rows.filter((row) => !["CONCLUIDA", "CANCELADA"].includes(row.status)).length,
+    atrasadas: rows.filter((row) => row.status === "ATRASADA").length,
+    concluidas: rows.filter((row) => row.status === "CONCLUIDA").length,
+  };
 
   function resetForm(task?: CrmTask | null) {
     setEditing(task ?? null);
-    reset(toForm(task, getBusinessTodayIso()));
+    setSubmitError("");
+    reset(toForm(task, getBusinessTodayIso(), funcionarios));
   }
 
-  async function onSubmit(form: FormState) {
+  async function onSubmit(values: CrmTarefaFormValues) {
     if (!tenantId) return;
-    setError("");
+
+    setSubmitError("");
     try {
-      const payload = {
-        prospectId: form.prospectId || undefined,
-        responsavelId: form.responsavelId || undefined,
-        stageStatus: form.stageStatus,
-        titulo: form.titulo,
-        descricao: form.descricao,
-        tipo: form.tipo,
-        prioridade: form.prioridade,
-        status: form.status,
-        vencimentoEm: `${form.vencimentoData}T${form.vencimentoHora}:00`,
-      };
+      const payload = buildTaskPayload(values, funcionarios);
       if (editing) {
         await updateMutation.mutateAsync({ tenantId, id: editing.id, data: payload });
       } else {
         await createMutation.mutateAsync({ tenantId, data: payload });
       }
+      setWriteUnavailable(false);
       resetForm(null);
-    } catch (submitError) {
-      const message = normalizeCapabilityError(submitError, "Falha ao salvar tarefa CRM.");
-      setError(message);
-      if (message.startsWith("Backend ainda não expõe")) {
+    } catch (error) {
+      const fieldResult = applyApiFieldErrors(error, setError, {
+        mapField: (field) => {
+          switch (field) {
+            case "responsavel":
+              return "responsavelId";
+            case "vencimentoEm":
+              return "vencimentoData";
+            default:
+              return field as keyof CrmTarefaFormValues;
+          }
+        },
+      });
+
+      if (error instanceof ApiRequestError) {
+        const dueDateMessage = error.fieldErrors?.vencimentoEm;
+        if (typeof dueDateMessage === "string" && dueDateMessage.trim().length > 0) {
+          setError("vencimentoHora", { type: "server", message: dueDateMessage });
+        }
+      }
+
+      const capabilityMessage = normalizeCapabilityError(error, "Falha ao salvar tarefa CRM.");
+      const message = buildFormApiErrorMessage(error, {
+        appliedFields: fieldResult.appliedFields,
+        fallbackMessage: capabilityMessage,
+      });
+      setSubmitError(message);
+      if (capabilityMessage.startsWith("Backend ainda não expõe")) {
         setWriteUnavailable(true);
       }
     }
@@ -188,19 +196,21 @@ export default function CrmTarefasPage() {
 
   async function handleConcluir(task: CrmTask) {
     if (!tenantId) return;
-    setError("");
+
+    setSubmitError("");
     try {
       await updateMutation.mutateAsync({
         tenantId,
         id: task.id,
-        data: { status: "CONCLUIDA" },
+        data: buildConcluirPayload(task),
       });
+      setWriteUnavailable(false);
       if (editing?.id === task.id) {
         resetForm(null);
       }
-    } catch (submitError) {
-      const message = normalizeCapabilityError(submitError, "Falha ao concluir tarefa.");
-      setError(message);
+    } catch (error) {
+      const message = normalizeCapabilityError(error, "Falha ao concluir tarefa.");
+      setSubmitError(message);
       if (message.startsWith("Backend ainda não expõe")) {
         setWriteUnavailable(true);
       }
@@ -256,279 +266,43 @@ export default function CrmTarefasPage() {
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle>Fila operacional</CardTitle>
-            <CardDescription>Filtre por status, prioridade e responsável para distribuir a carga.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="task-filter-status">Status</Label>
-                <select
-                  id="task-filter-status"
-                  value={filterStatus}
-                  onChange={(event) => setFilterStatus(event.target.value as CrmTaskStatus | "TODAS")}
-                  className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                >
-                  <option value="TODAS">Todos</option>
-                  {Object.entries(CRM_TASK_STATUS_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="task-filter-prioridade">Prioridade</Label>
-                <select
-                  id="task-filter-prioridade"
-                  value={filterPrioridade}
-                  onChange={(event) => setFilterPrioridade(event.target.value as CrmTaskPrioridade | "TODAS")}
-                  className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                >
-                  <option value="TODAS">Todas</option>
-                  {Object.entries(CRM_TASK_PRIORITY_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="task-filter-responsavel">Responsável</Label>
-                <select
-                  id="task-filter-responsavel"
-                  value={filterResponsavel}
-                  onChange={(event) => setFilterResponsavel(event.target.value)}
-                  className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                >
-                  <option value={FILTER_ALL}>Todos</option>
-                  {funcionarios.map((funcionario) => (
-                    <option key={funcionario.id} value={funcionario.id}>
-                      {funcionario.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+        <CrmTaskQueueCard
+          loading={loading}
+          filteredRows={filteredRows}
+          saving={saving}
+          writeUnavailable={writeUnavailable}
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          filterResponsavel={filterResponsavel}
+          setFilterResponsavel={setFilterResponsavel}
+          filterPrioridade={filterPrioridade}
+          setFilterPrioridade={setFilterPrioridade}
+          funcionarios={funcionarios}
+          stages={stages}
+          onEdit={resetForm}
+          onConcluir={handleConcluir}
+        />
 
-            {loading ? (
-              <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center text-sm text-muted-foreground">
-                Carregando tarefas comerciais...
-              </div>
-            ) : filteredRows.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/70 px-4 py-10 text-center text-sm text-muted-foreground">
-                Nenhuma tarefa encontrada com os filtros atuais.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredRows.map((task) => (
-                  <div key={task.id} className="rounded-xl border border-border/70 bg-secondary/25 p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-semibold">{task.titulo}</p>
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-                            {CRM_TASK_STATUS_LABEL[task.status]}
-                          </span>
-                          <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] text-muted-foreground">
-                            {CRM_TASK_PRIORITY_LABEL[task.prioridade]}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {task.prospectNome ?? "Sem prospect"} · {task.responsavelNome ?? "Sem responsável"} ·{" "}
-                          {CRM_TASK_TYPE_LABEL[task.tipo]}
-                        </p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          {task.stageStatus
-                            ? stages.find((stage) => stage.status === task.stageStatus)?.nome ?? task.stageStatus
-                            : "Sem etapa"}
-                          {" · "}
-                          vence em {formatDateTime(task.vencimentoEm)}
-                        </p>
-                        {task.descricao ? (
-                          <p className="mt-2 text-sm text-muted-foreground">{task.descricao}</p>
-                        ) : null}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={() => resetForm(task)}>
-                          Editar
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={() => handleConcluir(task)}
-                          disabled={saving || writeUnavailable || task.status === "CONCLUIDA"}
-                        >
-                          Concluir
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/80">
-          <CardHeader>
-            <CardTitle>{editing ? "Editar tarefa" : "Nova tarefa"}</CardTitle>
-            <CardDescription>
-              Centralize follow-up, priorização e responsável em um único registro operacional.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-              <div className="space-y-1.5">
-                <Label htmlFor="crm-task-titulo">Título da tarefa</Label>
-                <Input
-                  id="crm-task-titulo"
-                  {...register("titulo")}
-                  className="border-border bg-secondary"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="crm-task-prospect">Prospect</Label>
-                <select
-                  id="crm-task-prospect"
-                  {...register("prospectId")}
-                  onChange={(event) => {
-                    const prospect = prospects.find((item) => item.id === event.target.value);
-                    setValue("prospectId", event.target.value);
-                    setValue("stageStatus", prospect?.status ?? getValues("stageStatus"));
-                    setValue("responsavelId", prospect?.responsavelId ?? getValues("responsavelId"));
-                  }}
-                  className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                >
-                  <option value="">Sem prospect vinculado</option>
-                  {prospects.map((prospect) => (
-                    <option key={prospect.id} value={prospect.id}>
-                      {prospect.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-stage">Etapa do funil</Label>
-                  <select
-                    id="crm-task-stage"
-                    {...register("stageStatus")}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    {stages.map((stage) => (
-                      <option key={stage.id} value={stage.status}>
-                        {stage.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-responsavel">Responsável</Label>
-                  <select
-                    id="crm-task-responsavel"
-                    {...register("responsavelId")}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    <option value="">Sem responsável</option>
-                    {funcionarios.map((funcionario) => (
-                      <option key={funcionario.id} value={funcionario.id}>
-                        {funcionario.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-tipo">Tipo</Label>
-                  <select
-                    id="crm-task-tipo"
-                    {...register("tipo")}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    {Object.entries(CRM_TASK_TYPE_LABEL).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-prioridade">Prioridade</Label>
-                  <select
-                    id="crm-task-prioridade"
-                    {...register("prioridade")}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    {Object.entries(CRM_TASK_PRIORITY_LABEL).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-status">Status</Label>
-                  <select
-                    id="crm-task-status"
-                    {...register("status")}
-                    className="flex h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm"
-                  >
-                    <option value="PENDENTE">Pendente</option>
-                    <option value="EM_ANDAMENTO">Em andamento</option>
-                    <option value="CONCLUIDA">Concluída</option>
-                    <option value="CANCELADA">Cancelada</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-data">Data de vencimento</Label>
-                  <Input
-                    id="crm-task-data"
-                    type="date"
-                    {...register("vencimentoData")}
-                    className="border-border bg-secondary"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="crm-task-hora">Hora de vencimento</Label>
-                  <Input
-                    id="crm-task-hora"
-                    type="time"
-                    {...register("vencimentoHora")}
-                    className="border-border bg-secondary"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="crm-task-descricao">Contexto do follow-up</Label>
-                <Textarea
-                  id="crm-task-descricao"
-                  {...register("descricao")}
-                  className="border-border bg-secondary"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" disabled={saving || writeUnavailable}>
-                  {saving ? "Salvando..." : editing ? "Salvar tarefa" : "Criar tarefa"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => resetForm(null)} disabled={saving}>
-                  Limpar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <CrmTaskFormCard
+          form={form}
+          editing={editing}
+          saving={saving}
+          writeUnavailable={writeUnavailable}
+          prospects={prospects}
+          funcionarios={funcionarios}
+          stages={stages}
+          selectedProspect={selectedProspect}
+          onProspectChange={(nextProspectId) => {
+            const prospect = prospects.find((item) => item.id === nextProspectId);
+            setValue("prospectId", nextProspectId, { shouldDirty: true, shouldValidate: true });
+            setValue("responsavelId", prospect?.responsavelId ?? "", {
+              shouldDirty: true,
+              shouldValidate: true,
+            });
+          }}
+          onSubmit={handleSubmit(onSubmit)}
+          onReset={() => resetForm(null)}
+        />
       </div>
     </div>
   );

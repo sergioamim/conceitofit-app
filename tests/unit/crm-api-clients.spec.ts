@@ -169,7 +169,7 @@ test.describe("crm api clients", () => {
         tenantId: "tenant-crm",
         data: {
           titulo: "Retornar lead",
-          tipo: "FOLLOW_UP",
+          responsavel: "Joana",
           prioridade: "ALTA",
           status: "PENDENTE",
           vencimentoEm: "2026-03-12T09:00:00",
@@ -182,7 +182,7 @@ test.describe("crm api clients", () => {
       expect(calls[0]?.url).not.toContain("tenantId=");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
         titulo: "Retornar lead",
-        tipo: "FOLLOW_UP",
+        responsavel: "Joana",
         prioridade: "ALTA",
         status: "PENDENTE",
         vencimentoEm: "2026-03-12T09:00:00",

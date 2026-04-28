@@ -352,10 +352,11 @@ describe("api/crm", () => {
         tenantId: "t1",
         data: {
           titulo: "T",
-          tipo: "LIGACAO",
+          responsavel: "Joana",
           prioridade: "MEDIA",
-          vencimentoEm: "2026-04-20",
-        } as never,
+          status: "PENDENTE",
+          vencimentoEm: "2026-04-20T09:00:00",
+        },
       });
       expect(result).toBeDefined();
     });
@@ -369,10 +370,11 @@ describe("api/crm", () => {
           tenantId: "t1",
           data: {
             titulo: "T",
-            tipo: "LIGACAO",
+            responsavel: "Joana",
             prioridade: "MEDIA",
-            vencimentoEm: "2026-04-20",
-          } as never,
+            status: "PENDENTE",
+            vencimentoEm: "2026-04-20T09:00:00",
+          },
         }),
       ).rejects.toThrow(/não expõe criação de tarefas/i);
     });
@@ -386,10 +388,11 @@ describe("api/crm", () => {
           tenantId: "t1",
           data: {
             titulo: "T",
-            tipo: "LIGACAO",
+            responsavel: "Joana",
             prioridade: "MEDIA",
-            vencimentoEm: "2026-04-20",
-          } as never,
+            status: "PENDENTE",
+            vencimentoEm: "2026-04-20T09:00:00",
+          },
         }),
       ).rejects.toThrow(/Server error/);
     });
@@ -401,7 +404,12 @@ describe("api/crm", () => {
       await updateCrmTaskApi({
         tenantId: "t1",
         id: "t1",
-        data: { titulo: "Edit" } as never,
+        data: {
+          titulo: "Edit",
+          prioridade: "ALTA",
+          status: "EM_ANDAMENTO",
+          vencimentoEm: "2026-04-20T09:00:00",
+        },
       });
       expect(spy.mock.calls[0][0].method).toBe("PUT");
       expect(spy.mock.calls[0][0].path).toBe("/api/v1/crm/tarefas/t1");

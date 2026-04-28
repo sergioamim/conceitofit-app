@@ -35,7 +35,6 @@ import type {
   CrmTask,
   CrmTaskPrioridade,
   CrmTaskStatus,
-  CrmTaskTipo,
   CreateProspectInput,
   OrigemProspect,
   Prospect,
@@ -75,6 +74,32 @@ type ProspectListApiResponse =
       result?: ProspectApiResponse[];
       itens?: ProspectApiResponse[];
     };
+
+type CrmTaskApiResponse = Partial<
+  Pick<
+    CrmTask,
+    | "id"
+    | "tenantId"
+    | "prospectId"
+    | "titulo"
+    | "descricao"
+    | "prioridade"
+    | "status"
+    | "vencimentoEm"
+    | "concluidaEm"
+    | "dataCriacao"
+    | "dataAtualizacao"
+  >
+> & {
+  responsavel?: string;
+  responsavelNome?: string;
+  origem?: CrmTask["origem"];
+  tipo?: CrmTask["tipo"];
+};
+
+type CrmTaskFallback = Partial<CrmTask> & {
+  responsavel?: string;
+};
 
 export interface ProspectUpsertApiRequest {
   tenantId: string;
@@ -164,6 +189,45 @@ function mapUnavailableCapability(error: unknown, message: string): never {
     throw new Error(message);
   }
   throw error;
+}
+
+function normalizeCrmTaskApiResponse(
+  response: CrmTaskApiResponse,
+  fallback?: CrmTaskFallback,
+): CrmTask {
+  const tenantId = cleanString(response.tenantId) ?? cleanString(fallback?.tenantId) ?? "";
+  const vencimentoEm =
+    cleanString(response.vencimentoEm) ??
+    cleanString(fallback?.vencimentoEm) ??
+    new Date().toISOString();
+  const dataCriacao =
+    cleanString(response.dataCriacao) ??
+    cleanString(fallback?.dataCriacao) ??
+    vencimentoEm;
+
+  return {
+    id: cleanString(response.id) ?? cleanString(fallback?.id) ?? "",
+    tenantId,
+    prospectId: cleanString(response.prospectId) ?? cleanString(fallback?.prospectId),
+    titulo: cleanString(response.titulo) ?? cleanString(fallback?.titulo) ?? "",
+    descricao: cleanString(response.descricao) ?? cleanString(fallback?.descricao),
+    prioridade: response.prioridade ?? fallback?.prioridade ?? "MEDIA",
+    status: response.status ?? fallback?.status ?? "PENDENTE",
+    vencimentoEm,
+    concluidaEm: cleanString(response.concluidaEm) ?? cleanString(fallback?.concluidaEm),
+    dataCriacao,
+    dataAtualizacao: cleanString(response.dataAtualizacao) ?? cleanString(fallback?.dataAtualizacao),
+    responsavelNome:
+      cleanString(response.responsavelNome) ??
+      cleanString(response.responsavel) ??
+      cleanString(fallback?.responsavelNome) ??
+      cleanString(fallback?.responsavel),
+    tipo: response.tipo ?? fallback?.tipo ?? "FOLLOW_UP",
+    origem: response.origem ?? fallback?.origem ?? "MANUAL",
+    stageStatus: fallback?.stageStatus,
+    prospectNome: fallback?.prospectNome,
+    responsavelId: fallback?.responsavelId,
+  };
 }
 
 export function buildProspectUpsertApiRequest(
@@ -545,7 +609,7 @@ export async function updateProspectAgendamentoApi(input: {
   });
 }
 
-async function listCrmPipelineStagesApi(input: {
+export async function listCrmPipelineStagesApi(input: {
   tenantId: string;
 }): Promise<CrmPipelineStage[]> {
   try {
@@ -566,40 +630,37 @@ export async function listCrmTasksApi(input: {
   prospectId?: string;
   responsavelId?: string;
 }): Promise<CrmTask[]> {
-  const response = await apiRequest<GenericListResponse<CrmTask>>({
+  const response = await apiRequest<GenericListResponse<CrmTaskApiResponse>>({
     path: "/api/v1/crm/tarefas",
     query: {
       tenantId: input.tenantId,
       status: input.status,
       prioridade: input.prioridade,
-      prospectId: input.prospectId,
-      responsavelId: input.responsavelId,
     },
   });
-  return extractListItems(response);
+  return extractListItems(response).map((task) => normalizeCrmTaskApiResponse(task));
 }
 
 export async function createCrmTaskApi(input: {
   tenantId: string;
   data: {
     prospectId?: string;
-    stageStatus?: StatusProspect;
     titulo: string;
     descricao?: string;
-    tipo: CrmTaskTipo;
     prioridade: CrmTaskPrioridade;
     status?: CrmTaskStatus;
-    responsavelId?: string;
+    responsavel?: string;
     vencimentoEm: string;
   };
 }): Promise<CrmTask> {
   try {
-    return await apiRequest<CrmTask>({
+    const response = await apiRequest<CrmTaskApiResponse>({
       path: "/api/v1/crm/tarefas",
       method: "POST",
       query: { tenantId: input.tenantId },
       body: input.data,
     });
+    return normalizeCrmTaskApiResponse(response, input.data);
   } catch (error) {
     mapUnavailableCapability(error, "Backend ainda não expõe criação de tarefas CRM neste ambiente.");
   }
@@ -610,22 +671,25 @@ export async function updateCrmTaskApi(input: {
   id: string;
   data: Partial<{
     prospectId?: string;
-    stageStatus?: StatusProspect;
     titulo: string;
     descricao?: string;
-    tipo: CrmTaskTipo;
     prioridade: CrmTaskPrioridade;
     status: CrmTaskStatus;
-    responsavelId?: string;
+    responsavel?: string;
     vencimentoEm: string;
   }>;
 }): Promise<CrmTask> {
   try {
-    return await apiRequest<CrmTask>({
+    const response = await apiRequest<CrmTaskApiResponse>({
       path: `/api/v1/crm/tarefas/${input.id}`,
       method: "PUT",
       query: { tenantId: input.tenantId },
       body: input.data,
+    });
+    return normalizeCrmTaskApiResponse(response, {
+      id: input.id,
+      tenantId: input.tenantId,
+      ...input.data,
     });
   } catch (error) {
     mapUnavailableCapability(error, "Backend ainda não expõe atualização de tarefas CRM neste ambiente.");
@@ -752,7 +816,7 @@ export async function updateCrmAutomacaoApi(input: {
   });
 }
 
-async function listCrmActivitiesApi(input: {
+export async function listCrmActivitiesApi(input: {
   tenantId: string;
   prospectId?: string;
   limit?: number;

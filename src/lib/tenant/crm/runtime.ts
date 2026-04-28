@@ -57,15 +57,19 @@ export function enrichCrmTasksRuntime(input: {
 }): CrmTask[] {
   const prospectsById = new Map(input.prospects.map((prospect) => [prospect.id, prospect] as const));
   const funcionariosById = new Map(input.funcionarios.map((funcionario) => [funcionario.id, funcionario] as const));
+  const funcionariosByName = new Map(input.funcionarios.map((funcionario) => [funcionario.nome, funcionario] as const));
 
   return input.tasks.map((task) => {
     const prospect = task.prospectId ? prospectsById.get(task.prospectId) : undefined;
-    const responsavel = task.responsavelId ? funcionariosById.get(task.responsavelId) : undefined;
+    const responsavel =
+      (task.responsavelId ? funcionariosById.get(task.responsavelId) : undefined) ??
+      (task.responsavelNome ? funcionariosByName.get(task.responsavelNome) : undefined);
 
     return {
       ...task,
       prospectNome: task.prospectNome ?? prospect?.nome,
       stageStatus: task.stageStatus ?? prospect?.status,
+      responsavelId: task.responsavelId ?? responsavel?.id,
       responsavelNome: task.responsavelNome ?? responsavel?.nome,
       status: getEffectiveCrmTaskStatus(task),
     };
