@@ -22,6 +22,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { ExercicioModal, type ExercicioForm } from "@/components/shared/exercicio-modal";
 import { ImportarDoCatalogoDialog } from "@/components/treinos/editor/importar-do-catalogo-dialog";
@@ -80,6 +81,9 @@ export default function ExerciciosPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [sanitizeOpen, setSanitizeOpen] = useState(false);
   const sanitizeMutation = useSanitizeBiblioteca(tenantId ?? "");
+  // Hydration-safe: tenantId vem do contexto client-only (cookie/storage).
+  // SSR renderiza só "Novo exercício"; após mount, mostra Sanitizar/Importar.
+  const hydrated = useHydrated();
 
   const { data, isLoading: loading, isError, error: queryError } = useExercicios({
     tenantId,
@@ -269,7 +273,7 @@ export default function ExerciciosPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {tenantId && exercicios.length > 0 ? (
+          {hydrated && tenantId && exercicios.length > 0 ? (
             <Button
               variant="outline"
               onClick={() => setSanitizeOpen(true)}
@@ -280,7 +284,7 @@ export default function ExerciciosPage() {
               Sanitizar
             </Button>
           ) : null}
-          {tenantId ? (
+          {hydrated && tenantId ? (
             <Button
               variant="outline"
               onClick={() => setImportDialogOpen(true)}
