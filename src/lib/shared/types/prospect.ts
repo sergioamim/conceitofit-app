@@ -134,16 +134,15 @@ export type CrmCadenciaGatilho =
   | "SEM_RESPOSTA_48H"
   | "SEM_RESPOSTA_72H";
 export type CrmCadenciaAcao = "WHATSAPP" | "EMAIL" | "LIGACAO" | "TAREFA_INTERNA";
-export type CrmAutomationGatilho =
-  | "PROSPECT_CRIADO"
-  | "ETAPA_ALTERADA"
-  | "TAREFA_ATRASADA"
-  | "CADENCIA_CONCLUIDA";
-export type CrmAutomationAcao =
-  | "CRIAR_TAREFA"
-  | "INICIAR_CADENCIA"
-  | "APLICAR_PLAYBOOK"
-  | "NOTIFICAR_RESPONSAVEL";
+export type CrmEventoTipo =
+  | "LEAD_CRIADO"
+  | "ADESAO_REALIZADA"
+  | "PROSPECT_CONVERTIDO"
+  | "RENOVACAO_CONCLUIDA"
+  | "RENOVACAO_VENCENDO"
+  | "INADIMPLENCIA_DETECTADA"
+  | "INADIMPLENCIA_REGULARIZADA"
+  | "PESQUISA_RELACIONAL_CRITICA";
 export type CrmActivityTipo =
   | "PROSPECT_CRIADO"
   | "ETAPA_ALTERADA"
@@ -253,17 +252,17 @@ export interface CrmCadencia {
 
 export interface CrmAutomation {
   id: UUID;
-  tenantId: UUID;
+  tenantId?: UUID;
   nome: string;
   descricao?: string;
-  gatilho: CrmAutomationGatilho;
-  acao: CrmAutomationAcao;
-  stageStatus?: StatusProspect;
-  ativo: boolean;
-  execucoes: number;
-  ultimaExecucao?: LocalDateTime;
-  cadenceId?: UUID;
+  tipoEvento: CrmEventoTipo;
   playbookId?: UUID;
+  responsavelPadrao?: string;
+  canalPadrao?: string;
+  prioridadePadrao?: CrmTaskPrioridade;
+  prazoHoras?: number;
+  filtros?: Record<string, unknown>;
+  ativo: boolean;
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
 }

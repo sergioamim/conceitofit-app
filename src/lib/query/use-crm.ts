@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/components/ui/use-toast";
 import {
   listCrmAutomacoesApi,
   listCrmTasksApi,
@@ -14,6 +15,7 @@ import {
   normalizeProspectRuntime,
 } from "@/lib/tenant/crm/runtime";
 import type { CrmAutomation, CrmWorkspaceSnapshot } from "@/lib/types";
+import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { queryKeys } from "./keys";
 
 // ---------------------------------------------------------------------------
@@ -63,6 +65,21 @@ async function fetchCrmWorkspaceSnapshot(
 
 const CRM_STALE_TIME = 30_000; // 30s
 
+function buildAutomationUpsertPayload(automation: CrmAutomation) {
+  return {
+    nome: automation.nome,
+    descricao: automation.descricao,
+    tipoEvento: automation.tipoEvento,
+    playbookId: automation.playbookId,
+    responsavelPadrao: automation.responsavelPadrao,
+    canalPadrao: automation.canalPadrao,
+    prioridadePadrao: automation.prioridadePadrao ?? "MEDIA",
+    prazoHoras: automation.prazoHoras ?? 24,
+    filtros: automation.filtros,
+    ativo: !automation.ativo,
+  };
+}
+
 export function useCrmWorkspace(tenantId: string) {
   return useQuery<CrmWorkspaceData>({
     queryKey: queryKeys.crm.snapshot(tenantId),
@@ -75,18 +92,27 @@ export function useCrmWorkspace(tenantId: string) {
 
 export function useToggleCrmAutomation(tenantId: string) {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (automation: CrmAutomation) => {
       await updateCrmAutomacaoApi({
         tenantId,
         id: automation.id,
-        data: { ativo: !automation.ativo },
+        data: buildAutomationUpsertPayload(automation),
       });
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: queryKeys.crm.snapshot(tenantId),
+      });
+      toast({ title: "Automação atualizada" });
+    },
+    onError: (error) => {
+      toast({
+        title: "Falha ao atualizar automação",
+        description: normalizeErrorMessage(error),
+        variant: "destructive",
       });
     },
   });

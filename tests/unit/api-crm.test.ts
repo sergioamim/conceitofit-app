@@ -527,10 +527,23 @@ describe("api/crm", () => {
       await updateCrmAutomacaoApi({
         tenantId: "t1",
         id: "a1",
-        data: { ativa: true } as never,
+        data: {
+          nome: "Lead sem retorno",
+          tipoEvento: "LEAD_CRIADO",
+          prioridadePadrao: "MEDIA",
+          prazoHoras: 24,
+          ativo: true,
+        },
       });
       expect(spy.mock.calls[0][0].path).toBe("/api/v1/crm/automacoes/a1");
       expect(spy.mock.calls[0][0].method).toBe("PUT");
+      expect(spy.mock.calls[0][0].body).toEqual({
+        nome: "Lead sem retorno",
+        tipoEvento: "LEAD_CRIADO",
+        prioridadePadrao: "MEDIA",
+        prazoHoras: 24,
+        ativo: true,
+      });
     });
 
     it("listCrmCampanhasApi GET", async () => {

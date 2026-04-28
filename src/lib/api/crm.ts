@@ -180,6 +180,19 @@ type CrmCadenciaUpsertData = {
   }>;
 };
 
+export type CrmAutomationUpsertData = {
+  nome: string;
+  descricao?: string;
+  tipoEvento: CrmAutomation["tipoEvento"];
+  playbookId?: string;
+  responsavelPadrao?: string;
+  canalPadrao?: string;
+  prioridadePadrao?: NonNullable<CrmAutomation["prioridadePadrao"]>;
+  prazoHoras?: number;
+  filtros?: Record<string, unknown>;
+  ativo?: boolean;
+};
+
 function mapUnavailableCapability(error: unknown, message: string): never {
   if (error instanceof ApiRequestError && [404, 405, 501].includes(error.status)) {
     throw new Error(message);
@@ -786,7 +799,7 @@ export async function listCrmAutomacoesApi(input: {
 export async function updateCrmAutomacaoApi(input: {
   tenantId: string;
   id: string;
-  data: Partial<Omit<CrmAutomation, "id" | "tenantId" | "dataCriacao" | "dataAtualizacao">>;
+  data: CrmAutomationUpsertData;
 }): Promise<CrmAutomation> {
   return apiRequest<CrmAutomation>({
     path: `/api/v1/crm/automacoes/${input.id}`,

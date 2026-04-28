@@ -1,11 +1,10 @@
 import type {
   CrmActivityTipo,
-  CrmAutomationAcao,
-  CrmAutomationGatilho,
   CrmCadenciaAcao,
   CrmCadenciaGatilho,
   CrmCadenceExecutionStatus,
   CrmCadenceStepExecutionStatus,
+  CrmEventoTipo,
   CrmEscalationAction,
   CrmPipelineStage,
   CrmPlaybookAcao,
@@ -132,18 +131,15 @@ export const CRM_CADENCIA_ACTION_LABEL: Record<CrmCadenciaAcao, string> = {
   TAREFA_INTERNA: "Tarefa interna",
 };
 
-export const CRM_AUTOMATION_TRIGGER_LABEL: Record<CrmAutomationGatilho, string> = {
-  PROSPECT_CRIADO: "Prospect criado",
-  ETAPA_ALTERADA: "Etapa alterada",
-  TAREFA_ATRASADA: "Tarefa atrasada",
-  CADENCIA_CONCLUIDA: "Cadência concluída",
-};
-
-export const CRM_AUTOMATION_ACTION_LABEL: Record<CrmAutomationAcao, string> = {
-  CRIAR_TAREFA: "Criar tarefa",
-  INICIAR_CADENCIA: "Iniciar cadência",
-  APLICAR_PLAYBOOK: "Aplicar playbook",
-  NOTIFICAR_RESPONSAVEL: "Notificar responsável",
+export const CRM_EVENTO_TIPO_LABEL: Record<CrmEventoTipo, string> = {
+  LEAD_CRIADO: "Lead criado",
+  ADESAO_REALIZADA: "Adesão realizada",
+  PROSPECT_CONVERTIDO: "Prospect convertido",
+  RENOVACAO_CONCLUIDA: "Renovação concluída",
+  RENOVACAO_VENCENDO: "Renovação vencendo",
+  INADIMPLENCIA_DETECTADA: "Inadimplência detectada",
+  INADIMPLENCIA_REGULARIZADA: "Inadimplência regularizada",
+  PESQUISA_RELACIONAL_CRITICA: "Pesquisa relacional crítica",
 };
 
 export const CRM_ACTIVITY_LABEL: Record<CrmActivityTipo, string> = {

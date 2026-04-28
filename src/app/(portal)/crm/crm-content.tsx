@@ -6,8 +6,7 @@ import { getActiveTenantIdFromSession } from "@/lib/api/session";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import {
   CRM_ACTIVITY_LABEL,
-  CRM_AUTOMATION_ACTION_LABEL,
-  CRM_AUTOMATION_TRIGGER_LABEL,
+  CRM_EVENTO_TIPO_LABEL,
 } from "@/lib/tenant/crm/workspace";
 import { formatDateTime } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
@@ -39,6 +38,17 @@ export function CrmContent() {
         { label: "Automações ativas", value: snapshot.totalAutomacoesAtivas, tone: "text-emerald-300" },
       ]
     : [];
+
+  const resolveAutomationMeta = (automation: (typeof automations)[number]) => {
+    const chips = [
+      automation.playbookId ? "Playbook vinculado" : null,
+      automation.responsavelPadrao ? `Responsável padrão: ${automation.responsavelPadrao}` : null,
+      automation.canalPadrao ? `Canal: ${automation.canalPadrao}` : null,
+      automation.prazoHoras != null ? `Prazo padrão: ${automation.prazoHoras}h` : null,
+    ].filter(Boolean);
+
+    return chips.length > 0 ? chips.join(" · ") : "Sem parâmetros adicionais configurados.";
+  };
 
   return (
     <div className="space-y-6">
@@ -192,11 +202,13 @@ export function CrmContent() {
                             </span>
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            {CRM_AUTOMATION_TRIGGER_LABEL[automation.gatilho]} ·{" "}
-                            {CRM_AUTOMATION_ACTION_LABEL[automation.acao]}
+                            {CRM_EVENTO_TIPO_LABEL[automation.tipoEvento]}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            {automation.execucoes} execuções · último disparo {automation.ultimaExecucao ? formatDateTime(automation.ultimaExecucao) : "Sem registro"}
+                            {resolveAutomationMeta(automation)}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Atualizada em {formatDateTime(automation.dataAtualizacao ?? automation.dataCriacao)}
                           </p>
                         </div>
                         <Button
