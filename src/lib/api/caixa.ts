@@ -135,17 +135,26 @@ export async function abrirCaixa(
 export async function getCaixaAtivo(): Promise<
   { caixa: CaixaResponse; saldo: SaldoParcialResponse } | null
 > {
-  const response = await apiRequestWithMeta<{
-    caixa: CaixaResponse;
-    saldo: SaldoParcialResponse;
-  } | null>({
+  // Backend (CaixaAtivoResponse record) serializa o saldo como `saldoParcial`,
+  // mas o resto do FE consome via `.saldo`. Normalizamos aqui pra evitar
+  // mudar todos os call sites.
+  const response = await apiRequestWithMeta<
+    | {
+        caixa: CaixaResponse;
+        saldo?: SaldoParcialResponse;
+        saldoParcial?: SaldoParcialResponse;
+      }
+    | null
+  >({
     path: "/api/caixas/ativo",
     method: "GET",
   });
   if (response.data == null) return null;
   if (typeof response.data !== "object") return null;
-  if (!("caixa" in response.data) || !("saldo" in response.data)) return null;
-  return response.data;
+  if (!("caixa" in response.data)) return null;
+  const saldo = response.data.saldo ?? response.data.saldoParcial;
+  if (!saldo) return null;
+  return { caixa: response.data.caixa, saldo };
 }
 
 /** `POST /api/caixas/{id}/fechar` → 200 `FecharCaixaResponse`. */
