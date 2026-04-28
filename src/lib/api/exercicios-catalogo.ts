@@ -77,12 +77,16 @@ export async function importarBatchExerciciosApi(
   });
 }
 
-/** Wave D.1: sanitiza biblioteca local (soft delete em massa). */
+/**
+ * Wave D.1 + auditoria #7: sanitiza biblioteca local (soft delete em massa).
+ * Path usa prefixo `_` (nunca UUID) pra eliminar ambiguidade com
+ * `DELETE /exercicios/{id}` no roteamento Spring.
+ */
 export async function sanitizeBibliotecaApi(input: {
   tenantId: string;
 }): Promise<{ totalRemovidos: number }> {
   return apiRequest<{ totalRemovidos: number }>({
-    path: "/api/v1/exercicios/sanitize",
+    path: "/api/v1/exercicios/_sanitize",
     method: "DELETE",
     query: { tenantId: input.tenantId },
   });
