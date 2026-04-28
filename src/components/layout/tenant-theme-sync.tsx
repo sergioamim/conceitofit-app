@@ -6,9 +6,8 @@ import {
   getTenantAppName,
   getTenantThemeCssVarEntries,
   resolveTenantTheme,
-  serializeTenantThemeCookiePayload,
-  TENANT_THEME_COOKIE_NAME,
 } from "@/lib/tenant/tenant-theme";
+import { persistTenantThemeCookie } from "@/lib/tenant/theme-cookie";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 
 function applyThemeVars(academia: Academia, tenantId?: string) {
@@ -22,10 +21,9 @@ function applyThemeVars(academia: Academia, tenantId?: string) {
   const appName = getTenantAppName(academia);
   document.title = `${appName} - Gestão de Academia`;
   syncThemeColorMeta(theme.background);
-  persistThemeCookie({
+  persistTenantThemeCookie({
     tenantId,
-    theme,
-    appName,
+    academia,
   });
 }
 
@@ -67,21 +65,4 @@ function syncThemeColorMeta(color: string) {
     document.head.appendChild(meta);
   }
   meta.content = color;
-}
-
-function persistThemeCookie(input: {
-  tenantId?: string;
-  theme: ReturnType<typeof resolveTenantTheme>;
-  appName: string;
-}) {
-  const secure = window.location.protocol === "https:" ? "; Secure" : "";
-  const scopeKey = input.tenantId?.trim()
-    ? `tenant:${input.tenantId.trim()}`
-    : `host:${window.location.host.toLowerCase()}`;
-
-  document.cookie = `${TENANT_THEME_COOKIE_NAME}=${serializeTenantThemeCookiePayload({
-    scopeKey,
-    theme: input.theme,
-    appName: input.appName,
-  })}; Path=/; Max-Age=300; SameSite=Lax${secure}`;
 }

@@ -26,6 +26,7 @@ import {
   resolvePostLoginPath,
   resolvePostLoginPathForSession,
 } from "@/lib/tenant/auth-redirect";
+import { persistTenantThemeCookie } from "@/lib/tenant/theme-cookie";
 import { isPlatformUser } from "@/lib/shared/user-kind";
 import { buildNetworkAccessHref } from "@/lib/network-subdomain";
 import {
@@ -179,7 +180,11 @@ export function NetworkAccessFlow({
   }, [credentialForm, loginForm, mode, networkSubdomain, tenantForm]);
 
   async function finalizeTenantStep(targetTenantId: string) {
-    await setTenantContextApi(targetTenantId);
+    const tenantContext = await setTenantContextApi(targetTenantId);
+    persistTenantThemeCookie({
+      tenantId: tenantContext.currentTenantId || targetTenantId,
+      tenant: tenantContext.tenantAtual,
+    });
     setPreferredTenantId(targetTenantId);
     queryClient.clear();
     router.replace(resolvedNextPath);
