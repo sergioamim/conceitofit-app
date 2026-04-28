@@ -331,7 +331,6 @@ describe("api/caixa", () => {
         expect(isCaixaApiError(err)).toBe(true);
         if (isCaixaApiError(err) && err.code === "CAIXA_NAO_ABERTO") {
           expect(err.acaoSugerida).toBe("ABRIR_CAIXA");
-          expect(err.caixaCatalogoSugerido).toBe("cc1");
         }
       }
     });
@@ -424,7 +423,6 @@ describe("caixa-error-handler", () => {
       const presentation = mapCaixaError({
         code: "CAIXA_NAO_ABERTO",
         acaoSugerida: "ABRIR_CAIXA",
-        caixaCatalogoSugerido: null,
       });
       expect(presentation.titulo).toBe("Sem caixa aberto");
       expect(presentation.acaoSugerida?.action).toBe("ABRIR_CAIXA");
