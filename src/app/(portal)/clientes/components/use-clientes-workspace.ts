@@ -30,7 +30,7 @@ export function useClientesWorkspace() {
   const { tenantId, tenantResolved, setTenant } = useTenantContext();
   const session = getAuthSessionSnapshot();
   const {
-    q, rawStatus, status: filtro, page, size: pageSize,
+    q, rawStatus, status: filtro, sort: sortBy, page, size: pageSize,
     setParams, clearParams, hasActiveFilters,
   } = useTableSearchParams();
 
@@ -38,7 +38,6 @@ export function useClientesWorkspace() {
   const busca = q;
   const wizard = useDialogState();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [sortBy, setSortBy] = useState<"cadastro" | "nome">("cadastro");
   const currentMonthYear = useSyncExternalStore(
     subscribeNoop,
     () => getBusinessTodayIso().slice(0, 7),
@@ -164,6 +163,10 @@ export function useClientesWorkspace() {
     setViewPreference(viewPreferenceKey, nextView);
     setParams({ view: nextView });
   }, [setParams, setViewPreference, viewPreferenceKey]);
+
+  const setSortBy = useCallback((nextSort: "cadastro" | "nome") => {
+    setParams({ sort: nextSort });
+  }, [setParams]);
 
   return {
     // Data

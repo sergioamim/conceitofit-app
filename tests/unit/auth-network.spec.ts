@@ -63,7 +63,7 @@ test.describe("auth por rede", () => {
         redeIdentifier: "rede-norte",
       });
 
-      expect(calls[0]?.url).toContain("/api/v1/auth/login");
+      expect(calls[0]?.url).toContain("/api/v1/auth/rede/login");
       expect(calls[0]?.method).toBe("POST");
       expect(calls[0]?.headers.get("X-Rede-Identifier")).toBe("rede-norte");
       expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
@@ -80,6 +80,41 @@ test.describe("auth por rede", () => {
       // unit valida-se o payload normalizado retornado pela API.
       expect(session.availableScopes).toEqual(["REDE"]);
       expect(session.broadAccess).toBe(true);
+    } finally {
+      restore();
+    }
+  });
+
+  test("loginApi sem rede usa o endpoint global sem cabeçalho contextual", async () => {
+    const { calls, restore } = mockFetchWithSequence([
+      {
+        body: {
+          token: "token-global",
+          refreshToken: "refresh-global",
+          userId: "user-operador",
+          userKind: "OPERADOR",
+          activeTenantId: "tenant-centro",
+          baseTenantId: "tenant-base",
+        },
+      },
+    ]);
+
+    try {
+      const session = await loginApi({
+        identifier: "operador@qa.local",
+        password: "12345678",
+        channel: "APP",
+      });
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toContain("/api/v1/auth/login");
+      expect(calls[0]?.headers.get("X-Rede-Identifier")).toBeNull();
+      expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({
+        identifier: "operador@qa.local",
+        password: "12345678",
+        channel: "APP",
+      });
+      expect(session.userKind).toBe("OPERADOR");
     } finally {
       restore();
     }

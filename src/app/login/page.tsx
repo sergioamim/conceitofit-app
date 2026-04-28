@@ -6,8 +6,8 @@ import { resolveNetworkSubdomain } from "@/lib/network-subdomain";
 const NetworkAccessFlow = dynamic(() =>
   import("@/components/auth/network-access-flow").then((m) => m.NetworkAccessFlow),
 );
-const AdminLoginFlow = dynamic(() =>
-  import("@/components/auth/admin-login-flow").then((m) => m.AdminLoginFlow),
+const GlobalLoginFlow = dynamic(() =>
+  import("@/components/auth/global-login-flow").then((m) => m.GlobalLoginFlow),
 );
 
 export const metadata: Metadata = {
@@ -32,5 +32,5 @@ export default async function LoginPage({
     return <NetworkAccessFlow networkSubdomain={networkSubdomain} nextPath={next} mode="login" />;
   }
 
-  return <AdminLoginFlow nextPath={next} reason={reason} />;
+  return <GlobalLoginFlow nextPath={next} reason={reason} />;
 }

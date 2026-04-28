@@ -175,6 +175,7 @@ const DEFAULT_LOGIN_PATH = "/login";
 /** Rotas que não requerem autenticação. */
 const PUBLIC_ROUTE_PREFIXES = [
   "/login",
+  "/admin-login",
   "/backend/",
   "/api/",
   "/acesso/",
@@ -223,6 +224,7 @@ function sanitizeCallbackPath(pathname: string, search: string): string | null {
   if (!raw.startsWith("/")) return null;
   if (raw.startsWith("//")) return null;
   if (raw.startsWith("/login")) return null;
+  if (raw.startsWith("/admin-login")) return null;
   if (/^\/app\/[^/]+\/login(?:[/?#]|$)/.test(raw)) return null;
   if (/^\/acesso\/[^/]+\/autenticacao(?:[/?#]|$)/.test(raw)) return null;
   return raw;

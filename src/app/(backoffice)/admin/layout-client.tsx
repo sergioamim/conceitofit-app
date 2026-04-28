@@ -247,7 +247,7 @@ function AdminLayoutContent({
   }, []);
 
   useEffect(() => {
-    if (hydrated && !authenticated) router.replace("/login");
+    if (hydrated && !authenticated) router.replace(buildAdminLoginHref("/admin"));
   }, [authenticated, hydrated, router]);
 
   useEffect(() => {

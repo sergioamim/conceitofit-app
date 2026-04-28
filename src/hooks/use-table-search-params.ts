@@ -10,6 +10,8 @@ const ALLOWED_STATUS_FILTERS = new Set<StatusAluno | typeof FILTER_ALL>([
   "INATIVO",
 ]);
 
+const ALLOWED_SORT_VALUES = new Set(["cadastro", "nome"]);
+
 export function useTableSearchParams() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -20,6 +22,10 @@ export function useTableSearchParams() {
   const status = ALLOWED_STATUS_FILTERS.has(rawStatus ?? FILTER_ALL)
     ? (rawStatus ?? FILTER_ALL)
     : FILTER_ALL;
+  const rawSort = searchParams.get("sort");
+  const sort = ALLOWED_SORT_VALUES.has(rawSort ?? "")
+    ? (rawSort as "cadastro" | "nome")
+    : "cadastro";
   const page = parseInt(searchParams.get("page") ?? "0", 10);
   const size = parseInt(searchParams.get("size") ?? "20", 10) as 20 | 50 | 100 | 200;
 
@@ -62,6 +68,7 @@ export function useTableSearchParams() {
     q,
     rawStatus,
     status,
+    sort,
     page,
     size,
     setParams,

@@ -135,7 +135,7 @@ export function GlobalLoginFlow({
       const session = await loginApi({
         identifier: values.identifier.trim(),
         password: values.password,
-        channel: "WEB",
+        channel: "APP",
       });
 
       if (session.forcePasswordChangeRequired) {

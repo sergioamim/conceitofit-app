@@ -9,6 +9,7 @@ import {
 const DEFAULT_POST_LOGIN_PATH = "/dashboard";
 const BACKOFFICE_HOME_PATH = "/admin";
 const DEFAULT_LOGIN_PATH = "/login";
+const DEFAULT_ADMIN_LOGIN_PATH = "/admin-login";
 const FORCE_PASSWORD_CHANGE_PATH = "/primeiro-acesso/trocar-senha";
 
 const HOME_BY_KIND: Record<UserKind, string> = {
@@ -23,6 +24,7 @@ export function resolvePostLoginPath(rawValue?: string | null): string {
   if (!candidate.startsWith("/")) return DEFAULT_POST_LOGIN_PATH;
   if (candidate.startsWith("//")) return DEFAULT_POST_LOGIN_PATH;
   if (candidate.startsWith("/login")) return DEFAULT_POST_LOGIN_PATH;
+  if (candidate.startsWith("/admin-login")) return DEFAULT_POST_LOGIN_PATH;
   if (/^\/app\/[^/]+\/login(?:[/?#]|$)/.test(candidate)) return DEFAULT_POST_LOGIN_PATH;
   if (/^\/acesso\/[^/]+\/autenticacao(?:[/?#]|$)/.test(candidate)) return DEFAULT_POST_LOGIN_PATH;
   return candidate;
@@ -56,7 +58,7 @@ export function buildAdminLoginHref(nextPath?: string, reason?: string | null): 
   }
 
   const query = params.toString();
-  return query ? `${DEFAULT_LOGIN_PATH}?${query}` : DEFAULT_LOGIN_PATH;
+  return query ? `${DEFAULT_ADMIN_LOGIN_PATH}?${query}` : DEFAULT_ADMIN_LOGIN_PATH;
 }
 
 export function buildForcedPasswordChangeHref(nextPath?: string): string {

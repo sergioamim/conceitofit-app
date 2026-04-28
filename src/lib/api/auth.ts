@@ -319,7 +319,7 @@ export async function loginApi(input: {
   identifier?: string;
   password: string;
   redeIdentifier?: string;
-  channel?: "APP" | "BACKOFFICE";
+  channel?: "APP" | "BACKOFFICE" | "WEB";
 }): Promise<AuthSession> {
   clearOperationalTenantScope();
   const identifier = input.identifier?.trim();
