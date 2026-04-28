@@ -42,7 +42,7 @@ import {
  * em um 4xx, relançamos como objeto tipado para a UI consumir via
  * `mapCaixaError()`.
  */
-function tryExtractCaixaApiError(error: ApiRequestError): CaixaApiError | null {
+export function tryExtractCaixaApiError(error: ApiRequestError): CaixaApiError | null {
   if (!error.responseBody) return null;
   let parsed: unknown;
   try {

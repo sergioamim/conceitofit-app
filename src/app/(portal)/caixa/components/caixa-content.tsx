@@ -108,6 +108,16 @@ export function CaixaContent({ initial }: CaixaContentProps) {
     }
   }, [toast]);
 
+  // Refetch ao mount: o SSR (page.tsx) tenta getCaixaAtivo() mas pode
+  // falhar silenciosamente quando o cookie de auth não está disponível
+  // no servidor — entrega initial=null mesmo quando há caixa aberto. O
+  // refetch após hidratação garante que o cliente busque com a sessão
+  // correta e exiba o caixa real.
+  useEffect(() => {
+    void refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Polling a cada 30s.
   useEffect(() => {
     const interval = window.setInterval(() => {

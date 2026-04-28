@@ -1,5 +1,6 @@
 import type { StatusContratoPlano, TipoFormaPagamento, TipoVenda, Venda } from "@/lib/types";
-import { apiRequest } from "./http";
+import { apiRequest, ApiRequestError } from "./http";
+import { tryExtractCaixaApiError } from "./caixa";
 
 const listVendasApiInFlight = new Map<string, Promise<Venda[] | ListVendasApiEnvelopeResult>>();
 
@@ -351,37 +352,48 @@ export async function createVendaApi(input: {
   aceitarCaixaDiaAnterior?: boolean;
 }): Promise<Venda> {
   const itens = normalizeCreateVendaItems(input.data.itens);
-  const response = await apiRequest<VendaApiResponse>({
-    path: "/api/v1/comercial/vendas",
-    method: "POST",
-    query: {
-      tenantId: input.tenantId,
-      ...(input.aceitarCaixaDiaAnterior ? { aceitarCaixaDiaAnterior: true } : {}),
-    },
-    body: {
-      tipo: input.data.tipo,
-      clienteId: input.data.clienteId,
-      convenioId: input.data.convenioId,
-      voucherCodigo: input.data.voucherCodigo,
-      dataInicioPlano: input.data.dataInicioPlano,
-      descontoTotal: input.data.descontoTotal,
-      acrescimoTotal: input.data.acrescimoTotal,
-      pagamento: {
-        formaPagamento: input.data.pagamento.formaPagamento,
-        parcelas: input.data.pagamento.parcelas,
-        valorPago: input.data.pagamento.valorPago,
-        observacoes: input.data.pagamento.observacoes,
-        // Código de autorização vai nested em `pagamento` — alinhado com
-        // CreatePagamentoVendaRequest.codigoTransacao do backend (modulo-comercial).
-        // `input.data.codigoTransacao` é o legado top-level mantido só como
-        // fallback; novos callers devem setar direto em pagamento.
-        codigoTransacao:
-          input.data.pagamento.codigoTransacao ?? input.data.codigoTransacao,
+  try {
+    const response = await apiRequest<VendaApiResponse>({
+      path: "/api/v1/comercial/vendas",
+      method: "POST",
+      query: {
+        tenantId: input.tenantId,
+        ...(input.aceitarCaixaDiaAnterior ? { aceitarCaixaDiaAnterior: true } : {}),
       },
-      itens,
-    },
-  });
-  return normalizeVenda(response);
+      body: {
+        tipo: input.data.tipo,
+        clienteId: input.data.clienteId,
+        convenioId: input.data.convenioId,
+        voucherCodigo: input.data.voucherCodigo,
+        dataInicioPlano: input.data.dataInicioPlano,
+        descontoTotal: input.data.descontoTotal,
+        acrescimoTotal: input.data.acrescimoTotal,
+        pagamento: {
+          formaPagamento: input.data.pagamento.formaPagamento,
+          parcelas: input.data.pagamento.parcelas,
+          valorPago: input.data.pagamento.valorPago,
+          observacoes: input.data.pagamento.observacoes,
+          // Código de autorização vai nested em `pagamento` — alinhado com
+          // CreatePagamentoVendaRequest.codigoTransacao do backend (modulo-comercial).
+          // `input.data.codigoTransacao` é o legado top-level mantido só como
+          // fallback; novos callers devem setar direto em pagamento.
+          codigoTransacao:
+            input.data.pagamento.codigoTransacao ?? input.data.codigoTransacao,
+        },
+        itens,
+      },
+    });
+    return normalizeVenda(response);
+  } catch (error) {
+    // Wave A1: 409 com payload `{code: CAIXA_*}` vira CaixaApiError tipado
+    // pra que o caller (use-venda-workspace) discrimine CAIXA_DIA_ANTERIOR
+    // e abra o modal de 3 ações em vez de cair no toast genérico.
+    if (error instanceof ApiRequestError) {
+      const caixaError = tryExtractCaixaApiError(error);
+      if (caixaError) throw caixaError;
+    }
+    throw error;
+  }
 }
 
 export async function getVendaApi(input: {
