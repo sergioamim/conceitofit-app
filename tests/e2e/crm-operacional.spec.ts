@@ -51,8 +51,8 @@ test.describe("CRM operacional", () => {
     await expect(page.getByRole("heading", { name: "Playbooks e cadências" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("Qualificação expressa")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("tab", { name: "Cadências" })).toBeVisible();
-    const cadenciasUnavailable = page.getByText("Este ambiente ainda não expõe cadências CRM no backend");
-    await expect(cadenciasUnavailable).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("tab", { name: "Cadências" }).click();
+    await expect(page.getByText("Cadência D+2")).toBeVisible({ timeout: 30_000 });
 
     await navegarPara(page, "/crm");
     await expect(page.getByRole("heading", { name: "Workspace CRM" })).toBeVisible({ timeout: 30_000 });

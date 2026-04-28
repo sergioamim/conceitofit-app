@@ -1383,6 +1383,32 @@ export async function installOperationalCrmApiMocks(page: Page) {
     },
   ];
 
+  const cadencias = [
+    {
+      id: "crm-cadencia-1",
+      tenantId: tenant.id,
+      nome: "Cadência D+2",
+      objetivo: "Retomar contato com lead sem resposta.",
+      stageStatus: "EM_CONTATO",
+      gatilho: "SEM_RESPOSTA_48H",
+      ativo: true,
+      passos: [
+        {
+          id: "crm-cadencia-passo-1",
+          ordem: 1,
+          titulo: "Enviar WhatsApp de retomada",
+          acao: "WHATSAPP",
+          delayDias: 2,
+          template: "reativacao-d2",
+          automatica: true,
+        },
+      ],
+      ultimaExecucao: "2026-03-12T11:00:00",
+      dataCriacao: "2026-03-10T09:00:00",
+      dataAtualizacao: "2026-03-12T11:00:00",
+    },
+  ];
+
   const automacoes = [
     {
       id: "crm-automation-1",
@@ -1463,7 +1489,7 @@ export async function installOperationalCrmApiMocks(page: Page) {
     }
 
     if (path === "/api/v1/crm/cadencias" && method === "GET") {
-      await fulfillJson(route, { message: "Cadências indisponíveis neste ambiente" }, 404);
+      await fulfillJson(route, cadencias);
       return;
     }
 

@@ -474,51 +474,42 @@ describe("api/crm", () => {
       expect(spy.mock.calls[0][0].path).toBe("/api/v1/crm/playbooks/pb1");
     });
 
-    it("listCrmCadenciasApi GET com 404 friendly", async () => {
-      vi.spyOn(http, "apiRequest").mockRejectedValue(
-        new ApiRequestError({ status: 404, message: "Not Found" }),
-      );
-      await expect(listCrmCadenciasApi({ tenantId: "t1" })).rejects.toThrow(
-        /não expõe cadências/i,
-      );
-    });
-
     it("listCrmCadenciasApi lista com sucesso", async () => {
       vi.spyOn(http, "apiRequest").mockResolvedValue([] as never);
       const result = await listCrmCadenciasApi({ tenantId: "t1" });
       expect(result).toEqual([]);
     });
 
-    it("createCrmCadenciaApi POST com 405 friendly", async () => {
-      vi.spyOn(http, "apiRequest").mockRejectedValue(
-        new ApiRequestError({ status: 405, message: "Method Not Allowed" }),
-      );
-      await expect(
-        createCrmCadenciaApi({
-          tenantId: "t1",
-          data: {
-            nome: "C",
-            objetivo: "o",
-            stageStatus: "NOVO",
-            gatilho: "MANUAL",
-            ativo: true,
-            passos: [],
-          } as never,
-        }),
-      ).rejects.toThrow(/não expõe criação de cadências/i);
+    it("createCrmCadenciaApi POST", async () => {
+      const spy = vi
+        .spyOn(http, "apiRequest")
+        .mockResolvedValue({ id: "c1" } as never);
+      await createCrmCadenciaApi({
+        tenantId: "t1",
+        data: {
+          nome: "C",
+          objetivo: "o",
+          stageStatus: "NOVO",
+          gatilho: "NOVO_PROSPECT",
+          ativo: true,
+          passos: [{ titulo: "Passo 1", acao: "WHATSAPP", delayDias: 0, automatica: true }],
+        },
+      });
+      expect(spy.mock.calls[0][0].method).toBe("POST");
+      expect(spy.mock.calls[0][0].path).toBe("/api/v1/crm/cadencias");
     });
 
-    it("updateCrmCadenciaApi PUT com 404 friendly", async () => {
-      vi.spyOn(http, "apiRequest").mockRejectedValue(
-        new ApiRequestError({ status: 404, message: "Not Found" }),
-      );
-      await expect(
-        updateCrmCadenciaApi({
-          tenantId: "t1",
-          id: "c1",
-          data: {} as never,
-        }),
-      ).rejects.toThrow(/não expõe atualização de cadências/i);
+    it("updateCrmCadenciaApi PUT", async () => {
+      const spy = vi
+        .spyOn(http, "apiRequest")
+        .mockResolvedValue({ id: "c1" } as never);
+      await updateCrmCadenciaApi({
+        tenantId: "t1",
+        id: "c1",
+        data: { nome: "Editada" },
+      });
+      expect(spy.mock.calls[0][0].method).toBe("PUT");
+      expect(spy.mock.calls[0][0].path).toBe("/api/v1/crm/cadencias/c1");
     });
 
     it("listCrmAutomacoesApi GET", async () => {

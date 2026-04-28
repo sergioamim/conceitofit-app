@@ -140,7 +140,7 @@ export default function PlaybooksContent() {
   const [cadenciaSubmitError, setCadenciaSubmitError] = useState<string | null>(null);
 
   const { data: playbooks = [], isLoading: playbooksLoading } = useCrmPlaybooks({ tenantId });
-  const { data: cadencias = [], isLoading: cadenciasLoading, isError: cadenciasError } = useCrmCadencias({ tenantId });
+  const { data: cadencias = [], isLoading: cadenciasLoading } = useCrmCadencias({ tenantId });
   const savePlaybookMutation = useSavePlaybook(tenantId);
   const saveCadenciaMutation = useSaveCadencia(tenantId);
 
@@ -190,7 +190,6 @@ export default function PlaybooksContent() {
   });
 
   const loading = playbooksLoading || cadenciasLoading;
-  const cadenciasUnavailable = cadenciasError;
 
   function resetPlaybookForm(playbook?: CrmPlaybook | null) {
     setEditingPlaybook(playbook ?? null);
@@ -265,14 +264,6 @@ export default function PlaybooksContent() {
           <span className="font-semibold text-foreground">{tenantContext.tenantName ?? "atual"}</span>.
         </p>
       </div>
-
-      {cadenciasUnavailable ? (
-        <Card className="border-amber-500/40 bg-amber-500/10">
-          <CardContent className="px-6 py-5 text-sm text-amber-100">
-            Este ambiente ainda não expõe cadências CRM no backend. O tab permanece visível, mas em modo somente leitura.
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Tabs defaultValue="playbooks" className="space-y-4">
         <TabsList>
@@ -626,7 +617,6 @@ export default function PlaybooksContent() {
                             automatica: true,
                           })
                         }
-                        disabled={cadenciasUnavailable}
                       >
                         Adicionar passo
                       </Button>
@@ -708,7 +698,7 @@ export default function PlaybooksContent() {
                             variant="outline"
                             className="mt-6"
                             onClick={() => removeCadenciaPasso(index)}
-                            disabled={cadenciaPassos.length <= 1 || cadenciasUnavailable}
+                            disabled={cadenciaPassos.length <= 1}
                           >
                             Remover
                           </Button>
@@ -718,7 +708,7 @@ export default function PlaybooksContent() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button type="submit" disabled={!tenantId || cadenciaSaving || !isCadenciaValid || cadenciasUnavailable}>
+                    <Button type="submit" disabled={!tenantId || cadenciaSaving || !isCadenciaValid}>
                       {cadenciaSaving ? "Salvando..." : editingCadencia ? "Salvar cadência" : "Criar cadência"}
                     </Button>
                     <Button type="button" variant="outline" onClick={() => resetCadenciaForm(null)} disabled={cadenciaSaving}>

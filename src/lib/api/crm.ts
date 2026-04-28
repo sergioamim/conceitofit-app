@@ -10,10 +10,6 @@
  * a feature fica em estado "indisponível":
  *
  *   - GET    /api/v1/crm/pipeline-stages    → listCrmPipelineStagesApi
- *   - GET    /api/v1/crm/cadencias          → listCrmCadenciasApi
- *   - POST   /api/v1/crm/cadencias          → createCrmCadenciaApi
- *   - PUT    /api/v1/crm/cadencias/{id}     → updateCrmCadenciaApi
- *   - DELETE /api/v1/crm/cadencias/{id}     → deleteCrmCadenciaApi
  *   - GET    /api/v1/crm/atividades         → listCrmActivitiesApi
  *
  * Quando o BE implementar, basta nenhum trabalho FE — funções continuam
@@ -734,31 +730,23 @@ export async function updateCrmPlaybookApi(input: {
 export async function listCrmCadenciasApi(input: {
   tenantId: string;
 }): Promise<CrmCadencia[]> {
-  try {
-    const response = await apiRequest<GenericListResponse<CrmCadencia>>({
-      path: "/api/v1/crm/cadencias",
-      query: { tenantId: input.tenantId },
-    });
-    return extractListItems(response);
-  } catch (error) {
-    mapUnavailableCapability(error, "Backend ainda não expõe cadências CRM neste ambiente.");
-  }
+  const response = await apiRequest<GenericListResponse<CrmCadencia>>({
+    path: "/api/v1/crm/cadencias",
+    query: { tenantId: input.tenantId },
+  });
+  return extractListItems(response);
 }
 
 export async function createCrmCadenciaApi(input: {
   tenantId: string;
   data: CrmCadenciaUpsertData;
 }): Promise<CrmCadencia> {
-  try {
-    return await apiRequest<CrmCadencia>({
-      path: "/api/v1/crm/cadencias",
-      method: "POST",
-      query: { tenantId: input.tenantId },
-      body: input.data,
-    });
-  } catch (error) {
-    mapUnavailableCapability(error, "Backend ainda não expõe criação de cadências CRM neste ambiente.");
-  }
+  return apiRequest<CrmCadencia>({
+    path: "/api/v1/crm/cadencias",
+    method: "POST",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
 }
 
 export async function updateCrmCadenciaApi(input: {
@@ -766,31 +754,23 @@ export async function updateCrmCadenciaApi(input: {
   id: string;
   data: Partial<CrmCadenciaUpsertData>;
 }): Promise<CrmCadencia> {
-  try {
-    return await apiRequest<CrmCadencia>({
-      path: `/api/v1/crm/cadencias/${input.id}`,
-      method: "PUT",
-      query: { tenantId: input.tenantId },
-      body: input.data,
-    });
-  } catch (error) {
-    mapUnavailableCapability(error, "Backend ainda não expõe atualização de cadências CRM neste ambiente.");
-  }
+  return apiRequest<CrmCadencia>({
+    path: `/api/v1/crm/cadencias/${input.id}`,
+    method: "PUT",
+    query: { tenantId: input.tenantId },
+    body: input.data,
+  });
 }
 
 export async function deleteCrmCadenciaApi(input: {
   tenantId: string;
   id: string;
 }): Promise<void> {
-  try {
-    await apiRequest<void>({
-      path: `/api/v1/crm/cadencias/${input.id}`,
-      method: "DELETE",
-      query: { tenantId: input.tenantId },
-    });
-  } catch (error) {
-    mapUnavailableCapability(error, "Backend ainda não expõe remoção de cadências CRM neste ambiente.");
-  }
+  await apiRequest<void>({
+    path: `/api/v1/crm/cadencias/${input.id}`,
+    method: "DELETE",
+    query: { tenantId: input.tenantId },
+  });
 }
 
 export async function listCrmAutomacoesApi(input: {
