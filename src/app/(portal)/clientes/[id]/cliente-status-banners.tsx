@@ -3,11 +3,9 @@
 import type { Aluno } from "@/lib/types";
 import {
   ShieldCheck,
-  Check,
   AlertTriangle,
   Lock,
   Clock,
-  TrendingDown,
   Camera,
   type LucideIcon,
 } from "lucide-react";
@@ -19,8 +17,10 @@ import { cn } from "@/lib/utils";
  *
  * Regras de produto (2026-04-22):
  *  - "Contrato vence em X dias" só aparece quando `daysUntilEnd <= 3` (antes era 30).
- *  - "Cliente sem pendências" é icon-only (checkmark verde) — sem texto no chip.
- *  - "Acesso liberado", "Sem frequência há X dias" e demais mantêm texto.
+ *  - "Acesso liberado" e demais mantêm texto.
+ *  - "Cliente sem pendências" e "Sem frequência registrada" foram removidos
+ *    (2026-04-29) — chips positivos/neutros geravam ruído visual sem ajudar
+ *    decisão operacional.
  *  - Ordenação visual é direita→esquerda (flex-row-reverse), prioridade a
  *    sinais críticos (vermelho) aparecer primeiro na leitura natural.
  */
@@ -108,18 +108,6 @@ export function computeClienteBanners(
     }
   }
 
-  // Laranja — "Sem frequência registrada" (só para alunos sem NENHUMA
-  // presença ainda). O banner "Sem frequência há X dias" foi removido
-  // em 2026-04-22 por gerar ruído em alunos com frequência esporádica.
-  if (presencas.length === 0) {
-    result.push({
-      key: "sem-frequencia",
-      icon: TrendingDown,
-      text: "Sem frequência registrada",
-      variant: "orange",
-    });
-  }
-
   // Azul — face não sincronizada.
   if (!aluno.foto) {
     result.push({
@@ -137,16 +125,6 @@ export function computeClienteBanners(
       icon: ShieldCheck,
       text: "Acesso liberado",
       variant: "green",
-    });
-  }
-
-  if (vencidos.length === 0) {
-    result.push({
-      key: "sem-pendencias",
-      icon: Check,
-      text: "Cliente sem pendências",
-      variant: "green",
-      iconOnly: true,
     });
   }
 
