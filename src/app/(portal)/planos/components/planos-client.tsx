@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { TIPO_PLANO_LABEL } from "@/lib/tenant/planos/form";
 import { formatBRL } from "@/lib/formatters";
 import { FILTER_ALL } from "@/lib/shared/constants/filters";
+import { ConfigParcelaMinimaCard } from "@/components/pagamento-split/config-parcela-minima-card";
 
 export function PlanosClient() {
   const { tenantId, tenantResolved } = useTenantContext();
@@ -71,6 +72,8 @@ export function PlanosClient() {
           Planos disponíveis para matrícula
         </p>
       </div>
+
+      {tenantId ? <ConfigParcelaMinimaCard tenantId={tenantId} /> : null}
 
       <div className="flex items-center justify-between">
         <div className="text-sm text-muted-foreground">

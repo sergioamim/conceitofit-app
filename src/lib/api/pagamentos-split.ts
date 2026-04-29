@@ -261,6 +261,40 @@ export async function getParcelasMaximasApi(
   };
 }
 
+// =========================================================================
+// Config parcela mínima (follow-up Parte B)
+// =========================================================================
+
+export interface ConfigParcelaMinimaDto {
+  valorMinimoParcela: number | null;
+}
+
+export async function getConfigParcelaMinimaApi(tenantId: string): Promise<ConfigParcelaMinimaDto> {
+  const data = await apiRequest<{ valorMinimoParcela: unknown }>({
+    path: "/api/v1/comercial/pagamentos/config-parcela-minima",
+    method: "GET",
+    query: { tenantId },
+  });
+  return {
+    valorMinimoParcela: data.valorMinimoParcela == null ? null : toNumber(data.valorMinimoParcela),
+  };
+}
+
+export async function putConfigParcelaMinimaApi(
+  tenantId: string,
+  valorMinimoParcela: number | null,
+): Promise<ConfigParcelaMinimaDto> {
+  const data = await apiRequest<{ valorMinimoParcela: unknown }>({
+    path: "/api/v1/comercial/pagamentos/config-parcela-minima",
+    method: "PUT",
+    query: { tenantId },
+    body: { valorMinimoParcela },
+  });
+  return {
+    valorMinimoParcela: data.valorMinimoParcela == null ? null : toNumber(data.valorMinimoParcela),
+  };
+}
+
 export const FORMA_PAGAMENTO_LABEL: Record<FormaPagamentoSplit, string> = {
   DINHEIRO: "Dinheiro",
   PIX: "PIX",
