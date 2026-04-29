@@ -67,7 +67,21 @@ export function useCrmCadenciasWorkspace(tenantId: string) {
         await updateCrmCadenciaApi({
           tenantId,
           id: cadencia.id,
-          data: { ativo: !cadencia.ativo },
+          data: {
+            nome: cadencia.nome,
+            objetivo: cadencia.objetivo,
+            stageStatus: cadencia.stageStatus,
+            gatilho: cadencia.gatilho,
+            ativo: !cadencia.ativo,
+            passos: cadencia.passos.map((passo) => ({
+              id: passo.id,
+              titulo: passo.titulo,
+              acao: passo.acao,
+              delayDias: passo.delayDias,
+              template: passo.template,
+              automatica: passo.automatica,
+            })),
+          },
         });
         toast({
           title: cadencia.ativo ? "Cadência desativada" : "Cadência ativada",

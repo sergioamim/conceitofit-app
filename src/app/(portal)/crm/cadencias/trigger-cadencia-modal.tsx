@@ -1,8 +1,12 @@
 "use client";
 
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Play } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,6 +29,12 @@ import { triggerCrmCadenceApi } from "@/lib/api/crm-cadencias";
 import type { CrmCadencia } from "@/lib/types";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
+const triggerCadenciaSchema = z.object({
+  prospectId: z.string().min(1, "Selecione um prospect"),
+});
+
+type TriggerCadenciaFormData = z.infer<typeof triggerCadenciaSchema>;
+
 export interface TriggerCadenciaModalProps {
   open: boolean;
   tenantId: string;
@@ -42,7 +52,21 @@ export function TriggerCadenciaModal({
 }: TriggerCadenciaModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [prospectId, setProspectId] = useState<string>("");
+  const [submitError, setSubmitError] = useState("");
+  const form = useForm<TriggerCadenciaFormData>({
+    resolver: zodResolver(triggerCadenciaSchema),
+    mode: "onChange",
+    defaultValues: {
+      prospectId: "",
+    },
+  });
+  const { control, formState, handleSubmit, register, reset, setError, setValue } = form;
+  const prospectId = useWatch({ control, name: "prospectId" });
+
+  useEffect(() => {
+    if (!open) return;
+    reset({ prospectId: "" });
+  }, [open, reset]);
 
   // React Query carrega prospects on-demand.
   const {
@@ -57,13 +81,12 @@ export function TriggerCadenciaModal({
   });
 
   const triggerMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (data: TriggerCadenciaFormData) => {
       if (!cadencia) throw new Error("Cadência inválida");
-      if (!prospectId) throw new Error("Selecione um prospect");
       return triggerCrmCadenceApi({
         tenantId,
         cadenciaId: cadencia.id,
-        prospectId,
+        prospectId: data.prospectId,
       });
     },
     onSuccess: () => {
@@ -72,28 +95,45 @@ export function TriggerCadenciaModal({
       });
       toast({ title: "Cadência disparada com sucesso" });
       onTriggered?.();
-      setProspectId("");
+      reset({ prospectId: "" });
       onOpenChange(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Erro ao disparar cadência",
-        description: normalizeErrorMessage(error),
-        variant: "destructive",
-      });
     },
   });
 
   const submitting = triggerMutation.isPending;
-  const canTrigger = Boolean(prospectId) && !submitting;
+  const canTrigger = formState.isValid && !submitting;
+
+  async function onSubmit(data: TriggerCadenciaFormData) {
+    form.clearErrors();
+    setSubmitError("");
+    try {
+      await triggerMutation.mutateAsync(data);
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } = applyApiFieldErrors(
+        error,
+        setError,
+      );
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        setSubmitError(
+          buildFormApiErrorMessage(error, {
+            appliedFields,
+            fallbackMessage: "Não foi possível disparar a cadência. Tente novamente.",
+          }),
+        );
+      }
+    }
+  }
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
       if (submitting) return;
-      if (!next) setProspectId("");
+      if (!next) {
+        setSubmitError("");
+        reset({ prospectId: "" });
+      }
       onOpenChange(next);
     },
-    [submitting, onOpenChange],
+    [submitting, onOpenChange, reset],
   );
 
   return (
@@ -102,7 +142,7 @@ export function TriggerCadenciaModal({
         <DialogHeader>
           <DialogTitle>Disparar cadência manualmente</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {cadencia && (
             <div className="rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm">
               <p className="font-medium">{cadencia.nome}</p>
@@ -113,12 +153,19 @@ export function TriggerCadenciaModal({
           )}
 
           <div className="space-y-2">
+            <input type="hidden" {...register("prospectId")} />
             <Label htmlFor="trigger-prospect">
               Prospect <span className="text-gym-danger">*</span>
             </Label>
             <Select
               value={prospectId}
-              onValueChange={setProspectId}
+              onValueChange={(value) =>
+                setValue("prospectId", value, {
+                  shouldTouch: true,
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
               disabled={loadingProspects || submitting}
             >
               <SelectTrigger
@@ -152,9 +199,18 @@ export function TriggerCadenciaModal({
                 {normalizeErrorMessage(prospectsError)}
               </p>
             )}
+            {formState.errors.prospectId && (
+              <p className="text-xs text-gym-danger">
+                {formState.errors.prospectId.message}
+              </p>
+            )}
           </div>
-        </div>
-        <DialogFooter>
+          {submitError ? (
+            <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-sm text-gym-danger">
+              {submitError}
+            </div>
+          ) : null}
+          <DialogFooter>
           <Button
             type="button"
             variant="outline"
@@ -165,9 +221,8 @@ export function TriggerCadenciaModal({
             Cancelar
           </Button>
           <Button
-            type="button"
+            type="submit"
             className="bg-gym-accent text-black hover:bg-gym-accent/90"
-            onClick={() => triggerMutation.mutate()}
             disabled={!canTrigger}
           >
             {submitting ? (
@@ -177,7 +232,8 @@ export function TriggerCadenciaModal({
             )}
             Disparar
           </Button>
-        </DialogFooter>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

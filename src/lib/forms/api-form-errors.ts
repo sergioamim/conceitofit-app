@@ -20,13 +20,13 @@ function resolveFieldPath<TFieldValues extends FieldValues>(
   field: string,
   mapper?: ApiFieldErrorMapper<TFieldValues>,
 ): FieldPath<TFieldValues> | null {
-  if (!mapper) {
-    return field as FieldPath<TFieldValues>;
-  }
-  if (typeof mapper === "function") {
-    return mapper(field) ?? null;
-  }
-  return mapper[field] ?? null;
+  const rawField = !mapper
+    ? field
+    : typeof mapper === "function"
+      ? mapper(field) ?? null
+      : mapper[field] ?? null;
+  if (!rawField) return null;
+  return rawField.replace(/\[(\d+)\]/g, ".$1") as FieldPath<TFieldValues>;
 }
 
 export function applyApiFieldErrors<TFieldValues extends FieldValues>(

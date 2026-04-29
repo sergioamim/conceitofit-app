@@ -1,9 +1,10 @@
 "use client";
 
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,6 @@ import {
   CRM_ESCALATION_ACTION_LABEL,
   getCrmStageName,
 } from "@/lib/tenant/crm/workspace";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 
 const ESCALATION_CONDITIONS = [
   "TAREFA_VENCIDA",
@@ -129,17 +129,17 @@ export function EscalationRuleEditorModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEdit = Boolean(rule);
+  const [submitError, setSubmitError] = useState("");
 
   const form = useForm<EscalationRuleFormData>({
     resolver: zodResolver(escalationRuleSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: DEFAULT_VALUES,
   });
 
   const { control, register, handleSubmit, reset, setValue, formState } = form;
 
   const watchedCadenciaId = useWatch({ control, name: "cadenciaId" });
-  const watchedNome = useWatch({ control, name: "nome" });
   const watchedCondicao = useWatch({ control, name: "condicao" });
   const watchedAcao = useWatch({ control, name: "acao" });
   const watchedAtivo = useWatch({ control, name: "ativo" });
@@ -236,19 +236,28 @@ export function EscalationRuleEditorModal({
   });
 
   const saving = createMutation.isPending || updateMutation.isPending;
-  const mutationError = createMutation.error || updateMutation.error;
+  const canSave = formState.isValid;
 
-  const canSave =
-    Boolean(watchedCadenciaId) &&
-    Boolean(watchedNome?.trim()) &&
-    Boolean(watchedCondicao) &&
-    Boolean(watchedAcao);
-
-  function onSubmit(data: EscalationRuleFormData) {
-    if (isEdit) {
-      updateMutation.mutate(data);
-    } else {
-      createMutation.mutate(data);
+  async function onSubmit(data: EscalationRuleFormData) {
+    form.clearErrors();
+    setSubmitError("");
+    try {
+      if (isEdit) {
+        await updateMutation.mutateAsync(data);
+      } else {
+        await createMutation.mutateAsync(data);
+      }
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } =
+        applyApiFieldErrors(error, form.setError);
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        setSubmitError(
+          buildFormApiErrorMessage(error, {
+            appliedFields,
+            fallbackMessage: "Revise os campos destacados e tente novamente.",
+          }),
+        );
+      }
     }
   }
 
@@ -261,6 +270,7 @@ export function EscalationRuleEditorModal({
       open={open}
       onOpenChange={(next) => {
         if (saving) return;
+        if (!next) setSubmitError("");
         onOpenChange(next);
       }}
     >
@@ -279,7 +289,11 @@ export function EscalationRuleEditorModal({
             <Select
               value={watchedCadenciaId}
               onValueChange={(v) =>
-                setValue("cadenciaId", v, { shouldTouch: true })
+                setValue("cadenciaId", v, {
+                  shouldTouch: true,
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
               }
             >
               <SelectTrigger className="bg-secondary border-border">
@@ -334,9 +348,15 @@ export function EscalationRuleEditorModal({
                 value={watchedCondicao}
                 onValueChange={(v) => {
                   const next = v as (typeof ESCALATION_CONDITIONS)[number];
-                  setValue("condicao", next, { shouldTouch: true });
+                  setValue("condicao", next, {
+                    shouldTouch: true,
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  });
                   setValue("horasLimite", defaultHorasFor(next), {
                     shouldTouch: true,
+                    shouldDirty: true,
+                    shouldValidate: true,
                   });
                 }}
               >
@@ -361,6 +381,8 @@ export function EscalationRuleEditorModal({
                 onValueChange={(v) =>
                   setValue("acao", v as CrmEscalationAction, {
                     shouldTouch: true,
+                    shouldDirty: true,
+                    shouldValidate: true,
                   })
                 }
               >
@@ -404,6 +426,8 @@ export function EscalationRuleEditorModal({
                   onValueChange={(v) =>
                     setValue("novoStatus", v as StatusProspect, {
                       shouldTouch: true,
+                      shouldDirty: true,
+                      shouldValidate: true,
                     })
                   }
                 >
@@ -428,7 +452,11 @@ export function EscalationRuleEditorModal({
               id="escalation-ativo"
               checked={Boolean(watchedAtivo)}
               onCheckedChange={(v) =>
-                setValue("ativo", v, { shouldTouch: true })
+                setValue("ativo", v, {
+                  shouldTouch: true,
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
               }
             />
             <Label htmlFor="escalation-ativo" className="cursor-pointer">
@@ -436,11 +464,11 @@ export function EscalationRuleEditorModal({
             </Label>
           </div>
 
-          {mutationError && (
+          {submitError ? (
             <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-sm text-gym-danger">
-              {normalizeErrorMessage(mutationError)}
+              {submitError}
             </div>
-          )}
+          ) : null}
 
           <DialogFooter>
             <Button

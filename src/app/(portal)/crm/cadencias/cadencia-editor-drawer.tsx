@@ -1,9 +1,10 @@
 "use client";
 
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { zodResolver } from "@/lib/forms/zod-resolver";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,6 @@ import {
   CRM_CADENCIA_TRIGGER_LABEL,
   getCrmStageName,
 } from "@/lib/tenant/crm/workspace";
-import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { CadenciaPassoFields } from "./cadencia-passo-fields";
 
 const CADENCIA_TRIGGERS: readonly CrmCadenciaGatilho[] = [
@@ -130,10 +130,11 @@ export function CadenciaEditorDrawer({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const isEdit = Boolean(cadencia);
+  const [submitError, setSubmitError] = useState("");
 
   const form = useForm<CadenciaFormData>({
     resolver: zodResolver(cadenciaSchema),
-    mode: "onTouched",
+    mode: "onChange",
     defaultValues: DEFAULT_VALUES,
   });
 
@@ -144,9 +145,6 @@ export function CadenciaEditorDrawer({
     name: "passos",
   });
 
-  const watchedNome = useWatch({ control, name: "nome" });
-  const watchedObjetivo = useWatch({ control, name: "objetivo" });
-  const watchedPassos = useWatch({ control, name: "passos" });
   const watchedAtivo = useWatch({ control, name: "ativo" });
   const watchedGatilho = useWatch({ control, name: "gatilho" });
   const watchedStage = useWatch({ control, name: "stageStatus" });
@@ -225,21 +223,28 @@ export function CadenciaEditorDrawer({
   });
 
   const saving = createMutation.isPending || updateMutation.isPending;
-  const mutationError = createMutation.error || updateMutation.error;
+  const canSave = formState.isValid;
 
-  const canSave =
-    Boolean(watchedNome?.trim()) &&
-    Boolean(watchedObjetivo?.trim()) &&
-    Array.isArray(watchedPassos) &&
-    watchedPassos.length >= 1 &&
-    watchedPassos.length <= MAX_PASSOS &&
-    watchedPassos.every((p) => Boolean(p?.titulo?.trim()));
-
-  function onSubmit(data: CadenciaFormData) {
-    if (isEdit) {
-      updateMutation.mutate(data);
-    } else {
-      createMutation.mutate(data);
+  async function onSubmit(data: CadenciaFormData) {
+    form.clearErrors();
+    setSubmitError("");
+    try {
+      if (isEdit) {
+        await updateMutation.mutateAsync(data);
+      } else {
+        await createMutation.mutateAsync(data);
+      }
+    } catch (error) {
+      const { appliedFields, unmatchedFieldErrors, hasFieldErrors } =
+        applyApiFieldErrors(error, form.setError);
+      if (!hasFieldErrors || Object.keys(unmatchedFieldErrors).length > 0) {
+        setSubmitError(
+          buildFormApiErrorMessage(error, {
+            appliedFields,
+            fallbackMessage: "Revise os campos destacados e tente novamente.",
+          }),
+        );
+      }
     }
   }
 
@@ -253,6 +258,7 @@ export function CadenciaEditorDrawer({
       open={open}
       onOpenChange={(next) => {
         if (saving) return;
+        if (!next) setSubmitError("");
         onOpenChange(next);
       }}
     >
@@ -324,6 +330,8 @@ export function CadenciaEditorDrawer({
                   onValueChange={(v) =>
                     setValue("gatilho", v as CrmCadenciaGatilho, {
                       shouldTouch: true,
+                      shouldDirty: true,
+                      shouldValidate: true,
                     })
                   }
                 >
@@ -348,6 +356,8 @@ export function CadenciaEditorDrawer({
                   onValueChange={(v) =>
                     setValue("stageStatus", v as StatusProspect, {
                       shouldTouch: true,
+                      shouldDirty: true,
+                      shouldValidate: true,
                     })
                   }
                 >
@@ -371,7 +381,11 @@ export function CadenciaEditorDrawer({
                 id="cadencia-ativo"
                 checked={Boolean(watchedAtivo)}
                 onCheckedChange={(v) =>
-                  setValue("ativo", v, { shouldTouch: true })
+                  setValue("ativo", v, {
+                    shouldTouch: true,
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
                 }
               />
               <Label htmlFor="cadencia-ativo" className="cursor-pointer">
@@ -432,11 +446,11 @@ export function CadenciaEditorDrawer({
 
           {/* Footer sticky */}
           <div className="space-y-3 border-t border-border px-6 py-4">
-            {mutationError && (
+            {submitError ? (
               <div className="rounded-lg border border-gym-danger/30 bg-gym-danger/10 px-3 py-2 text-sm text-gym-danger">
-                {normalizeErrorMessage(mutationError)}
+                {submitError}
               </div>
-            )}
+            ) : null}
             <div className="flex items-center justify-end gap-2">
               <Button
                 type="button"

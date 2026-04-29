@@ -48,6 +48,25 @@ describe("api-form-errors", () => {
     });
   });
 
+  it("normaliza índices em bracket notation para paths compatíveis com RHF", () => {
+    const setError = vi.fn();
+    const error = new ApiRequestError({
+      status: 400,
+      message: "Validation error",
+      fieldErrors: {
+        "passos[0].titulo": "Título obrigatório.",
+      },
+    });
+
+    const result = applyApiFieldErrors(error, setError);
+
+    expect(result.appliedFields).toEqual(["passos[0].titulo"]);
+    expect(setError).toHaveBeenCalledWith("passos.0.titulo", {
+      type: "server",
+      message: "Título obrigatório.",
+    });
+  });
+
   it("gera fallback amigável quando todos os fieldErrors já foram aplicados inline", () => {
     const error = new ApiRequestError({
       status: 400,
