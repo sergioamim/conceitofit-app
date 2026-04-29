@@ -65,6 +65,9 @@ export function computeClienteBanners(
 ): BannerData[] {
   const { aluno, suspenso, pendenteFinanceiro, planoAtivo, presencas, pagamentos } = input;
   const now = new Date();
+  // Para comparações de "dias até X" (vencimento de plano), tratamos dataFim
+  // como inclusivo do dia inteiro — comparamos dia-a-dia zerando horas.
+  const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const result: BannerData[] = [];
 
   const vencidos = pagamentos.filter((p) => p.status === "VENCIDO");
@@ -97,7 +100,7 @@ export function computeClienteBanners(
   // Amarelo — contrato vencendo em ≤3 dias (antes era ≤30).
   if (planoAtivo?.dataFim) {
     const fimDate = parseLocalDate(planoAtivo.dataFim);
-    const daysUntilEnd = daysBetween(now, fimDate);
+    const daysUntilEnd = daysBetween(nowDay, fimDate);
     if (daysUntilEnd >= 0 && daysUntilEnd <= 3) {
       result.push({
         key: "contrato-vencendo",

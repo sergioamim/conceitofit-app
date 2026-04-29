@@ -111,7 +111,10 @@ export function ClientePlanoCard({
   }
 
   const fim = parseLocalDate(planoAtivo.dataFim);
-  const dias = Math.floor((fim.getTime() - referencia.getTime()) / 86400000);
+  // dataFim é inclusivo (o dia inteiro é válido). Compara dia-a-dia zerando
+  // horas no `referencia` pra evitar arredondamento parcial de fuso/horário.
+  const hojeDia = new Date(referencia.getFullYear(), referencia.getMonth(), referencia.getDate());
+  const dias = Math.round((fim.getTime() - hojeDia.getTime()) / 86400000);
   const vencido = dias < 0;
   const venceLogo = dias >= 0 && dias <= 14;
   const valueColor = vencido
