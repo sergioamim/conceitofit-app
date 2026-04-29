@@ -1,16 +1,39 @@
 import { z } from "zod";
 import { requiredTrimmedString } from "@/lib/forms/zod-helpers";
 
+function isValidOptionalEmail(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return true;
+  return z.string().email().safeParse(normalized).success;
+}
+
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function hasValidOptionalPhone(value: string) {
+  const digits = digitsOnly(value);
+  return !digits || (digits.length >= 10 && digits.length <= 15);
+}
+
+function hasValidOptionalCpf(value: string) {
+  const digits = digitsOnly(value);
+  return !digits || digits.length === 11;
+}
+
+function isPastOptionalIsoDate(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return true;
+  const parsed = new Date(`${normalized}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return parsed < today;
+}
+
 export const cargoFormSchema = z.object({
   nome: requiredTrimmedString("Informe o nome do cargo."),
   ativo: z.boolean(),
-});
-
-const funcionarioFormSchema = z.object({
-  nome: requiredTrimmedString("Informe o nome do funcionário."),
-  cargoId: z.string(),
-  ativo: z.boolean(),
-  podeMinistrarAulas: z.boolean(),
 });
 
 export const convenioFormSchema = z.object({
@@ -25,58 +48,6 @@ export const convenioFormSchema = z.object({
   validoDe: z.string(),
   validoAte: z.string(),
   observacoes: z.string(),
-});
-
-const quickCreateColaboradorFormSchema = z.object({
-  nome: requiredTrimmedString("Informe o nome do colaborador."),
-  emailProfissional: z.string(),
-  celular: z.string(),
-  cargoId: z.string(),
-  cargo: z.string().optional(),
-  podeMinistrarAulas: z.boolean(),
-  permiteCatraca: z.boolean(),
-  permiteForaHorario: z.boolean(),
-  utilizaTecladoAcesso: z.boolean(),
-  coordenador: z.boolean(),
-  criarAcessoSistema: z.boolean(),
-  provisionamentoAcesso: z.enum(["CONVITE", "REUTILIZAR_USUARIO", "SEM_ACESSO"]),
-  tenantIds: z.array(z.string()).default([]),
-  tenantBaseId: z.string(),
-  perfilAcessoInicialId: z.string(),
-  observacoes: z.string(),
-}).superRefine((values, ctx) => {
-  if (values.criarAcessoSistema && !values.emailProfissional.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["emailProfissional"],
-      message: "Informe o e-mail profissional para criar acesso.",
-    });
-  }
-  if (values.criarAcessoSistema && values.tenantIds.filter(Boolean).length === 0) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["tenantIds"],
-      message: "Selecione ao menos uma unidade para provisionar o acesso.",
-    });
-  }
-  if (values.criarAcessoSistema && !values.perfilAcessoInicialId.trim()) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["perfilAcessoInicialId"],
-      message: "Selecione um perfil inicial de acesso.",
-    });
-  }
-  if (
-    values.criarAcessoSistema &&
-    values.tenantIds.filter(Boolean).length > 0 &&
-    !values.tenantIds.includes(values.tenantBaseId)
-  ) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["tenantBaseId"],
-      message: "A unidade base precisa estar entre as unidades selecionadas.",
-    });
-  }
 });
 
 const funcionarioPerfilBaseSchema = z.object({
@@ -171,6 +142,62 @@ const funcionarioPerfilBaseSchema = z.object({
 
 export function buildFuncionarioProfileFormSchema(mode: "create" | "edit") {
   return funcionarioPerfilBaseSchema.superRefine((values, ctx) => {
+    if (!isValidOptionalEmail(values.emailProfissional)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["emailProfissional"],
+        message: "Informe um e-mail profissional válido.",
+      });
+    }
+
+    if (!isValidOptionalEmail(values.emailPessoal)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["emailPessoal"],
+        message: "Informe um e-mail pessoal válido.",
+      });
+    }
+
+    if (!hasValidOptionalCpf(values.cpf)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cpf"],
+        message: "Informe um CPF com 11 dígitos.",
+      });
+    }
+
+    if (!hasValidOptionalPhone(values.celular)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["celular"],
+        message: "Informe um celular com 10 a 15 dígitos.",
+      });
+    }
+
+    if (!hasValidOptionalPhone(values.telefone)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["telefone"],
+        message: "Informe um telefone com 10 a 15 dígitos.",
+      });
+    }
+
+    if (!hasValidOptionalPhone(values.emergencia.telefoneResponsavel)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["emergencia", "telefoneResponsavel"],
+        message: "Informe um telefone de emergência com 10 a 15 dígitos.",
+      });
+    }
+
+    if (!isPastOptionalIsoDate(values.dataNascimento)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["dataNascimento"],
+        message: "Informe uma data de nascimento anterior a hoje.",
+      });
+    }
+
     if (mode === "create" && values.criarAcessoSistema && !values.emailProfissional.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -214,6 +241,17 @@ export function buildFuncionarioProfileFormSchema(mode: "create" | "edit") {
         path: ["contratacao", "salarioAtual"],
         message: "Informe um valor numérico válido para salário.",
       });
+    }
+
+    if (values.contratacao.salarioAtual.trim()) {
+      const parsed = Number(values.contratacao.salarioAtual.replace(",", "."));
+      if (!Number.isNaN(parsed) && parsed < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["contratacao", "salarioAtual"],
+          message: "Informe um valor maior ou igual a zero para salário.",
+        });
+      }
     }
   });
 }

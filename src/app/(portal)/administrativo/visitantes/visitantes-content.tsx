@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@/lib/forms/zod-resolver";
-import { z } from "zod";
 import {
   LogIn,
   Plus,
@@ -47,8 +46,10 @@ import {
   type ValidacaoVisitanteResult,
   type Visitante,
 } from "@/lib/api/visitantes";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { formatBRL, formatDateTimeBR } from "@/lib/formatters";
+import { createVisitanteFormDefaults, type RegistrarVisitanteFormValues, visitanteFormSchema } from "./visitante-form";
 
 const TIPO_OPTIONS: Array<{ value: TipoVisitante; label: string }> = [
   { value: "DAY_USE", label: "Day-use" },
@@ -67,28 +68,6 @@ const TIPO_CLASS: Record<TipoVisitante, string> = {
   AULA_EXPERIMENTAL: "bg-gym-teal/15 text-gym-teal",
   CONVIDADO: "bg-gym-warning/15 text-gym-warning",
 };
-
-const registrarSchema = z.object({
-  nome: z.string().trim().min(2, "Informe o nome do visitante."),
-  documento: z.string().trim().optional(),
-  telefone: z.string().trim().optional(),
-  email: z.string().trim().email("E-mail inválido").or(z.literal("")).optional(),
-  tipo: z.enum(["DAY_USE", "AULA_EXPERIMENTAL", "CONVIDADO"]),
-  validoAte: z.string().min(1, "Informe a data/hora de validade."),
-  maxEntradas: z.coerce.number().int().positive().max(10).optional(),
-  valorCobrado: z.coerce.number().nonnegative().optional(),
-  observacoes: z.string().trim().max(500).optional(),
-});
-
-type RegistrarFormValues = z.infer<typeof registrarSchema>;
-
-function defaultValidoAte(): string {
-  // Amanhã mesmo horário em formato compatível com datetime-local
-  const date = new Date();
-  date.setDate(date.getDate() + 1);
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 /**
  * Pagina de gestao de visitantes (Task #541).
@@ -142,20 +121,10 @@ export function VisitantesContent() {
     return { total: filtered.length, hoje, pendentes, revogados };
   }, [filtered]);
 
-  const form = useForm<RegistrarFormValues>({
-    resolver: zodResolver(registrarSchema),
+  const form = useForm<RegistrarVisitanteFormValues>({
+    resolver: zodResolver(visitanteFormSchema),
     mode: "onTouched",
-    defaultValues: {
-      nome: "",
-      documento: "",
-      telefone: "",
-      email: "",
-      tipo: "DAY_USE",
-      validoAte: defaultValidoAte(),
-      maxEntradas: 1,
-      valorCobrado: undefined,
-      observacoes: "",
-    },
+    defaultValues: createVisitanteFormDefaults(),
   });
 
   // Manual watch dos required fields para evitar rodar o zodResolver no mount.
@@ -176,19 +145,8 @@ export function VisitantesContent() {
       setSuccess(`Visitante ${v.nome} cadastrado. Código: ${v.codigoAcesso}`);
       setTimeout(() => setSuccess(null), 5000);
       setRegistrarOpen(false);
-      form.reset({
-        nome: "",
-        documento: "",
-        telefone: "",
-        email: "",
-        tipo: "DAY_USE",
-        validoAte: defaultValidoAte(),
-        maxEntradas: 1,
-        valorCobrado: undefined,
-        observacoes: "",
-      });
+      form.reset(createVisitanteFormDefaults());
     },
-    onError: (e) => setError(normalizeErrorMessage(e)),
   });
 
   const revogarMutation = useMutation({
@@ -233,8 +191,9 @@ export function VisitantesContent() {
     }
   }
 
-  function onSubmitRegistrar(values: RegistrarFormValues) {
+  async function onSubmitRegistrar(values: RegistrarVisitanteFormValues) {
     setError(null);
+    form.clearErrors();
     const payload: RegistrarVisitantePayload = {
       nome: values.nome,
       documento: values.documento || undefined,
@@ -246,7 +205,18 @@ export function VisitantesContent() {
       valorCobrado: values.valorCobrado,
       observacoes: values.observacoes || undefined,
     };
-    registrarMutation.mutate(payload);
+    try {
+      await registrarMutation.mutateAsync(payload);
+    } catch (submitError) {
+      const { appliedFields } = applyApiFieldErrors(submitError, form.setError);
+      const message = buildFormApiErrorMessage(submitError, {
+        appliedFields,
+        fallbackMessage: normalizeErrorMessage(submitError) || "Falha ao registrar visitante.",
+      });
+      if (message) {
+        setError(message);
+      }
+    }
   }
 
   function handleRevogar(v: Visitante) {

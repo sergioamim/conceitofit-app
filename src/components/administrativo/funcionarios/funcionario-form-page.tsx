@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@/lib/forms/zod-resolver";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
+import { Controller, useForm, useWatch, type FieldPath } from "react-hook-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +117,22 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
       ? "Crie o colaborador em uma rota dedicada, organizando cadastro, contratação, permissões, horários e notificações por abas."
       : "Atualize a ficha completa sem depender da listagem principal. A navegação por abas preserva contexto e deep-link por rota.";
 
+  function mapApiField(field: string): FieldPath<FuncionarioFormValues> | null {
+    const normalized = field.replace(/\[(\d+)\]/g, ".$1");
+    switch (normalized) {
+      case "tenantIdsAdicionais":
+        return "tenantIds";
+      case "acesso.email":
+        return "emailProfissional";
+      case "acesso.roleName":
+        return "perfilAcessoInicialId";
+      case "contratacao.tipoContratacao":
+        return "contratacao.tipo";
+      default:
+        return normalized as FieldPath<FuncionarioFormValues>;
+    }
+  }
+
   async function handleSaveCargo(data: Omit<Cargo, "id" | "tenantId">, id?: string) {
     setSaving(true);
     setError(null);
@@ -141,6 +158,7 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
     setSaving(true);
     setError(null);
     setSuccess(null);
+    form.clearErrors();
 
     try {
       if (mode === "create") {
@@ -169,7 +187,13 @@ export function FuncionarioFormPage({ mode, funcionarioId }: FuncionarioFormPage
       form.reset(funcionarioToFormValues(saved));
       setSuccess("Ficha do colaborador atualizada.");
     } catch (saveError) {
-      setError(normalizeErrorMessage(saveError));
+      const { appliedFields } = applyApiFieldErrors(saveError, form.setError, {
+        mapField: mapApiField,
+      });
+      setError(buildFormApiErrorMessage(saveError, {
+        appliedFields,
+        fallbackMessage: normalizeErrorMessage(saveError) || "Falha ao salvar colaborador.",
+      }));
     } finally {
       setSaving(false);
     }

@@ -162,6 +162,39 @@ test.describe("administrativo colaboradores", () => {
     expect(parsed.error.issues.some((issue) => issue.path.join(".") === "perfilAcessoInicialId")).toBe(true);
   });
 
+  test("schema da ficha rejeita email, cpf, telefone e nascimento inválidos", () => {
+    const schema = buildFuncionarioProfileFormSchema("edit");
+    const parsed = schema.safeParse({
+      ...createFuncionarioFormDefaults("tenant-centro"),
+      nome: "Carlos Silva",
+      emailProfissional: "nao-email",
+      cpf: "123",
+      celular: "999",
+      dataNascimento: "2099-01-01",
+      emergencia: {
+        nomeResponsavel: "",
+        telefoneResponsavel: "12",
+        convenioMedico: "",
+        hospitalPreferencia: "",
+        alergias: "",
+        observacoes: "",
+      },
+      contratacao: {
+        ...createFuncionarioFormDefaults("tenant-centro").contratacao,
+        salarioAtual: "-10",
+      },
+    });
+
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "emailProfissional")).toBe(true);
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "cpf")).toBe(true);
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "celular")).toBe(true);
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "dataNascimento")).toBe(true);
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "emergencia.telefoneResponsavel")).toBe(true);
+    expect(parsed.error.issues.some((issue) => issue.path.join(".") === "contratacao.salarioAtual")).toBe(true);
+  });
+
   test("converte colaborador existente para valores da ficha por rota", () => {
     const values = funcionarioToFormValues(
       normalizeFuncionarioRecord({
