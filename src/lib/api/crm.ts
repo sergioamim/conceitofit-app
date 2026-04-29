@@ -910,7 +910,7 @@ export async function encerrarCrmCampanhaApi(input: {
   try {
     return await apiRequest<CampanhaCRM>({
       path: `/api/v1/crm/campanhas/${input.id}/encerrar`,
-      method: "PATCH",
+      method: "POST",
       query: { tenantId: input.tenantId },
     });
   } catch (error) {

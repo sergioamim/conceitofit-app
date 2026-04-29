@@ -595,7 +595,7 @@ describe("api/crm", () => {
       expect(spy.mock.calls[0][0].method).toBe("POST");
     });
 
-    it("encerrarCrmCampanhaApi PATCH /encerrar", async () => {
+    it("encerrarCrmCampanhaApi POST /encerrar", async () => {
       const spy = vi
         .spyOn(http, "apiRequest")
         .mockResolvedValue({} as never);
@@ -603,7 +603,7 @@ describe("api/crm", () => {
       expect(spy.mock.calls[0][0].path).toBe(
         "/api/v1/crm/campanhas/c1/encerrar",
       );
-      expect(spy.mock.calls[0][0].method).toBe("PATCH");
+      expect(spy.mock.calls[0][0].method).toBe("POST");
     });
   });
 

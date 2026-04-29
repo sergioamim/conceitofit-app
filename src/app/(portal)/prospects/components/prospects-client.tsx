@@ -3,8 +3,8 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import { formatDateBR } from "@/lib/formatters";
 import Link from "next/link";
-import { Search, Plus, ChevronDown, Users, Target, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Search, Plus, ChevronDown, Target } from "lucide-react";
+import { motion } from "framer-motion";
 import { checkProspectDuplicateApi } from "@/lib/api/crm";
 import { listFuncionariosApi } from "@/lib/api/administrativo";
 import { getBusinessCurrentMonthYear } from "@/lib/business-date";
@@ -16,8 +16,6 @@ import {
   useCreateProspect,
   useUpdateProspect,
   useUpdateProspectStatus,
-  useMarkProspectLost,
-  useDeleteProspect,
 } from "@/lib/query/use-prospects";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -33,8 +31,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProspectModal } from "@/components/shared/prospect-modal";
-import { ProspectLossReasonDialog } from "@/components/shared/prospect-loss-reason-dialog";
-import { ProspectTimelineModal } from "@/components/shared/prospect-timeline-modal";
 import type {
   Prospect,
   StatusProspect,
@@ -43,11 +39,11 @@ import type {
   Funcionario,
 } from "@/lib/types";
 import { maskPhone } from "@/lib/utils";
-import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { useDialogState } from "@/hooks/use-dialog-state";
 import { ListErrorState } from "@/components/shared/list-states";
 import { FILTER_ALL, type WithFilterAll } from "@/lib/shared/constants/filters";
 import { cn } from "@/lib/utils";
+import { buildDuplicateProspectError } from "./prospect-form-errors";
 
 const STATUS_OPTIONS: { value: WithFilterAll<StatusProspect>; label: string }[] = [
   { value: FILTER_ALL, label: "Todos" },
@@ -59,7 +55,7 @@ const STATUS_OPTIONS: { value: WithFilterAll<StatusProspect>; label: string }[] 
   { value: "PERDIDO", label: "Perdido" },
 ];
 
-const STATUS_LABELS: { value: StatusProspect; label: string; tone: any }[] = [
+const STATUS_LABELS: { value: StatusProspect; label: string; tone: "accent" | "warning" | "teal" | "danger" }[] = [
   { value: "NOVO", label: "Novos", tone: "accent" },
   { value: "EM_CONTATO", label: "Em contato", tone: "warning" },
   { value: "AGENDOU_VISITA", label: "Agendou visita", tone: "warning" },
@@ -84,9 +80,6 @@ type ProspectRowProps = {
   index: number;
   onAdvance: (id: string, status: StatusProspect) => void;
   onEdit: (prospect: Prospect) => void;
-  onTimeline: (prospect: Prospect) => void;
-  onMarkLost: (id: string) => void;
-  onDelete: (id: string) => void;
 };
 
 const ProspectTableRow = memo(function ProspectTableRow({
@@ -95,12 +88,8 @@ const ProspectTableRow = memo(function ProspectTableRow({
   index,
   onAdvance,
   onEdit,
-  onTimeline,
-  onMarkLost,
-  onDelete,
 }: ProspectRowProps) {
   const canAdvance = canAdvanceProspect(prospect.status);
-  const canLose = prospect.status !== "PERDIDO";
   const canConvert = prospect.status !== "CONVERTIDO" && prospect.status !== "PERDIDO";
 
   const handleAdvance = useCallback(
@@ -108,9 +97,6 @@ const ProspectTableRow = memo(function ProspectTableRow({
     [onAdvance, prospect.id, prospect.status]
   );
   const handleEdit = useCallback(() => onEdit(prospect), [onEdit, prospect]);
-  const handleTimeline = useCallback(() => onTimeline(prospect), [onTimeline, prospect]);
-  const handleMarkLost = useCallback(() => onMarkLost(prospect.id), [onMarkLost, prospect.id]);
-  const handleDelete = useCallback(() => onDelete(prospect.id), [onDelete, prospect.id]);
 
   return (
     <motion.tr 
@@ -162,7 +148,6 @@ const ProspectTableRow = memo(function ProspectTableRow({
 });
 
 export function ProspectsClient() {
-  const { confirm, ConfirmDialog } = useConfirmDialog();
   const tenantContext = useTenantContext();
   const tenantId = tenantContext.tenantId ?? "";
 
@@ -174,16 +159,12 @@ export function ProspectsClient() {
   const createMutation = useCreateProspect(tenantId || undefined);
   const updateMutation = useUpdateProspect(tenantId || undefined);
   const statusMutation = useUpdateProspectStatus(tenantId || undefined);
-  const lostMutation = useMarkProspectLost(tenantId || undefined);
-  const deleteMutation = useDeleteProspect(tenantId || undefined);
 
   const [filtroStatus, setFiltroStatus] = useState<WithFilterAll<StatusProspect>>(FILTER_ALL);
   const [filtroOrigem, setFiltroOrigem] = useState<OrigemProspect | "TODAS">("TODAS");
   const [busca, setBusca] = useState("");
   const modal = useDialogState();
   const [editing, setEditing] = useState<Prospect | null>(null);
-  const [timeline, setTimeline] = useState<Prospect | null>(null);
-  const [lossTargetId, setLossTargetId] = useState<string | null>(null);
   const [mes, setMes] = useState(() => getBusinessCurrentMonthYear().month);
   const [ano, setAno] = useState(() => getBusinessCurrentMonthYear().year);
   const [pageSize, setPageSize] = useState<20 | 50 | 100 | 200>(20);
@@ -261,8 +242,6 @@ export function ProspectsClient() {
   const handleCloseNew = modal.close;
   const handleOpenEdit = useCallback((prospect: Prospect) => setEditing(prospect), []);
   const handleCloseEditing = useCallback(() => setEditing(null), []);
-  const handleOpenTimeline = useCallback((prospect: Prospect) => setTimeline(prospect), []);
-  const handleCloseTimeline = useCallback(() => setTimeline(null), []);
 
   const handleFiltroStatus = useCallback((next: WithFilterAll<StatusProspect>) => {
     setFiltroStatus(next);
@@ -297,7 +276,7 @@ export function ProspectsClient() {
         email: data.email,
       });
       if (isDup) {
-        throw new Error("Já existe prospect com este telefone, CPF ou e-mail.");
+        throw buildDuplicateProspectError(data);
       }
       await createMutation.mutateAsync(data);
     },
@@ -334,38 +313,8 @@ export function ProspectsClient() {
     [handleStatus]
   );
 
-  const handlePerdido = useCallback(
-    (id: string) => {
-      if (!tenantId) return;
-      setLossTargetId(id);
-    },
-    [tenantId]
-  );
-
-  const handleCloseLossDialog = useCallback(() => setLossTargetId(null), []);
-
-  const handleConfirmLoss = useCallback(
-    async (motivo?: string) => {
-      if (!tenantId || !lossTargetId) return;
-      await lostMutation.mutateAsync({ id: lossTargetId, motivo });
-      setLossTargetId(null);
-    },
-    [lossTargetId, lostMutation, tenantId]
-  );
-
-  const handleDelete = useCallback(
-    (id: string) => {
-      if (!tenantId) return;
-      confirm("Remover este prospect?", async () => {
-        await deleteMutation.mutateAsync(id);
-      });
-    },
-    [confirm, tenantId, deleteMutation]
-  );
-
   return (
     <div className="space-y-8 pb-10">
-      {ConfirmDialog}
       <ProspectModal open={modal.isOpen} onClose={handleCloseNew} onSave={handleSave} funcionarios={funcionarios} />
       <ProspectModal
         open={!!editing}
@@ -374,13 +323,6 @@ export function ProspectsClient() {
         funcionarios={funcionarios}
         initial={editing}
       />
-      <ProspectLossReasonDialog
-        open={lossTargetId !== null}
-        submitting={lostMutation.isPending}
-        onClose={handleCloseLossDialog}
-        onConfirm={handleConfirmLoss}
-      />
-      <ProspectTimelineModal prospect={timeline} onClose={handleCloseTimeline} />
 
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -508,9 +450,6 @@ export function ProspectsClient() {
                     origemLabel={ORIGEM_LABELS[p.origem]}
                     onAdvance={handleAdvance}
                     onEdit={handleOpenEdit}
-                    onTimeline={handleOpenTimeline}
-                    onMarkLost={handlePerdido}
-                    onDelete={handleDelete}
                   />
                 ))
               )}

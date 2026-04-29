@@ -1,6 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@/lib/forms/zod-resolver";
 import { formatDate } from "@/lib/formatters";
 import { listVouchersApi } from "@/lib/api/beneficios";
 import { normalizeCapabilityError } from "@/lib/api/backend-capability";
@@ -20,10 +23,17 @@ import type {
   CampanhaStatus,
   Voucher,
 } from "@/lib/types";
+import { applyApiFieldErrors, buildFormApiErrorMessage } from "@/lib/forms/api-form-errors";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  campanhaFormSchema,
+  campanhaToFormValues,
+  createCampanhaFormDefaults,
+  type CampanhaFormValues,
+} from "./campanha-form-schema";
 
 const PUBLICO_OPTIONS: Array<{ value: CampanhaPublicoAlvo; label: string; help: string }> = [
   { value: "EVADIDOS_ULTIMOS_3_MESES", label: "Evadidos últimos 3 meses", help: "Alunos inativos/cancelados com última matrícula encerrada em até 90 dias." },
@@ -38,35 +48,6 @@ const CANAIS: Array<{ value: CampanhaCanal; label: string }> = [
   { value: "LIGACAO", label: "Ligação" },
 ];
 
-type FormState = {
-  nome: string;
-  descricao: string;
-  publicoAlvo: CampanhaPublicoAlvo;
-  canais: CampanhaCanal[];
-  voucherId: string;
-  dataInicio: string;
-  dataFim: string;
-  status: CampanhaStatus;
-};
-
-const EMPTY_FORM: FormState = {
-  nome: "",
-  descricao: "",
-  publicoAlvo: "EVADIDOS_ULTIMOS_3_MESES",
-  canais: ["WHATSAPP"],
-  voucherId: "none",
-  dataInicio: "",
-  dataFim: "",
-  status: "RASCUNHO",
-};
-
-function buildEmptyForm(todayIso: string): FormState {
-  return {
-    ...EMPTY_FORM,
-    dataInicio: todayIso,
-  };
-}
-
 function statusStyle(status: CampanhaStatus): string {
   if (status === "ATIVA") return "bg-gym-teal/15 text-gym-teal";
   if (status === "ENCERRADA") return "bg-muted text-muted-foreground";
@@ -76,14 +57,23 @@ function statusStyle(status: CampanhaStatus): string {
 export default function CampanhasCrmPage() {
   const tenantContext = useTenantContext();
   const tenantId = tenantContext.tenantId ?? "";
-  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [statusFilter, setStatusFilter] = useState<"TODAS" | CampanhaStatus>("TODAS");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CampanhaCRM | null>(null);
-  const [form, setForm] = useState<FormState>(() => buildEmptyForm(""));
   const [error, setError] = useState("");
-  const [campaignsUnavailable, setCampaignsUnavailable] = useState(false);
+  const [modalError, setModalError] = useState("");
   const [writeUnavailable, setWriteUnavailable] = useState(false);
+
+  const form = useForm<CampanhaFormValues>({
+    resolver: zodResolver(campanhaFormSchema),
+    mode: "onTouched",
+    defaultValues: createCampanhaFormDefaults(getBusinessTodayIso()),
+  });
+
+  const watchedPublicoAlvo = useWatch({ control: form.control, name: "publicoAlvo" });
+  const watchedCanais = useWatch({ control: form.control, name: "canais" }) ?? [];
+  const watchedVoucherId = useWatch({ control: form.control, name: "voucherId" });
+  const watchedStatus = useWatch({ control: form.control, name: "status" });
 
   const {
     data: rows = [],
@@ -101,34 +91,18 @@ export default function CampanhasCrmPage() {
   const dispararMutation = useDispararCrmCampanha();
   const encerrarMutation = useEncerrarCrmCampanha();
 
-  useEffect(() => {
-    if (queryError && queryErrorObj) {
-      const message = normalizeCapabilityError(queryErrorObj, "Falha ao carregar campanhas CRM.");
-      setCampaignsUnavailable(message.startsWith("Backend ainda não expõe"));
-      if (!message.startsWith("Backend ainda não expõe")) {
-        setError(message);
+  const { data: vouchers = [] } = useQuery<Voucher[]>({
+    queryKey: ["crm-campanhas-vouchers"],
+    queryFn: async () => {
+      try {
+        const result = await listVouchersApi();
+        return result.filter((v) => v.ativo && (v.usarNaVenda || v.tipo.toUpperCase().includes("DESCONTO")));
+      } catch {
+        return [];
       }
-    }
-  }, [queryError, queryErrorObj]);
-
-  useEffect(() => {
-    setForm((current) => (current.dataInicio ? current : buildEmptyForm(getBusinessTodayIso())));
-  }, []);
-
-  const loadVouchers = useCallback(async () => {
-    try {
-      const result = await listVouchersApi();
-      setVouchers(
-        result.filter((v) => v.ativo && (v.usarNaVenda || v.tipo.toUpperCase().includes("DESCONTO")))
-      );
-    } catch {
-      setVouchers([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadVouchers();
-  }, [loadVouchers]);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const summary = useMemo(() => {
     const total = rows.length;
@@ -138,73 +112,101 @@ export default function CampanhasCrmPage() {
     return { total, ativas, rascunho, disparos };
   }, [rows]);
 
+  const queryCapabilityMessage = useMemo(() => {
+    if (!queryError || !queryErrorObj) return "";
+    return normalizeCapabilityError(queryErrorObj, "Falha ao carregar campanhas CRM.");
+  }, [queryError, queryErrorObj]);
+
+  const campaignsUnavailable = queryCapabilityMessage.startsWith("Backend ainda não expõe");
+  const pageError = !campaignsUnavailable && queryCapabilityMessage ? queryCapabilityMessage : error;
+
+  const saving = createMutation.isPending || updateMutation.isPending;
+
+  const resetModalState = useCallback(() => {
+    setEditing(null);
+    setModalError("");
+    form.reset(createCampanhaFormDefaults(getBusinessTodayIso()));
+  }, [form]);
+
+  const handleModalOpenChange = useCallback((open: boolean) => {
+    setModalOpen(open);
+    if (!open) {
+      resetModalState();
+    }
+  }, [resetModalState]);
+
   function openCreate() {
     if (campaignsUnavailable || writeUnavailable) return;
-    setEditing(null);
     setError("");
-    setForm(buildEmptyForm(getBusinessTodayIso()));
+    resetModalState();
     setModalOpen(true);
   }
 
   function openEdit(row: CampanhaCRM) {
     if (campaignsUnavailable || writeUnavailable) return;
-    setEditing(row);
     setError("");
-    setForm({
-      nome: row.nome,
-      descricao: row.descricao ?? "",
-      publicoAlvo: row.publicoAlvo,
-      canais: row.canais,
-      voucherId: row.voucherId ?? "none",
-      dataInicio: row.dataInicio,
-      dataFim: row.dataFim ?? "",
-      status: row.status,
-    });
+    setModalError("");
+    setEditing(row);
+    form.reset(campanhaToFormValues(row));
     setModalOpen(true);
   }
 
-  async function handleSave() {
+  function toggleCanal(canal: CampanhaCanal) {
+    const next = watchedCanais.includes(canal)
+      ? watchedCanais.filter((item) => item !== canal)
+      : [...watchedCanais, canal];
+    form.setValue("canais", next, { shouldDirty: true, shouldValidate: true });
+  }
+
+  const handleSave = form.handleSubmit(async (values) => {
     if (!tenantId || campaignsUnavailable || writeUnavailable) return;
-    if (!form.nome.trim()) {
-      setError("Informe o nome da campanha.");
-      return;
-    }
-    if (form.canais.length === 0) {
-      setError("Selecione ao menos um canal.");
-      return;
-    }
-    setError("");
+
+    setModalError("");
+    form.clearErrors();
+
     try {
       const payload = {
-        nome: form.nome.trim(),
-        descricao: form.descricao.trim() || undefined,
-        publicoAlvo: form.publicoAlvo,
-        canais: form.canais,
-        voucherId: form.voucherId === "none" ? undefined : form.voucherId,
-        dataInicio: form.dataInicio,
-        dataFim: form.dataFim || undefined,
-        status: form.status,
+        nome: values.nome.trim(),
+        descricao: values.descricao.trim() || undefined,
+        publicoAlvo: values.publicoAlvo,
+        canais: values.canais,
+        voucherId: values.voucherId === "none" ? undefined : values.voucherId,
+        dataInicio: values.dataInicio,
+        dataFim: values.dataFim.trim() || undefined,
+        status: values.status,
       };
+
       if (editing) {
         await updateMutation.mutateAsync({ tenantId, id: editing.id, data: payload });
       } else {
         await createMutation.mutateAsync({ tenantId, data: payload });
       }
+
       setModalOpen(false);
-      setEditing(null);
-      setForm(buildEmptyForm(getBusinessTodayIso()));
+      resetModalState();
     } catch (submitError) {
-      const message = normalizeCapabilityError(submitError, "Falha ao salvar campanha CRM.");
-      setError(message);
-      if (message.startsWith("Backend ainda não expõe")) {
-        setWriteUnavailable(true);
+      const appliedFields = applyApiFieldErrors(submitError, form.setError).appliedFields;
+      const fallbackMessage = normalizeCapabilityError(
+        submitError,
+        editing ? "Falha ao salvar campanha CRM." : "Falha ao criar campanha CRM.",
+      );
+      const message = buildFormApiErrorMessage(submitError, {
+        appliedFields,
+        fallbackMessage,
+      });
+      if (message) {
+        setModalError(message);
+        if (message.startsWith("Backend ainda não expõe")) {
+          setWriteUnavailable(true);
+        }
       }
     }
-  }
+  });
 
   async function handleDisparar(id: string) {
     if (!tenantId || campaignsUnavailable || writeUnavailable) return;
     try {
+      setError("");
       await dispararMutation.mutateAsync({ tenantId, id });
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao disparar campanha CRM.");
@@ -218,6 +220,7 @@ export default function CampanhasCrmPage() {
   async function handleEncerrar(id: string) {
     if (!tenantId || campaignsUnavailable || writeUnavailable) return;
     try {
+      setError("");
       await encerrarMutation.mutateAsync({ tenantId, id });
     } catch (submitError) {
       const message = normalizeCapabilityError(submitError, "Falha ao encerrar campanha CRM.");
@@ -228,20 +231,9 @@ export default function CampanhasCrmPage() {
     }
   }
 
-  function toggleCanal(canal: CampanhaCanal) {
-    setForm((prev) => ({
-      ...prev,
-      canais: prev.canais.includes(canal)
-        ? prev.canais.filter((item) => item !== canal)
-        : [...prev.canais, canal],
-    }));
-  }
-
-  const saving = createMutation.isPending || updateMutation.isPending;
-
   return (
     <div className="space-y-6">
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <Dialog open={modalOpen} onOpenChange={handleModalOpenChange}>
         <DialogContent className="border-border bg-card sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">
@@ -249,125 +241,143 @@ export default function CampanhasCrmPage() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
-              <Input
-                value={form.nome}
-                onChange={(e) => setForm((s) => ({ ...s, nome: e.target.value }))}
-                className="border-border bg-secondary"
-              />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
-              <Input
-                value={form.descricao}
-                onChange={(e) => setForm((s) => ({ ...s, descricao: e.target.value }))}
-                className="border-border bg-secondary"
-              />
-            </div>
+          <form className="space-y-4" onSubmit={handleSave}>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome *</label>
+                <Input
+                  {...form.register("nome")}
+                  className="border-border bg-secondary"
+                />
+                {form.formState.errors.nome ? (
+                  <p className="text-xs text-gym-danger">{form.formState.errors.nome.message}</p>
+                ) : null}
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Público alvo</label>
-              <Select
-                value={form.publicoAlvo}
-                onValueChange={(value) => setForm((s) => ({ ...s, publicoAlvo: value as CampanhaPublicoAlvo }))}
-              >
-                <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
-                <SelectContent className="border-border bg-card">
-                  {PUBLICO_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {PUBLICO_OPTIONS.find((option) => option.value === form.publicoAlvo)?.help}
-              </p>
-            </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Descrição</label>
+                <Input
+                  {...form.register("descricao")}
+                  className="border-border bg-secondary"
+                />
+                {form.formState.errors.descricao ? (
+                  <p className="text-xs text-gym-danger">{form.formState.errors.descricao.message}</p>
+                ) : null}
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Voucher da campanha</label>
-              <Select value={form.voucherId} onValueChange={(value) => setForm((s) => ({ ...s, voucherId: value }))}>
-                <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
-                <SelectContent className="border-border bg-card">
-                  <SelectItem value="none">Sem voucher</SelectItem>
-                  {vouchers.map((voucher) => (
-                    <SelectItem key={voucher.id} value={voucher.id}>
-                      {voucher.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Público alvo</label>
+                <Select
+                  value={watchedPublicoAlvo}
+                  onValueChange={(value) => form.setValue("publicoAlvo", value as CampanhaPublicoAlvo, { shouldDirty: true, shouldValidate: true })}
+                >
+                  <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
+                  <SelectContent className="border-border bg-card">
+                    {PUBLICO_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {PUBLICO_OPTIONS.find((option) => option.value === watchedPublicoAlvo)?.help}
+                </p>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data início</label>
-              <Input
-                type="date"
-                value={form.dataInicio}
-                onChange={(e) => setForm((s) => ({ ...s, dataInicio: e.target.value }))}
-                className="border-border bg-secondary"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data fim</label>
-              <Input
-                type="date"
-                value={form.dataFim}
-                onChange={(e) => setForm((s) => ({ ...s, dataFim: e.target.value }))}
-                className="border-border bg-secondary"
-              />
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Voucher da campanha</label>
+                <Select
+                  value={watchedVoucherId}
+                  onValueChange={(value) => form.setValue("voucherId", value, { shouldDirty: true, shouldValidate: true })}
+                >
+                  <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
+                  <SelectContent className="border-border bg-card">
+                    <SelectItem value="none">Sem voucher</SelectItem>
+                    {vouchers.map((voucher) => (
+                      <SelectItem key={voucher.id} value={voucher.id}>
+                        {voucher.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</label>
-              <Select
-                value={form.status}
-                onValueChange={(value) => setForm((s) => ({ ...s, status: value as CampanhaStatus }))}
-              >
-                <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
-                <SelectContent className="border-border bg-card">
-                  <SelectItem value="RASCUNHO">Rascunho</SelectItem>
-                  <SelectItem value="ATIVA">Ativa</SelectItem>
-                  <SelectItem value="ENCERRADA">Encerrada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data início</label>
+                <Input
+                  type="date"
+                  {...form.register("dataInicio")}
+                  className="border-border bg-secondary"
+                />
+                {form.formState.errors.dataInicio ? (
+                  <p className="text-xs text-gym-danger">{form.formState.errors.dataInicio.message}</p>
+                ) : null}
+              </div>
 
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Canais de divulgação</label>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                {CANAIS.map((canal) => {
-                  const selected = form.canais.includes(canal.value);
-                  return (
-                    <button
-                      key={canal.value}
-                      type="button"
-                      onClick={() => toggleCanal(canal.value)}
-                      className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
-                        selected
-                          ? "border-gym-accent bg-gym-accent/10 text-foreground"
-                          : "border-border bg-secondary/30 text-muted-foreground"
-                      }`}
-                    >
-                      {canal.label}
-                    </button>
-                  );
-                })}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Data fim</label>
+                <Input
+                  type="date"
+                  {...form.register("dataFim")}
+                  className="border-border bg-secondary"
+                />
+                {form.formState.errors.dataFim ? (
+                  <p className="text-xs text-gym-danger">{form.formState.errors.dataFim.message}</p>
+                ) : null}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Status</label>
+                <Select
+                  value={watchedStatus}
+                  onValueChange={(value) => form.setValue("status", value as CampanhaStatus, { shouldDirty: true, shouldValidate: true })}
+                >
+                  <SelectTrigger className="border-border bg-secondary"><SelectValue /></SelectTrigger>
+                  <SelectContent className="border-border bg-card">
+                    <SelectItem value="RASCUNHO">Rascunho</SelectItem>
+                    <SelectItem value="ATIVA">Ativa</SelectItem>
+                    <SelectItem value="ENCERRADA">Encerrada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Canais de divulgação</label>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {CANAIS.map((canal) => {
+                    const selected = watchedCanais.includes(canal.value);
+                    return (
+                      <button
+                        key={canal.value}
+                        type="button"
+                        onClick={() => toggleCanal(canal.value)}
+                        className={`cursor-pointer rounded-md border px-3 py-2 text-sm ${
+                          selected
+                            ? "border-gym-accent bg-gym-accent/10 text-foreground"
+                            : "border-border bg-secondary/30 text-muted-foreground"
+                        }`}
+                      >
+                        {canal.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.formState.errors.canais ? (
+                  <p className="text-xs text-gym-danger">{form.formState.errors.canais.message}</p>
+                ) : null}
               </div>
             </div>
-          </div>
 
-          {error && <p className="text-sm text-gym-danger">{error}</p>}
+            {modalError ? <p className="text-sm text-gym-danger">{modalError}</p> : null}
 
-          <DialogFooter>
-            <Button variant="outline" className="border-border" onClick={() => setModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar campanha"}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button variant="outline" className="border-border" onClick={() => handleModalOpenChange(false)} type="button">
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Salvando..." : "Salvar campanha"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
@@ -395,9 +405,9 @@ export default function CampanhasCrmPage() {
         </div>
       </div>
 
-      {error ? (
+      {pageError ? (
         <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-          {error}
+          {pageError}
         </div>
       ) : null}
       {campaignsUnavailable ? (
