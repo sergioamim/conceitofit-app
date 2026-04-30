@@ -19,6 +19,10 @@ type BiMetricCardProps = {
   /** Card inteiro vira alvo clicável (evita `<button><h3>` — usa role=button no container). */
   onPress?: () => void;
   "data-testid"?: string;
+  /** Barra inferior 0–100 (protótipo cockpit). Omitir mantém faixa visual ~68%. */
+  railPercent?: number;
+  /** Card mais estreito/compacto para carrossel horizontal. */
+  compact?: boolean;
 };
 
 /**
@@ -46,6 +50,8 @@ export function BiMetricCard({
   sparkline,
   onPress,
   "data-testid": dataTestId,
+  railPercent,
+  compact = false,
 }: BiMetricCardProps) {
   const tones = {
     accent: "text-gym-accent border-gym-accent/20 bg-gym-accent/10",
@@ -69,13 +75,21 @@ export function BiMetricCard({
   };
 
   const interactive = Boolean(onPress);
+  const resolvedRail =
+    railPercent === undefined ? 68 : Math.min(100, Math.max(0, railPercent));
 
   return (
-    <div className="flex-1 min-w-[240px]">
+    <div
+      className={cn(
+        "min-w-[240px]",
+        compact ? "max-w-[280px] flex-none shrink-0 sm:max-w-none lg:min-w-0 lg:flex-1" : "flex-1",
+      )}
+    >
       <div
         data-testid={dataTestId}
         className={cn(
-          "relative overflow-hidden rounded-2xl border border-border/40 bg-card p-6 shadow-sm",
+          "relative overflow-hidden rounded-2xl border border-border/40 bg-card shadow-sm",
+          compact ? "p-5" : "p-6",
           interactive &&
             "cursor-pointer transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         )}
@@ -119,7 +133,12 @@ export function BiMetricCard({
           <p className="text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground/70">
             {label}
           </p>
-          <h3 className="font-display text-3xl font-extrabold tracking-tight">
+          <h3
+            className={cn(
+              "font-display font-extrabold tracking-tight",
+              compact ? "text-2xl" : "text-3xl",
+            )}
+          >
             {value}
           </h3>
           {description && (
@@ -137,10 +156,11 @@ export function BiMetricCard({
 
         {extra && <div className="mt-4 pt-4 border-t border-border/20">{extra}</div>}
 
-        {/* Progress indicator line — width estática, sem framer-motion */}
-        <div className="absolute bottom-0 left-0 h-1 w-full bg-muted/10">
+        {/* Barra cockpit / progresso */}
+        <div className="absolute bottom-0 left-0 h-1.5 w-full bg-muted/20">
           <div
-            className={cn("h-full w-[65%]", progressColors[tone])}
+            className={cn("h-full rounded-br-2xl", progressColors[tone])}
+            style={{ width: `${resolvedRail}%` }}
           />
         </div>
       </div>

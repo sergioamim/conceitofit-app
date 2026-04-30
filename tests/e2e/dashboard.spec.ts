@@ -362,7 +362,8 @@ test.describe("Dashboard principal", () => {
     await installDashboardMocks(page);
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /Cockpit/ })).toBeVisible();
+    await expect(main.getByTestId("cockpit-insight-strip")).toBeVisible();
     await expect(main.getByText("Clientes ativos")).toBeVisible();
     await expect(main.getByRole("heading", { level: 3, name: "128" })).toBeVisible();
 
@@ -427,7 +428,7 @@ test.describe("Dashboard principal", () => {
 
     await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /Cockpit/ })).toBeVisible();
     await expect(main.getByText("Clientes ativos")).toBeVisible();
     await expect(main.getByRole("heading", { level: 3, name: "77" })).toBeVisible();
     await expect(main.getByText("Prospect SSR")).toBeVisible();
