@@ -1,6 +1,7 @@
 export const queryKeys = {
-  dashboard: (tenantId: string, referenceDate: string) =>
-    ["dashboard", tenantId, referenceDate] as const,
+  /** `scope`: FULL | CLIENTES | VENDAS | FINANCEIRO — cache separado por aba sob demanda. */
+  dashboard: (tenantId: string, referenceDate: string, scope = "FULL" as string) =>
+    ["dashboard", tenantId, referenceDate, scope] as const,
 
   billingConfig: (tenantId: string) =>
     ["billingConfig", tenantId] as const,

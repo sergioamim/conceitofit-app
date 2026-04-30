@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
-import { useDashboard } from "@/lib/query/use-dashboard";
+import { useDashboardTab } from "@/lib/query/use-dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, StatusAluno } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -54,15 +54,49 @@ export function DashboardContent({
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
-
-  const { data: dashboardData, isLoading: loading, error: queryError, refetch } = useDashboard({
-    tenantId: tenantContext.tenantId,
-    referenceDate: selectedDate,
-    scope: "FULL",
-    initialData: initialData ?? undefined,
+  const [visitedTabs, setVisitedTabs] = useState<Record<DashboardTab, boolean>>({
+    CLIENTES: true,
+    VENDAS: false,
+    FINANCEIRO: false,
   });
 
+  useEffect(() => {
+    setVisitedTabs((prev) => (prev[tab] ? prev : { ...prev, [tab]: true }));
+  }, [tab]);
+
+  const tenantId = tenantContext.tenantId;
+
+  const qClientes = useDashboardTab({
+    tenantId,
+    referenceDate: selectedDate,
+    scope: "CLIENTES",
+    enabled: Boolean(tenantId) && visitedTabs.CLIENTES,
+    initialData: initialData ?? undefined,
+  });
+  const qVendas = useDashboardTab({
+    tenantId,
+    referenceDate: selectedDate,
+    scope: "VENDAS",
+    enabled: Boolean(tenantId) && visitedTabs.VENDAS,
+  });
+  const qFinanceiro = useDashboardTab({
+    tenantId,
+    referenceDate: selectedDate,
+    scope: "FINANCEIRO",
+    enabled: Boolean(tenantId) && visitedTabs.FINANCEIRO,
+  });
+
+  const tabQuery =
+    tab === "CLIENTES" ? qClientes : tab === "VENDAS" ? qVendas : qFinanceiro;
+  const dashboardData = tabQuery.data;
+  const loading = Boolean(tenantId) && !dashboardData && tabQuery.isPending;
+  const queryError = tabQuery.error;
+
   const error = queryError ? normalizeErrorMessage(queryError) : null;
+
+  function refetch() {
+    void tabQuery.refetch();
+  }
 
   const openProspects = useMemo(() => {
     const prospects = dashboardData?.prospectsRecentes ?? [];
@@ -93,7 +127,7 @@ export function DashboardContent({
   }, [dashboardData]);
 
   if (!metrics) {
-    if (loading && initialData !== null) {
+    if (loading) {
       return <div className="py-12 text-center text-sm text-muted-foreground animate-pulse">Carregando dashboard...</div>;
     }
     return <div className="text-sm text-muted-foreground">Sem dados para o dashboard.</div>;
@@ -298,13 +332,16 @@ export function DashboardContent({
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
                 <BiMetricCard label="Recebimentos" value={formatBRL(metrics.receitaDoMes)} description="pagamentos recebidos" icon={Banknote} tone="teal" trend={deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior).text} />
                 <BiMetricCard label="Ticket médio" value={formatBRL(metrics.ticketMedio)} description="por pagamento recebido" icon={CreditCard} tone="accent" trend={deltaLabel(metrics.ticketMedio, metrics.ticketMedioAnterior).text} />
-                <BiMetricCard label="Inadimplência" value={formatBRL(metrics.inadimplencia)} description="valor vencido não recebido" icon={TrendingDown} tone="danger" />
+                <BiMetricCard label="Inadimplência" value={formatBRL(metrics.inadimplencia)} description="vencidos há até 30 dias (foco recuperação)" icon={TrendingDown} tone="danger" />
                 <BiMetricCard label="A receber" value={formatBRL(metrics.aReceber)} description="pagamentos ainda em aberto" icon={HandCoins} tone="warning" />
               </div>
 
               <div className="glass-card rounded-2xl border border-border/40 overflow-hidden shadow-xl shadow-black/5">
-                <div className="p-6 border-b border-border/40 bg-muted/10 flex items-center justify-between">
-                  <h2 className="font-display text-lg font-bold">Pendentes e Vencidos</h2>
+                <div className="p-6 border-b border-border/40 bg-muted/10 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="font-display text-lg font-bold">Vencidos para cobrança recente</h2>
+                    <p className="text-xs text-muted-foreground mt-1">Vencimento nos últimos 30 dias (até a data selecionada) · acima disso, usar Pagamentos</p>
+                  </div>
                   <Link href="/pagamentos">
                     <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
                       Ver todos <ArrowRight size={14} className="ml-1" />
@@ -313,7 +350,7 @@ export function DashboardContent({
                 </div>
                 <div className="p-6">
                   {metrics.pagamentosPendentes.length === 0 ? (
-                    <p className="py-10 text-center text-sm text-muted-foreground opacity-50">Nenhum pagamento pendente</p>
+                    <p className="py-10 text-center text-sm text-muted-foreground opacity-50">Nenhum vencido nessa janela de 30 dias</p>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {metrics.pagamentosPendentes.map((p, i) => (

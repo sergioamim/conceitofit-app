@@ -16,7 +16,7 @@ async function getActiveTenantId(): Promise<string | undefined> {
 async function fetchDashboard(tenantId: string, referenceDate: string): Promise<DashboardData | null> {
   try {
     return await serverFetch<DashboardData>("/api/v1/academia/dashboard", {
-      query: { tenantId, referenceDate, scope: "FULL" },
+      query: { tenantId, referenceDate, scope: "CLIENTES" },
       next: { revalidate: 60 },
     });
   } catch (error) {

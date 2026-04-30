@@ -4,9 +4,12 @@ import { getQueryClient, makeQueryClient } from "../../src/lib/query/query-clien
 
 test.describe("query hooks contracts", () => {
   test("gera query keys determinísticas e sem colisão entre parâmetros", async () => {
-    expect(queryKeys.dashboard("tn-1", "2026-03-31")).toEqual(["dashboard", "tn-1", "2026-03-31"]);
+    expect(queryKeys.dashboard("tn-1", "2026-03-31")).toEqual(["dashboard", "tn-1", "2026-03-31", "FULL"]);
     expect(queryKeys.dashboard("tn-1", "2026-03-31")).toEqual(queryKeys.dashboard("tn-1", "2026-03-31"));
     expect(queryKeys.dashboard("tn-1", "2026-03-31")).not.toEqual(queryKeys.dashboard("tn-2", "2026-03-31"));
+    expect(queryKeys.dashboard("tn-1", "2026-03-31", "CLIENTES")).not.toEqual(
+      queryKeys.dashboard("tn-1", "2026-03-31", "FINANCEIRO"),
+    );
     expect(queryKeys.clientes.list("tn-1", { page: 0, size: 20 })).not.toEqual(
       queryKeys.clientes.list("tn-1", { page: 1, size: 20 }),
     );
