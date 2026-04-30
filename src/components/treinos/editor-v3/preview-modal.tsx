@@ -67,9 +67,7 @@ export function PreviewModal({ open, onClose, editor, catalog }: PreviewModalPro
             </div>
           ) : (
             editor.sessoes.map((sessao, idx) => {
-              const letter = (sessao.nome || String.fromCharCode(65 + idx))
-                .charAt(0)
-                .toUpperCase();
+              const letter = String.fromCharCode(65 + idx);
               return (
                 <section
                   key={sessao.id}
@@ -81,7 +79,7 @@ export function PreviewModal({ open, onClose, editor, catalog }: PreviewModalPro
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-bold">
-                        {sessao.nome || `Sessão ${idx + 1}`}
+                        Sessão {letter}
                       </div>
                       <div className="text-[11px] text-muted-foreground">
                         {sessao.itens.length}{" "}

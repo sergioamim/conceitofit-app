@@ -23,6 +23,7 @@ export interface AuthSession {
   baseTenantId?: string;
   availableTenants?: TenantAccess[];
   availableScopes?: AuthSessionScope[];
+  capabilities?: string[];
   broadAccess?: boolean;
   forcePasswordChangeRequired?: boolean;
   sessionMode?: string;
@@ -45,6 +46,7 @@ export interface AuthSessionTokenClaims {
   activeTenantId?: string;
   baseTenantId?: string;
   availableScopes?: AuthSessionScope[];
+  capabilities?: string[];
   broadAccess?: boolean;
   scope?: string;
   sessionMode?: string;
@@ -312,6 +314,13 @@ export function getAvailableScopesFromSession(): AuthSessionScope[] {
     .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
 }
 
+export function getCapabilitiesFromSession(): string[] {
+  const raw = getClaims()?.capabilities;
+  return Array.isArray(raw)
+    ? raw.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean)
+    : [];
+}
+
 export function getAvailableTenantsFromSession(): TenantAccess[] {
   // Task 458: availableTenants não é mais armazenado localmente.
   // Retorna array vazio — o backend resolve tenants via token claims.
@@ -350,6 +359,7 @@ export function getAuthSessionSnapshot(): AuthSession | null {
           .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL")
         )
       : [],
+    capabilities: getCapabilitiesFromSession(),
     broadAccess: claims?.broadAccess,
     forcePasswordChangeRequired: claims?.forcePasswordChangeRequired,
     sessionMode: getSessionModeFromSession(),
@@ -400,6 +410,13 @@ function normalizeScopesFromClaims(value: unknown): AuthSessionScope[] {
   return rawValues
     .map((item) => (typeof item === "string" ? item.trim().toUpperCase() : ""))
     .filter((item): item is AuthSessionScope => item === "UNIDADE" || item === "REDE" || item === "GLOBAL");
+}
+
+function normalizeStringListClaim(value: unknown): string[] {
+  const rawValues = Array.isArray(value) ? value : typeof value === "string" ? [value] : [];
+  return rawValues
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
 }
 
 function normalizeTenantIds(values: string[]): string[] {
@@ -578,6 +595,7 @@ export function getSessionClaimsFromToken(token?: string): AuthSessionTokenClaim
     activeTenantId,
     baseTenantId,
     availableScopes: normalizeScopesFromClaims(payload.availableScopes ?? payload.scopes ?? scopeClaim),
+    capabilities: normalizeStringListClaim(payload.capabilities),
     broadAccess: typeof payload.broadAccess === "boolean" ? payload.broadAccess : undefined,
     scope: scopeClaim,
     sessionMode: readClaimString(payload, ["session_mode", "sessionMode"]),

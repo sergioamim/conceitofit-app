@@ -19,7 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { grupoColorByName } from "@/lib/treinos/grupo-colors";
-import { createTreinoV2MetricField } from "@/lib/tenant/treinos/v2-domain";
+import {
+  createTreinoV2MetricField,
+  type TreinoV2TechniqueType,
+} from "@/lib/tenant/treinos/v2-domain";
 import type { TreinoV2EditorSeed } from "@/lib/tenant/treinos/v2-runtime";
 import type { TreinoV2CatalogExercise } from "@/lib/api/treinos-v2";
 
@@ -28,10 +31,19 @@ type SessaoItem = TreinoV2EditorSeed["sessoes"][number]["itens"][number];
 const CUSTOM_CELL_CLASS =
   "border-amber-500/50 bg-amber-500/15 text-amber-300 font-semibold";
 
+const TECHNIQUE_OPTIONS: Array<{ value: "NORMAL" | TreinoV2TechniqueType; label: string }> = [
+  { value: "NORMAL", label: "Normal" },
+  { value: "DROP_SET", label: "Drop set" },
+  { value: "PROGRESSIVO", label: "Progressivo" },
+  { value: "CONJUGADO", label: "Conjugado" },
+  { value: "REPLICAR_SERIE", label: "Replicar série" },
+];
+
 export interface SortableExerciseRowProps {
   item: SessaoItem;
   index: number;
   catalog: Map<string, TreinoV2CatalogExercise>;
+  advancedMode: boolean;
   isCustom: (field: keyof SessaoItem) => boolean;
   onUpdate: (patch: Partial<SessaoItem>) => void;
   onDuplicate: () => void;
@@ -42,6 +54,7 @@ export function SortableExerciseRow({
   item,
   index,
   catalog,
+  advancedMode,
   isCustom,
   onUpdate,
   onDuplicate,
@@ -60,6 +73,7 @@ export function SortableExerciseRow({
   const exNome = item.exerciseNome ?? exercicio?.nome ?? "—";
   const grupoNome = exercicio?.grupoMuscularNome ?? item.objetivo ?? "";
   const grupoCor = grupoColorByName(grupoNome);
+  const tecnicaAtual = item.tecnicas?.[0]?.type ?? "NORMAL";
 
   return (
     <tr
@@ -158,37 +172,64 @@ export function SortableExerciseRow({
           )}
         />
       </td>
-      <td className="px-2 py-2">
-        <Input
-          value={item.cadencia ?? ""}
-          onChange={(e) => onUpdate({ cadencia: e.target.value || undefined })}
-          placeholder="2-0-1"
-          className={cn(
-            "h-8 w-20 border-border bg-secondary px-2",
-            isCustom("cadencia") && CUSTOM_CELL_CLASS,
-          )}
-          title="Cadência: excêntrica-pausa-concêntrica"
-        />
-      </td>
-      <td className="px-2 py-2">
-        <select
-          value={item.rir ?? ""}
-          onChange={(e) =>
-            onUpdate({ rir: e.target.value === "" ? undefined : Number(e.target.value) })
-          }
-          className={cn(
-            "h-8 w-16 rounded-md border border-border bg-secondary px-2 text-sm",
-            isCustom("rir") && CUSTOM_CELL_CLASS,
-          )}
-        >
-          <option value="">—</option>
-          {[0, 1, 2, 3, 4].map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
-      </td>
+      {advancedMode ? (
+        <>
+          <td className="px-2 py-2">
+            <select
+              value={tecnicaAtual}
+              onChange={(e) =>
+                onUpdate({
+                  tecnicas:
+                    e.target.value === "NORMAL"
+                      ? []
+                      : [{ type: e.target.value as TreinoV2TechniqueType }],
+                })
+              }
+              className={cn(
+                "h-8 w-28 rounded-md border border-border bg-secondary px-2 text-xs",
+                isCustom("tecnicas") && CUSTOM_CELL_CLASS,
+              )}
+            >
+              {TECHNIQUE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </td>
+          <td className="px-2 py-2">
+            <Input
+              value={item.cadencia ?? ""}
+              onChange={(e) => onUpdate({ cadencia: e.target.value || undefined })}
+              placeholder="2-0-1"
+              className={cn(
+                "h-8 w-20 border-border bg-secondary px-2",
+                isCustom("cadencia") && CUSTOM_CELL_CLASS,
+              )}
+              title="Cadência: excêntrica-pausa-concêntrica"
+            />
+          </td>
+          <td className="px-2 py-2">
+            <select
+              value={item.rir ?? ""}
+              onChange={(e) =>
+                onUpdate({ rir: e.target.value === "" ? undefined : Number(e.target.value) })
+              }
+              className={cn(
+                "h-8 w-16 rounded-md border border-border bg-secondary px-2 text-sm",
+                isCustom("rir") && CUSTOM_CELL_CLASS,
+              )}
+            >
+              <option value="">—</option>
+              {[0, 1, 2, 3, 4].map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </td>
+        </>
+      ) : null}
       <td className="px-2 py-2">
         <div className="flex gap-0.5">
           <Button

@@ -31,7 +31,6 @@ import {
 } from "@dnd-kit/sortable";
 import { ChevronDown, ChevronUp, Plus, UserCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
@@ -90,6 +89,7 @@ export function TreinoV3Editor({
   const [instanciaId, setInstanciaId] = useState<string | undefined>();
   const [bibliotecaOpen, setBibliotecaOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
 
   // Wave C.2 (Item 1): personalização do aluno (treino atribuído).
   // Hidratado de getTreinoApi(atribuicaoId) quando isInstance && atribuicaoId.
@@ -193,7 +193,7 @@ export function TreinoV3Editor({
           n++;
           continue;
         }
-        for (const f of ["series", "repeticoes", "carga", "intervalo", "cadencia", "rir", "observacoes"] as const) {
+        for (const f of ["series", "repeticoes", "carga", "intervalo", "cadencia", "rir", "tecnicas", "observacoes"] as const) {
           if (JSON.stringify(itCur[f] ?? null) !== JSON.stringify(itBase[f] ?? null)) n++;
         }
       }
@@ -232,6 +232,20 @@ export function TreinoV3Editor({
     return map;
   }, [exercicios]);
 
+  const gruposMuscularesPorSessao = useMemo(() => {
+    const gruposPorSessao: Record<string, string[]> = {};
+    for (const sessao of editor.sessoes) {
+      const grupos = new Set<string>();
+      for (const item of sessao.itens) {
+        const exercicio = item.exerciseId ? catalogById.get(item.exerciseId) : undefined;
+        const grupoNome = exercicio?.grupoMuscularNome ?? item.objetivo;
+        if (grupoNome?.trim()) grupos.add(grupoNome.trim());
+      }
+      gruposPorSessao[sessao.id] = Array.from(grupos);
+    }
+    return gruposPorSessao;
+  }, [editor.sessoes, catalogById]);
+
   // ─── Mutations (extraídas em editor-v3/use-editor-mutations.ts) ───
   const {
     updateSessoes,
@@ -261,6 +275,12 @@ export function TreinoV3Editor({
     );
     return { totalItens: activeSessao.itens.length, totalSeries };
   }, [activeSessao]);
+
+  const activeSessaoLabel = useMemo(() => {
+    if (!activeSessao) return "Sessão";
+    const index = editor.sessoes.findIndex((s) => s.id === activeSessao.id);
+    return `Sessão ${String.fromCharCode(65 + Math.max(0, index))}`;
+  }, [activeSessao, editor.sessoes]);
 
   // ─── Save ───
   // - Modo template: persiste mudanças no treino via saveTreinoWorkspace
@@ -549,6 +569,7 @@ export function TreinoV3Editor({
           sessoes={editor.sessoes}
           activeSessaoId={activeSessaoId}
           activeSessao={activeSessao ?? null}
+          gruposMuscularesPorSessao={gruposMuscularesPorSessao}
           onSelectSessao={setActiveSessaoId}
           onAddSessao={addSessao}
           onDuplicateSessao={duplicateSessao}
@@ -561,30 +582,45 @@ export function TreinoV3Editor({
             <>
               <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
                 <div>
-                  <Input
-                    value={activeSessao.nome}
-                    onChange={(e) =>
-                      updateSessoes((sessoes) =>
-                        sessoes.map((s) =>
-                          s.id === activeSessao.id ? { ...s, nome: e.target.value } : s,
-                        ),
-                      )
-                    }
-                    className="border-0 bg-transparent px-0 text-base font-bold focus-visible:ring-0"
-                  />
+                  <h2 className="text-base font-bold">{activeSessaoLabel}</h2>
                   <div className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span>
-                      <b className="text-foreground">{stats.totalItens}</b> exercícios
+                      <b className="text-foreground">{stats.totalItens}</b>{" "}
+                      {stats.totalItens === 1 ? "exercício" : "exercícios"}
                     </span>
                     <span>
                       <b className="text-foreground">{stats.totalSeries}</b> séries totais
                     </span>
                   </div>
                 </div>
-                <Button size="sm" onClick={() => setBibliotecaOpen(true)}>
-                  <Plus className="mr-2 size-4" />
-                  Adicionar exercício
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex rounded-md border border-border bg-secondary p-0.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={!advancedMode ? "default" : "ghost"}
+                      className="h-7 px-3 text-xs"
+                      onClick={() => setAdvancedMode(false)}
+                      aria-pressed={!advancedMode}
+                    >
+                      Simples
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={advancedMode ? "default" : "ghost"}
+                      className="h-7 px-3 text-xs"
+                      onClick={() => setAdvancedMode(true)}
+                      aria-pressed={advancedMode}
+                    >
+                      Avançado
+                    </Button>
+                  </div>
+                  <Button size="sm" onClick={() => setBibliotecaOpen(true)}>
+                    <Plus className="mr-2 size-4" />
+                    Adicionar exercício
+                  </Button>
+                </div>
               </header>
 
               {activeSessao.itens.length === 0 ? (
@@ -615,8 +651,13 @@ export function TreinoV3Editor({
                         <th className="w-32 px-2 py-2 text-left">Séries × Reps</th>
                         <th className="w-24 px-2 py-2 text-left">Carga</th>
                         <th className="w-24 px-2 py-2 text-left">Descanso</th>
-                        <th className="w-24 px-2 py-2 text-left">Cadência</th>
-                        <th className="w-20 px-2 py-2 text-left">RIR</th>
+                        {advancedMode ? (
+                          <>
+                            <th className="w-32 px-2 py-2 text-left">Técnica</th>
+                            <th className="w-24 px-2 py-2 text-left">Cadência</th>
+                            <th className="w-20 px-2 py-2 text-left">RIR</th>
+                          </>
+                        ) : null}
                         <th className="w-16 px-2 py-2"></th>
                       </tr>
                     </thead>
@@ -631,6 +672,7 @@ export function TreinoV3Editor({
                             item={item}
                             index={idx}
                             catalog={catalogById}
+                            advancedMode={advancedMode}
                             isCustom={(field) => isCustom(activeSessao.id, item.id, field)}
                             onUpdate={(patch) => updateItem(activeSessao.id, item.id, patch)}
                             onDuplicate={() => duplicateItem(activeSessao.id, item.id)}

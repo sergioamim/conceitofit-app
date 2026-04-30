@@ -39,6 +39,7 @@ export type TenantContextState = TenantContextSnapshot & {
   displayName?: string;
   userKind?: string;
   availableScopes: AuthSessionScope[];
+  capabilities: string[];
   broadAccess: boolean;
   academia: Academia | null;
   brandingSnapshot: TenantBranding | undefined;
@@ -196,6 +197,7 @@ export function buildTenantContextState(
     displayName: input.displayName ?? authUser?.displayName ?? authUser?.nome,
     userKind: input.userKind ?? authUser?.userKind,
     availableScopes: input.availableScopes ?? authUser?.availableScopes ?? [],
+    capabilities: input.capabilities ?? authUser?.capabilities ?? [],
     broadAccess: input.broadAccess ?? authUser?.broadAccess ?? false,
     academia: currentAcademia,
     brandingSnapshot: input.brandingSnapshot ?? resolveBrandingSnapshot(snapshot.tenant, currentAcademia),

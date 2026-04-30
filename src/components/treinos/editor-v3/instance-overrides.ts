@@ -21,6 +21,7 @@ export const COMPARABLE_FIELDS = [
   "intervalo",
   "cadencia",
   "rir",
+  "tecnicas",
   "observacoes",
 ] as const;
 

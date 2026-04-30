@@ -109,8 +109,18 @@ export const queryKeys = {
       ["contratos", tenantId, "aluno", alunoId] as const,
     creditosDias: (tenantId: string, contratoId: string) =>
       ["contratos", tenantId, "creditos-dias", contratoId] as const,
-    dashboard: (tenantId: string, monthKey: string, page: number) =>
-      ["contratos", "dashboard", tenantId, monthKey, page] as const,
+    dashboard: (tenantId: string, monthKey: string, page: number, filters?: Record<string, unknown>) =>
+      ["contratos", "dashboard", tenantId, monthKey, page, filters] as const,
+    evolucaoCanais: (tenantId: string, monthKey: string, meses: number) =>
+      ["contratos", "evolucao-canais", tenantId, monthKey, meses] as const,
+    origemAlunos: (tenantId: string, monthKey: string) =>
+      ["contratos", "origem-alunos", tenantId, monthKey] as const,
+    sinaisRetencao: (tenantId: string, monthKey: string) =>
+      ["contratos", "sinais-retencao", tenantId, monthKey] as const,
+    carteiraSnapshot: (tenantId: string, dataIso: string) =>
+      ["contratos", "carteira-snapshot", tenantId, dataIso] as const,
+    carteiraSerieMensal: (tenantId: string, monthKey: string) =>
+      ["contratos", "carteira-serie-mensal", tenantId, monthKey] as const,
   },
 
   prospects: {

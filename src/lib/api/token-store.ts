@@ -54,6 +54,7 @@ interface SessionClaims {
   activeTenantId?: string;
   baseTenantId?: string;
   availableScopes?: string[];
+  capabilities?: string[];
   broadAccess?: boolean;
   forcePasswordChangeRequired?: boolean;
   sessionMode?: string;

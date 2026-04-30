@@ -5,8 +5,7 @@
  *
  * Extraído de treino-v3-editor.tsx pra fechar débito de tamanho.
  * Renderiza: voltar (Atribuições/Templates) + título inline editável
- * + meta line + pill do aluno (modo instance) + botões Reset/Preview/
- * Salvar.
+ * + pill do aluno (modo instance) + botões Reset/Preview/Salvar.
  */
 
 import Link from "next/link";
@@ -77,36 +76,11 @@ export function EditorHeader({
           <Input
             value={editor.nome ?? ""}
             onChange={(e) => onNomeChange(e.target.value)}
-            className="border-0 bg-transparent px-0 font-display text-xl font-bold focus-visible:ring-0"
+            className="h-9 border-0 bg-transparent px-0 font-display text-xl font-bold leading-none focus-visible:ring-0"
             placeholder="Nome do template"
             disabled={isInstance}
+            title={isInstance ? `Baseado em ${treino.nome ?? "template"}` : undefined}
           />
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {isInstance ? (
-              <span className="text-gym-accent">
-                ↳ baseado em &ldquo;{treino.nome ?? "template"}&rdquo;
-              </span>
-            ) : (
-              <span>{editor.categoria ?? "Sem objetivo"}</span>
-            )}
-            <span>·</span>
-            <span>
-              {editor.frequenciaSemanal ?? 0}x/sem
-              {!isInstance ? (
-                <span
-                  className="ml-1 italic text-muted-foreground/70"
-                  title="Frequência sugerida — pode ser ajustada por aluno na atribuição"
-                >
-                  (sugerida)
-                </span>
-              ) : null}
-            </span>
-            <span>·</span>
-            <span>{editor.sessoes.length} sessões</span>
-            <Badge variant="outline" className="ml-2 border-gym-accent/30 text-gym-accent">
-              Editor V3 {isInstance ? "(instância)" : "(preview)"}
-            </Badge>
-          </div>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">

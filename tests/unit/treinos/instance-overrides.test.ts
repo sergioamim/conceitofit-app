@@ -126,12 +126,13 @@ describe("computeOverrides", () => {
         carga: createTreinoV2MetricField("80kg"),
         rir: 1,
         cadencia: "3-0-1",
+        tecnicas: [{ type: "DROP_SET" }],
       }),
     ]);
     const result = computeOverrides(base, cur);
 
     const campos = result.map((r) => r.campo).sort();
-    expect(campos).toEqual(["cadencia", "carga", "rir"]);
+    expect(campos).toEqual(["cadencia", "carga", "rir", "tecnicas"]);
     expect(result.every((r) => r.tipo === "MODIFY")).toBe(true);
   });
 
@@ -171,7 +172,7 @@ describe("serializeValor", () => {
 });
 
 describe("COMPARABLE_FIELDS", () => {
-  it("contém os 7 campos comparáveis do contrato de overrides", () => {
+  it("contém os campos comparáveis do contrato de overrides", () => {
     expect([...COMPARABLE_FIELDS]).toEqual([
       "series",
       "repeticoes",
@@ -179,6 +180,7 @@ describe("COMPARABLE_FIELDS", () => {
       "intervalo",
       "cadencia",
       "rir",
+      "tecnicas",
       "observacoes",
     ]);
   });

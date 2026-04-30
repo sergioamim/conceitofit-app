@@ -16,6 +16,7 @@
 import { useDroppable } from "@dnd-kit/core";
 import { Copy, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { grupoColorByName } from "@/lib/treinos/grupo-colors";
 import { cn } from "@/lib/utils";
 import type { TreinoV2EditorSeed } from "@/lib/tenant/treinos/v2-runtime";
 
@@ -28,6 +29,7 @@ export interface SessaoSidebarProps {
   sessoes: Sessao[];
   activeSessaoId: string;
   activeSessao: Sessao | null;
+  gruposMuscularesPorSessao: Record<string, string[]>;
   onSelectSessao: (id: string) => void;
   onAddSessao: () => void;
   onDuplicateSessao: (id: string) => void;
@@ -38,6 +40,7 @@ export function SessaoSidebar({
   sessoes,
   activeSessaoId,
   activeSessao,
+  gruposMuscularesPorSessao,
   onSelectSessao,
   onAddSessao,
   onDuplicateSessao,
@@ -63,6 +66,7 @@ export function SessaoSidebar({
           sessao={s}
           index={idx}
           ativa={s.id === activeSessaoId}
+          gruposMusculares={gruposMuscularesPorSessao[s.id] ?? []}
           enableDuplicate={s.id === activeSessaoId && sessoes.length > 1}
           onSelect={onSelectSessao}
           onDuplicate={onDuplicateSessao}
@@ -87,6 +91,7 @@ function SessaoTab({
   sessao,
   index,
   ativa,
+  gruposMusculares,
   enableDuplicate,
   onSelect,
   onDuplicate,
@@ -94,6 +99,7 @@ function SessaoTab({
   sessao: Sessao;
   index: number;
   ativa: boolean;
+  gruposMusculares: string[];
   enableDuplicate: boolean;
   onSelect: (id: string) => void;
   onDuplicate: (id: string) => void;
@@ -101,16 +107,17 @@ function SessaoTab({
   const { setNodeRef, isOver } = useDroppable({
     id: `${SESSAO_DROP_PREFIX}${sessao.id}`,
   });
-  const letter = (sessao.nome || String.fromCharCode(65 + index))
-    .charAt(0)
-    .toUpperCase();
+  const letter = String.fromCharCode(65 + index);
+  const exerciseCountLabel = `${sessao.itens.length} ${
+    sessao.itens.length === 1 ? "exercício" : "exercícios"
+  }`;
 
   return (
     <button
       ref={setNodeRef}
       onClick={() => onSelect(sessao.id)}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-md border px-2.5 py-2 text-left transition-colors",
+        "group flex w-full items-start gap-3 rounded-md border px-2.5 py-2 text-left transition-colors",
         ativa
           ? "border-gym-accent/40 bg-gym-accent/[0.08]"
           : "border-transparent hover:bg-secondary/60",
@@ -132,14 +139,29 @@ function SessaoTab({
         {letter}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13px] font-medium">
-          {sessao.nome || `Sessão ${index + 1}`}
-        </div>
         <div className="text-[11px] text-muted-foreground">
-          {isOver && !ativa
-            ? "soltar aqui →"
-            : `${sessao.itens.length} ex`}
+          {isOver && !ativa ? "soltar aqui →" : exerciseCountLabel}
         </div>
+        {gruposMusculares.length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {gruposMusculares.map((grupo) => {
+              const cor = grupoColorByName(grupo);
+              return (
+                <span
+                  key={grupo}
+                  className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase leading-none tracking-wide"
+                  style={{
+                    borderColor: `${cor}55`,
+                    backgroundColor: `${cor}1A`,
+                    color: cor,
+                  }}
+                >
+                  {grupo}
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
       {enableDuplicate ? (
         <span

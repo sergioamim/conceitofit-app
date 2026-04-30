@@ -2,6 +2,7 @@
 
 import {
   cancelarContratoApi,
+  type ContratosDashboardMensalFilters,
   createContratoApi,
   editarContratoApi,
   listContratosDashboardMensalApi,
@@ -36,6 +37,7 @@ export async function getContratosDashboardMensalService(input: {
   mes: string;
   page?: number;
   size?: number;
+  filters?: ContratosDashboardMensalFilters;
 }) {
   return listContratosDashboardMensalApi(input);
 }

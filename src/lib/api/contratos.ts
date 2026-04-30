@@ -19,6 +19,7 @@ export type ContratoApiResponse = {
   observacoes?: string | null;
   dataCriacao?: string;
   dataAtualizacao?: string | null;
+  dataCancelamento?: string | null;
   convenioId?: string | null;
   origemVendaId?: string | null;
   contratoStatus?: Contrato["contratoStatus"] | null;
@@ -264,6 +265,7 @@ export function normalizeContratoApiResponse(input: ContratoApiResponse): Contra
     pagamento,
     dataCriacao: typeof input.dataCriacao === "string" ? input.dataCriacao : new Date().toISOString(),
     dataAtualizacao: typeof input.dataAtualizacao === "string" ? input.dataAtualizacao : undefined,
+    dataCancelamento: typeof input.dataCancelamento === "string" ? input.dataCancelamento : undefined,
     origemVendaId: typeof input.origemVendaId === "string" ? input.origemVendaId : undefined,
     convenioId: typeof input.convenioId === "string" ? input.convenioId : undefined,
   };
@@ -299,10 +301,103 @@ export type ContratoDashboardMensalContratosPage = {
 
 export type ContratoDashboardMensalResult = {
   mes: string;
+  /** Data-base do recorte (YYYY-MM-DD); mes encerrado = ultimo dia; mes atual = dia de consulta no servidor */
+  dataReferenciaOperacional: string;
   resumo: ContratoDashboardMensalResumo;
   carteiraAtivaPorPlano: ContratoDashboardMensalPlano[];
   contratos: ContratoDashboardMensalContratosPage;
 };
+
+export type ContratosDashboardMensalFilters = {
+  busca?: string;
+  status?: string;
+  contratoStatus?: string;
+  planoId?: string;
+  formaPagamento?: string;
+  pagamentoStatus?: string;
+  dataInicioDe?: string;
+  dataInicioAte?: string;
+  dataFimDe?: string;
+  dataFimAte?: string;
+  valorMin?: number;
+  valorMax?: number;
+  ordenarPor?: string;
+  direcao?: "asc" | "desc";
+};
+
+export type ContratoCanalTipo = "PLANO" | "AGREGADOR";
+
+export type ContratoCanalEvolucao = {
+  id: string;
+  tipo: ContratoCanalTipo;
+  agregadorId?: string;
+  label: string;
+  cor: string | null;
+  serie: number[];
+};
+
+export type ContratoEvolucaoCanaisResult = {
+  mesAtual: string;
+  meses: string[];
+  canais: ContratoCanalEvolucao[];
+  totalAtual: number;
+  totalAnterior: number;
+  deltaPct: number;
+};
+
+export type ContratoCanalOrigem = Omit<ContratoCanalEvolucao, "serie"> & {
+  alunos: number;
+  percentual: number;
+  mrr: number;
+};
+
+export type ContratoOrigemAlunosResult = {
+  totalAlunos: number;
+  canais: ContratoCanalOrigem[];
+};
+
+export type ContratoSinaisRetencaoResult = {
+  alunosAtivos: number;
+  alunosAtivosDeltaPct: number;
+  alunosPlano: number;
+  alunosAgregadores: number;
+  diariasNoPeriodo: number;
+  alunosContratoPersonal: number;
+  dataReferenciaOperacional: string;
+  receitaMes: number;
+  emRiscoChurn: { quantidade: number; criterio: string; diasLimite: number };
+};
+
+type ContratoSinaisRetencaoRaw = {
+  alunosAtivos?: unknown;
+  alunosAtivosDeltaPct?: unknown;
+  alunosPlano?: unknown;
+  alunosAgregadores?: unknown;
+  diariasNoPeriodo?: unknown;
+  alunosContratoPersonal?: unknown;
+  dataReferenciaOperacional?: unknown;
+  receitaMes?: unknown;
+  emRiscoChurn?: { quantidade?: unknown; criterio?: string; diasLimite?: unknown };
+};
+
+function normalizeContratoSinaisRetencao(input: ContratoSinaisRetencaoRaw): ContratoSinaisRetencaoResult {
+  return {
+    alunosAtivos: toNumber(input.alunosAtivos),
+    alunosAtivosDeltaPct: toNumber(input.alunosAtivosDeltaPct),
+    alunosPlano: toNumber(input.alunosPlano),
+    alunosAgregadores: toNumber(input.alunosAgregadores),
+    diariasNoPeriodo: toNumber(input.diariasNoPeriodo),
+    alunosContratoPersonal: toNumber(input.alunosContratoPersonal),
+    dataReferenciaOperacional:
+      typeof input.dataReferenciaOperacional === "string" ? input.dataReferenciaOperacional : "",
+    receitaMes: toNumber(input.receitaMes),
+    emRiscoChurn: {
+      quantidade: toNumber(input.emRiscoChurn?.quantidade),
+      criterio: input.emRiscoChurn?.criterio ?? "",
+      diasLimite: toNumber(input.emRiscoChurn?.diasLimite),
+    },
+  };
+}
 
 type ContratoDashboardMensalResumoResponse = {
   totalContratos?: unknown;
@@ -332,6 +427,7 @@ type ContratoDashboardMensalContratosPageResponse = {
 
 type ContratoDashboardMensalResponse = {
   mes?: string | null;
+  dataReferenciaOperacional?: string | null;
   resumo?: ContratoDashboardMensalResumoResponse | null;
   carteiraAtivaPorPlano?: ContratoDashboardMensalPlanoResponse[] | null;
   contratos?: ContratoDashboardMensalContratosPageResponse | null;
@@ -368,6 +464,8 @@ function normalizeContratoDashboardMensalResponse(
 ): ContratoDashboardMensalResult {
   return {
     mes: input.mes?.trim() || "",
+    dataReferenciaOperacional:
+      typeof input.dataReferenciaOperacional === "string" ? input.dataReferenciaOperacional.trim() : "",
     resumo: normalizeContratoDashboardMensalResumo(input.resumo),
     carteiraAtivaPorPlano: Array.isArray(input.carteiraAtivaPorPlano)
       ? input.carteiraAtivaPorPlano.map(normalizeContratoDashboardMensalPlano)
@@ -445,6 +543,7 @@ export async function listContratosDashboardMensalApi(input: {
   mes: string;
   page?: number;
   size?: number;
+  filters?: ContratosDashboardMensalFilters;
 }): Promise<ContratoDashboardMensalResult> {
   const response = await apiRequest<ContratoDashboardMensalResponse>({
     path: "/api/v1/comercial/matriculas/dashboard-mensal",
@@ -453,10 +552,140 @@ export async function listContratosDashboardMensalApi(input: {
       mes: input.mes,
       page: input.page,
       size: input.size,
+      ...input.filters,
     },
   });
 
   return normalizeContratoDashboardMensalResponse(response);
+}
+
+export type ContratoDashboardCarteiraSnapshot = {
+  dataReferencia: string;
+  mesCompetencia: string;
+  contratosAtivosExcetoDiarias: number;
+  diariasNoMesCompetencia: number;
+  notaContratosBase: string;
+  notaDiarias: string;
+};
+
+export type ContratoDashboardCarteiraSerieDia = {
+  data: string;
+  contratosAtivosExcetoDiarias: number;
+};
+
+export type ContratoDashboardCarteiraSerieMensal = {
+  mes: string;
+  serieDiaria: ContratoDashboardCarteiraSerieDia[];
+  mediaContratosPorDia: number;
+  minContratos: number;
+  maxContratos: number;
+  variacaoPrimeiroUltimo: number;
+  variacaoPrimeiroUltimoPct: number;
+  totalDiariasNoMes: number;
+  notaContratosBase: string;
+  notaDiarias: string;
+};
+
+type ContratoDashboardCarteiraSerieMensalResponse = {
+  mes?: string;
+  serieDiaria?: Array<{ data?: string; contratosAtivosExcetoDiarias?: unknown }>;
+  mediaContratosPorDia?: unknown;
+  minContratos?: unknown;
+  maxContratos?: unknown;
+  variacaoPrimeiroUltimo?: unknown;
+  variacaoPrimeiroUltimoPct?: unknown;
+  totalDiariasNoMes?: unknown;
+  notaContratosBase?: string;
+  notaDiarias?: string;
+};
+
+function normalizeCarteiraSerieMensal(input: ContratoDashboardCarteiraSerieMensalResponse): ContratoDashboardCarteiraSerieMensal {
+  return {
+    mes: input.mes?.trim() ?? "",
+    serieDiaria: Array.isArray(input.serieDiaria)
+      ? input.serieDiaria.map((row) => ({
+          data: typeof row.data === "string" ? row.data : "",
+          contratosAtivosExcetoDiarias: toNumber(row.contratosAtivosExcetoDiarias),
+        }))
+      : [],
+    mediaContratosPorDia: toNumber(input.mediaContratosPorDia),
+    minContratos: toNumber(input.minContratos),
+    maxContratos: toNumber(input.maxContratos),
+    variacaoPrimeiroUltimo: toNumber(input.variacaoPrimeiroUltimo),
+    variacaoPrimeiroUltimoPct: toNumber(input.variacaoPrimeiroUltimoPct),
+    totalDiariasNoMes: toNumber(input.totalDiariasNoMes),
+    notaContratosBase: input.notaContratosBase?.trim() ?? "",
+    notaDiarias: input.notaDiarias?.trim() ?? "",
+  };
+}
+
+export async function getContratosDashboardCarteiraSnapshotApi(input: {
+  tenantId?: string;
+  data: string;
+}): Promise<ContratoDashboardCarteiraSnapshot> {
+  return apiRequest<ContratoDashboardCarteiraSnapshot>({
+    path: "/api/v1/comercial/matriculas/dashboard-carteira-snapshot",
+    query: {
+      tenantId: input.tenantId,
+      data: input.data,
+    },
+  });
+}
+
+export async function getContratosDashboardCarteiraSerieMensalApi(input: {
+  tenantId?: string;
+  mes: string;
+}): Promise<ContratoDashboardCarteiraSerieMensal> {
+  const response = await apiRequest<ContratoDashboardCarteiraSerieMensalResponse>({
+    path: "/api/v1/comercial/matriculas/dashboard-carteira-serie-mensal",
+    query: {
+      tenantId: input.tenantId,
+      mes: input.mes,
+    },
+  });
+  return normalizeCarteiraSerieMensal(response);
+}
+
+export async function listContratosEvolucaoCanaisApi(input: {
+  tenantId?: string;
+  monthKey: string;
+  meses?: number;
+}): Promise<ContratoEvolucaoCanaisResult> {
+  return apiRequest<ContratoEvolucaoCanaisResult>({
+    path: "/api/v1/app/contratos/evolucao-canais",
+    query: {
+      tenantId: input.tenantId,
+      monthKey: input.monthKey,
+      meses: input.meses,
+    },
+  });
+}
+
+export async function listContratosOrigemAlunosApi(input: {
+  tenantId?: string;
+  monthKey: string;
+}): Promise<ContratoOrigemAlunosResult> {
+  return apiRequest<ContratoOrigemAlunosResult>({
+    path: "/api/v1/app/contratos/origem-alunos",
+    query: {
+      tenantId: input.tenantId,
+      monthKey: input.monthKey,
+    },
+  });
+}
+
+export async function listContratosSinaisRetencaoApi(input: {
+  tenantId?: string;
+  monthKey: string;
+}): Promise<ContratoSinaisRetencaoResult> {
+  const response = await apiRequest<ContratoSinaisRetencaoRaw>({
+    path: "/api/v1/app/contratos/sinais-retencao",
+    query: {
+      tenantId: input.tenantId,
+      monthKey: input.monthKey,
+    },
+  });
+  return normalizeContratoSinaisRetencao(response);
 }
 
 export async function listContratosByAlunoApi(input: {
@@ -567,7 +796,6 @@ function normalizeContratoEdicaoResumoApiResponse(
     duracaoEfetivaDias: toNumber(input.duracaoEfetivaDias),
     diasCreditoPreservados: toNumber(input.diasCreditoPreservados),
     motivo: typeof input.motivo === "string" ? input.motivo : "",
-    auditId: typeof input.auditId === "string" ? input.auditId : "",
   };
 }
 

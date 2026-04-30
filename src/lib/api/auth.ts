@@ -248,6 +248,7 @@ export interface AuthUser {
   baseTenantId?: string;
   availableTenants: TenantAccess[];
   availableScopes?: AuthSessionScope[];
+  capabilities?: string[];
   broadAccess?: boolean;
   operationalAccess?: OperationalAccessState;
 }

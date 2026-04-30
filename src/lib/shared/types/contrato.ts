@@ -39,6 +39,7 @@ export interface Contrato {
   pagamento?: PagamentoResumo;
   dataCriacao: LocalDateTime;
   dataAtualizacao?: LocalDateTime;
+  dataCancelamento?: LocalDateTime;
   convenioId?: UUID;
   assinaturaId?: UUID;
   assinaturaStatus?: StatusAssinatura;
@@ -55,5 +56,4 @@ export interface ContratoEdicaoResumo {
   duracaoEfetivaDias: number;
   diasCreditoPreservados: number;
   motivo: string;
-  auditId: UUID;
 }
