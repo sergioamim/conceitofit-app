@@ -22,6 +22,7 @@ import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
 import { useDashboardTab } from "@/lib/query/use-dashboard";
 import { StatusBadge } from "@/components/shared/status-badge";
 import type { DashboardData, StatusAluno } from "@/lib/types";
+import { CockpitFinanceSheet } from "./cockpit-finance-sheet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { normalizeErrorMessage } from "@/lib/utils/api-error";
@@ -54,6 +55,9 @@ export function DashboardContent({
   const [prospectsPageNumber, setProspectsPageNumber] = useState(1);
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [tab, setTab] = useState<DashboardTab>("CLIENTES");
+  const [financePanelOpen, setFinancePanelOpen] = useState(false);
+  const [financeSheetItems, setFinanceSheetItems] = useState<DashboardData["pagamentosPendentes"]>([]);
+  const [financeSheetInad, setFinanceSheetInad] = useState(0);
   const [visitedTabs, setVisitedTabs] = useState<Record<DashboardTab, boolean>>({
     CLIENTES: true,
     VENDAS: false,
@@ -126,6 +130,13 @@ export function DashboardContent({
     };
   }, [dashboardData]);
 
+  const openFinanceInspector = () => {
+    if (!metrics || tab !== "FINANCEIRO") return;
+    setFinanceSheetItems(metrics.pagamentosPendentes);
+    setFinanceSheetInad(metrics.inadimplencia);
+    setFinancePanelOpen(true);
+  };
+
   if (!metrics) {
     if (loading) {
       return <div className="py-12 text-center text-sm text-muted-foreground animate-pulse">Carregando dashboard...</div>;
@@ -134,7 +145,13 @@ export function DashboardContent({
   }
 
   return (
-    <div className="space-y-8">
+    <>
+    <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-b from-primary/[0.07] via-background to-background p-4 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)] md:p-8">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+        aria-hidden
+      />
+      <div className="space-y-8">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -332,7 +349,15 @@ export function DashboardContent({
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
                 <BiMetricCard label="Recebimentos" value={formatBRL(metrics.receitaDoMes)} description="pagamentos recebidos" icon={Banknote} tone="teal" trend={deltaLabel(metrics.receitaDoMes, metrics.receitaDoMesAnterior).text} />
                 <BiMetricCard label="Ticket médio" value={formatBRL(metrics.ticketMedio)} description="por pagamento recebido" icon={CreditCard} tone="accent" trend={deltaLabel(metrics.ticketMedio, metrics.ticketMedioAnterior).text} />
-                <BiMetricCard label="Inadimplência" value={formatBRL(metrics.inadimplencia)} description="vencidos há até 30 dias (foco recuperação)" icon={TrendingDown} tone="danger" />
+                <BiMetricCard
+                  label="Inadimplência"
+                  value={formatBRL(metrics.inadimplencia)}
+                  description="vencidos há até 30 dias (foco recuperação) · clique para painel lateral"
+                  icon={TrendingDown}
+                  tone="danger"
+                  onPress={openFinanceInspector}
+                  data-testid="cockpit-finance-panel-trigger"
+                />
                 <BiMetricCard label="A receber" value={formatBRL(metrics.aReceber)} description="pagamentos ainda em aberto" icon={HandCoins} tone="warning" />
               </div>
 
@@ -342,11 +367,23 @@ export function DashboardContent({
                     <h2 className="font-display text-lg font-bold">Vencidos para cobrança recente</h2>
                     <p className="text-xs text-muted-foreground mt-1">Vencimento nos últimos 30 dias (até a data selecionada) · acima disso, usar Pagamentos</p>
                   </div>
-                  <Link href="/pagamentos">
-                    <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
-                      Ver todos <ArrowRight size={14} className="ml-1" />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg text-xs font-bold"
+                      onClick={openFinanceInspector}
+                      data-testid="cockpit-finance-panel-open-button"
+                    >
+                      Painel lateral
                     </Button>
-                  </Link>
+                    <Link href="/pagamentos">
+                      <Button variant="ghost" size="sm" className="text-xs font-bold text-primary hover:bg-primary/10 rounded-lg">
+                        Ver todos <ArrowRight size={14} className="ml-1" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
                 <div className="p-6">
                   {metrics.pagamentosPendentes.length === 0 ? (
@@ -384,6 +421,15 @@ export function DashboardContent({
           )}
         </motion.div>
       </AnimatePresence>
+      </div>
     </div>
+    <CockpitFinanceSheet
+      open={financePanelOpen}
+      onOpenChange={setFinancePanelOpen}
+      referenceLabel={formatDate(selectedDate)}
+      items={financeSheetItems}
+      inadimplenciaTotal={financeSheetInad}
+    />
+    </>
   );
 }

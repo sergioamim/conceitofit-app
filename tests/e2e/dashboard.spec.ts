@@ -378,8 +378,12 @@ test.describe("Dashboard principal", () => {
 
     await main.getByRole("button", { name: "Financeiro" }).click();
     await expect(main.getByText("Recebimentos")).toBeVisible();
-    await expect(main.getByRole("heading", { name: "Pendentes e Vencidos" })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "Vencidos para cobrança recente" })).toBeVisible();
     await expect(main.getByText("R$ 299,90")).toBeVisible();
+
+    await main.getByTestId("cockpit-finance-panel-open-button").click();
+    await expect(page.getByTestId("cockpit-finance-sheet-list")).toBeVisible();
+    await expect(page.getByTestId("cockpit-finance-sheet-list").getByText("Carlos Ativo")).toBeVisible();
     await browserErrors.assertNoUnexpectedErrors("Happy path do dashboard emitiu erro no browser");
   });
 

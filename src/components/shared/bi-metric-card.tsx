@@ -16,6 +16,9 @@ type BiMetricCardProps = {
   trend?: string;
   /** Série histórica (>=2 pontos) para renderizar mini gráfico no card. */
   sparkline?: number[];
+  /** Card inteiro vira alvo clicável (evita `<button><h3>` — usa role=button no container). */
+  onPress?: () => void;
+  "data-testid"?: string;
 };
 
 /**
@@ -41,6 +44,8 @@ export function BiMetricCard({
   icon: Icon,
   trend,
   sparkline,
+  onPress,
+  "data-testid": dataTestId,
 }: BiMetricCardProps) {
   const tones = {
     accent: "text-gym-accent border-gym-accent/20 bg-gym-accent/10",
@@ -63,9 +68,32 @@ export function BiMetricCard({
     danger: "#dc3545",
   };
 
+  const interactive = Boolean(onPress);
+
   return (
     <div className="flex-1 min-w-[240px]">
-      <div className="relative overflow-hidden rounded-2xl border border-border/40 bg-card p-6 shadow-sm">
+      <div
+        data-testid={dataTestId}
+        className={cn(
+          "relative overflow-hidden rounded-2xl border border-border/40 bg-card p-6 shadow-sm",
+          interactive &&
+            "cursor-pointer transition-colors hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        )}
+        role={interactive ? "button" : undefined}
+        tabIndex={interactive ? 0 : undefined}
+        onClick={interactive ? onPress : undefined}
+        onKeyDown={
+          interactive
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onPress?.();
+                }
+              }
+            : undefined
+        }
+        aria-label={interactive ? `${label}: ${value}` : undefined}
+      >
         <div className="flex items-center justify-between">
           <div
             className={cn(
