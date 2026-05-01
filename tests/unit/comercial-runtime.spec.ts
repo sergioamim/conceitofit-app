@@ -358,7 +358,7 @@ test.describe("comercial runtime", () => {
         issuedBy: "recepcao",
       });
       expect(requestId).toBe("grant-123");
-      expect(calls[2].body).toContain("\"issuedBy\":\"recepcao\"");
+      expect(calls[2].body).toContain("\"reason\":\"Liberacao manual\"");
 
       expect(
         resolveVendaFluxoStatusFromApi({

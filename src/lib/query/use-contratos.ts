@@ -7,14 +7,12 @@ import {
 } from "@/lib/tenant/comercial/runtime";
 import {
   getContratosDashboardCarteiraSerieMensalApi,
-  getContratosDashboardCarteiraSnapshotApi,
   listContratosEvolucaoCanaisApi,
   listContratosOrigemAlunosApi,
   listContratosSinaisRetencaoApi,
 } from "@/lib/api/contratos";
 import type {
   ContratoDashboardCarteiraSerieMensal,
-  ContratoDashboardCarteiraSnapshot,
   ContratoDashboardMensalResult,
   ContratosDashboardMensalFilters,
   ContratoEvolucaoCanaisResult,
@@ -124,26 +122,6 @@ export function useContratosSinaisRetencao(input: {
         monthKey: input.monthKey,
       }),
     enabled: Boolean(input.tenantId) && input.tenantResolved && input.monthKey.length > 0,
-    retry: (failureCount, error) => {
-      if (isTenantContextError(error) && failureCount < 1) return true;
-      return false;
-    },
-  });
-}
-
-export function useContratosCarteiraSnapshot(input: {
-  tenantId: string | undefined;
-  tenantResolved: boolean;
-  dataIso: string;
-}) {
-  return useQuery<ContratoDashboardCarteiraSnapshot>({
-    queryKey: queryKeys.contratos.carteiraSnapshot(input.tenantId ?? "", input.dataIso),
-    queryFn: () =>
-      getContratosDashboardCarteiraSnapshotApi({
-        tenantId: input.tenantId,
-        data: input.dataIso,
-      }),
-    enabled: Boolean(input.tenantId) && input.tenantResolved && input.dataIso.length > 0,
     retry: (failureCount, error) => {
       if (isTenantContextError(error) && failureCount < 1) return true;
       return false;

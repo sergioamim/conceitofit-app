@@ -285,7 +285,7 @@ describe("api/catraca", () => {
         tenantId: "t1",
       });
       expect(spy.mock.calls[0][0].path).toBe(
-        "/api/v1/gerencial/catraca/acessos/dashboard",
+        "/api/v1/gerencial/catraca-acessos",
       );
       expect(result.items).toHaveLength(1);
       expect(result.items[0].memberNome).toBe("João");

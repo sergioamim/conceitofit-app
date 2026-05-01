@@ -343,6 +343,13 @@ export type ContratoEvolucaoCanaisResult = {
   totalAtual: number;
   totalAnterior: number;
   deltaPct: number;
+  /** Distintos só plano (backend); ausente → derivar apenas de delta global se necessário */
+  totalSomentePlanosAtual?: number;
+  totalSomentePlanosAnterior?: number;
+  deltaPctSomentePlanos?: number;
+  totalAgregadoresAtual?: number;
+  totalAgregadoresAnterior?: number;
+  deltaPctAgregadores?: number;
 };
 
 export type ContratoCanalOrigem = Omit<ContratoCanalEvolucao, "serie"> & {
@@ -353,6 +360,8 @@ export type ContratoCanalOrigem = Omit<ContratoCanalEvolucao, "serie"> & {
 
 export type ContratoOrigemAlunosResult = {
   totalAlunos: number;
+  /** Distintos sem rota AGREGADOR no mês (backend); ausente em APIs antigas — UI soma slices como fallback. */
+  totalSomentePlanos?: number;
   canais: ContratoCanalOrigem[];
 };
 
@@ -367,6 +376,55 @@ export type ContratoSinaisRetencaoResult = {
   receitaMes: number;
   emRiscoChurn: { quantidade: number; criterio: string; diasLimite: number };
 };
+
+type ContratoOrigemAlunosRaw = {
+  totalAlunos?: unknown;
+  totalSomentePlanos?: unknown;
+  canais?: unknown;
+};
+
+function normalizeContratoOrigemAlunos(input: ContratoOrigemAlunosRaw): ContratoOrigemAlunosResult {
+  const rows = Array.isArray(input.canais) ? input.canais : [];
+  const canais: ContratoCanalOrigem[] = [];
+
+  rows.forEach((entry) => {
+    if (!entry || typeof entry !== "object") {
+      return;
+    }
+    const raw = entry as Record<string, unknown>;
+    const tipoVal = raw.tipo;
+    const tipo: ContratoCanalTipo = tipoVal === "AGREGADOR" ? "AGREGADOR" : "PLANO";
+    const id = typeof raw.id === "string" ? raw.id : "";
+    const label = typeof raw.label === "string" ? raw.label : "";
+
+    // Evita entrada vazia que quebra legendas/selectors.
+    if (!id.trim() && !label.trim()) {
+      return;
+    }
+
+    canais.push({
+      id,
+      tipo,
+      agregadorId: typeof raw.agregadorId === "string" ? raw.agregadorId : undefined,
+      label,
+      cor: typeof raw.cor === "string" ? raw.cor : null,
+      alunos: toNumber(raw.alunos),
+      percentual: toNumber(raw.percentual),
+      mrr: toNumber(raw.mrr),
+    });
+  });
+
+  const totalAlunos = toNumber(input.totalAlunos);
+  const tspRaw = input.totalSomentePlanos;
+  const totalSomentePlanos =
+    tspRaw !== undefined && tspRaw !== null && String(tspRaw).trim() !== "" ? toNumber(tspRaw) : undefined;
+
+  return {
+    totalAlunos,
+    totalSomentePlanos,
+    canais,
+  };
+}
 
 type ContratoSinaisRetencaoRaw = {
   alunosAtivos?: unknown;
@@ -559,15 +617,6 @@ export async function listContratosDashboardMensalApi(input: {
   return normalizeContratoDashboardMensalResponse(response);
 }
 
-export type ContratoDashboardCarteiraSnapshot = {
-  dataReferencia: string;
-  mesCompetencia: string;
-  contratosAtivosExcetoDiarias: number;
-  diariasNoMesCompetencia: number;
-  notaContratosBase: string;
-  notaDiarias: string;
-};
-
 export type ContratoDashboardCarteiraSerieDia = {
   data: string;
   contratosAtivosExcetoDiarias: number;
@@ -619,19 +668,6 @@ function normalizeCarteiraSerieMensal(input: ContratoDashboardCarteiraSerieMensa
   };
 }
 
-export async function getContratosDashboardCarteiraSnapshotApi(input: {
-  tenantId?: string;
-  data: string;
-}): Promise<ContratoDashboardCarteiraSnapshot> {
-  return apiRequest<ContratoDashboardCarteiraSnapshot>({
-    path: "/api/v1/comercial/matriculas/dashboard-carteira-snapshot",
-    query: {
-      tenantId: input.tenantId,
-      data: input.data,
-    },
-  });
-}
-
 export async function getContratosDashboardCarteiraSerieMensalApi(input: {
   tenantId?: string;
   mes: string;
@@ -651,7 +687,7 @@ export async function listContratosEvolucaoCanaisApi(input: {
   monthKey: string;
   meses?: number;
 }): Promise<ContratoEvolucaoCanaisResult> {
-  return apiRequest<ContratoEvolucaoCanaisResult>({
+  const raw = await apiRequest<ContratoEvolucaoCanaisRaw>({
     path: "/api/v1/app/contratos/evolucao-canais",
     query: {
       tenantId: input.tenantId,
@@ -659,19 +695,82 @@ export async function listContratosEvolucaoCanaisApi(input: {
       meses: input.meses,
     },
   });
+  return normalizeContratoEvolucaoCanais(raw ?? {});
+}
+
+type ContratoEvolucaoCanaisRaw = {
+  mesAtual?: unknown;
+  meses?: unknown;
+  canais?: unknown;
+  totalAtual?: unknown;
+  totalAnterior?: unknown;
+  deltaPct?: unknown;
+  totalSomentePlanosAtual?: unknown;
+  totalSomentePlanosAnterior?: unknown;
+  deltaPctSomentePlanos?: unknown;
+  totalAgregadoresAtual?: unknown;
+  totalAgregadoresAnterior?: unknown;
+  deltaPctAgregadores?: unknown;
+};
+
+function normalizeContratoEvolucaoCanais(input: ContratoEvolucaoCanaisRaw): ContratoEvolucaoCanaisResult {
+  const mesesRaw = Array.isArray(input.meses) ? input.meses : [];
+  const meses = mesesRaw.filter((m): m is string => typeof m === "string");
+  const canaisRaw = Array.isArray(input.canais) ? input.canais : [];
+  const canais = canaisRaw
+    .map((row): ContratoCanalEvolucao | null => {
+      if (!row || typeof row !== "object") return null;
+      const o = row as Record<string, unknown>;
+      const id = typeof o.id === "string" ? o.id : "";
+      const label = typeof o.label === "string" ? o.label : "";
+      if (!id && !label) return null;
+      const tipoRaw = o.tipo;
+      const tipo: ContratoCanalTipo = tipoRaw === "AGREGADOR" ? "AGREGADOR" : "PLANO";
+      const serieVals = Array.isArray(o.serie) ? o.serie.map((x) => toNumber(x)) : [];
+      return {
+        id,
+        tipo,
+        agregadorId: typeof o.agregadorId === "string" ? o.agregadorId : undefined,
+        label,
+        cor: typeof o.cor === "string" ? o.cor : null,
+        serie: serieVals,
+      };
+    })
+    .filter((x): x is ContratoCanalEvolucao => x !== null);
+
+  return {
+    mesAtual: typeof input.mesAtual === "string" ? input.mesAtual : "",
+    meses,
+    canais,
+    totalAtual: toNumber(input.totalAtual),
+    totalAnterior: toNumber(input.totalAnterior),
+    deltaPct: toNumber(input.deltaPct),
+    totalSomentePlanosAtual:
+      input.totalSomentePlanosAtual !== undefined ? toNumber(input.totalSomentePlanosAtual) : undefined,
+    totalSomentePlanosAnterior:
+      input.totalSomentePlanosAnterior !== undefined ? toNumber(input.totalSomentePlanosAnterior) : undefined,
+    deltaPctSomentePlanos:
+      input.deltaPctSomentePlanos !== undefined ? toNumber(input.deltaPctSomentePlanos) : undefined,
+    totalAgregadoresAtual:
+      input.totalAgregadoresAtual !== undefined ? toNumber(input.totalAgregadoresAtual) : undefined,
+    totalAgregadoresAnterior:
+      input.totalAgregadoresAnterior !== undefined ? toNumber(input.totalAgregadoresAnterior) : undefined,
+    deltaPctAgregadores: input.deltaPctAgregadores !== undefined ? toNumber(input.deltaPctAgregadores) : undefined,
+  };
 }
 
 export async function listContratosOrigemAlunosApi(input: {
   tenantId?: string;
   monthKey: string;
 }): Promise<ContratoOrigemAlunosResult> {
-  return apiRequest<ContratoOrigemAlunosResult>({
+  const raw = await apiRequest<ContratoOrigemAlunosRaw>({
     path: "/api/v1/app/contratos/origem-alunos",
     query: {
       tenantId: input.tenantId,
       monthKey: input.monthKey,
     },
   });
+  return normalizeContratoOrigemAlunos(raw ?? {});
 }
 
 export async function listContratosSinaisRetencaoApi(input: {

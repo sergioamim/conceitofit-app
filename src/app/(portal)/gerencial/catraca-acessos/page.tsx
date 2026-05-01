@@ -163,6 +163,7 @@ function getStatusClass(value?: string): string {
 function buildSearchText(item: CatracaAcesso): string {
   return [
     item.memberNome,
+    item.memberEmail,
     item.memberDocumento,
     item.memberId,
     item.agentId,
@@ -172,6 +173,7 @@ function buildSearchText(item: CatracaAcesso): string {
     item.issuedBy,
     item.reason,
     item.releaseType,
+    item.statusCliente,
     item.tenantId,
   ]
     .filter(Boolean)
@@ -561,12 +563,14 @@ export default function CatracaAcessosPage() {
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="mb-4 inline-flex items-start gap-2 text-sm text-muted-foreground">
               <Info className="mt-0.5 size-4 shrink-0" />
-              Considera acessos únicos com janela de 2 horas por cliente e tipo (entrada, manual, bloqueado).
+              Considera acessos únicos com janela de 2 horas por cliente e tipo de liberação.{" "}
+              <strong>Entradas</strong> = automáticas (política/totem); <strong>Manuais</strong> = operador/backoffice;{" "}
+              os totais não se sobrepõem.
             </p>
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-lg border border-gym-teal/25 bg-gym-teal/10 p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gym-teal">Entradas</p>
+                  <p className="text-sm font-semibold text-gym-teal">Entradas automáticas</p>
                   <LogIn className="size-4 text-gym-teal" />
                 </div>
                 <p className="mt-3 font-display text-4xl font-bold leading-none text-gym-teal">{dashboard?.entradas ?? 0}</p>
@@ -692,12 +696,13 @@ export default function CatracaAcessosPage() {
 
           <PaginatedTable<CatracaAcesso>
             columns={[
-              { label: "Cliente", className: "w-[300px]" },
+              { label: "Cliente", className: "w-[260px]" },
+              { label: "Status do cliente", className: "w-[140px]" },
               { label: "Dia", className: "w-[130px]" },
               { label: "Horário", className: "w-[120px]" },
               { label: "Tipo de liberação", className: "w-[180px]" },
-              { label: "Quem liberou", className: "w-[220px]" },
-              { label: "Motivo", className: "min-w-[220px]" },
+              { label: "Quem liberou", className: "w-[200px]" },
+              { label: "Motivo", className: "min-w-[200px]" },
             ]}
             items={filteredItems}
             emptyText={loading ? "Carregando acessos..." : "Nenhum acesso encontrado para os filtros informados."}
@@ -709,8 +714,8 @@ export default function CatracaAcessosPage() {
               const whoReleased = tipoLiberacao === "MANUAL" ? formatText(item.issuedBy ?? item.createdBy) : "—";
               const accessDateTime = item.occurredAt ?? item.createdAt;
               const catalog = item.memberId ? clienteCatalogoById[item.memberId] : undefined;
-              const memberNome = item.memberNome ?? catalog?.nome;
-              const memberEmail = catalog?.email;
+              const memberNome = item.memberNome?.trim() || catalog?.nome?.trim();
+              const memberEmail = item.memberEmail?.trim() || catalog?.email?.trim();
               const memberDocumento = item.memberDocumento ?? catalog?.cpf;
               const memberFoto = item.memberFoto ?? catalog?.foto;
               return (
@@ -720,9 +725,14 @@ export default function CatracaAcessosPage() {
                       <ClienteThumbnail nome={memberNome} foto={memberFoto} size="md" />
                       <div>
                         <p className="font-medium text-foreground">{formatText(memberNome)}</p>
-                        <p className="text-xs text-muted-foreground">{formatText(memberEmail ?? memberDocumento)}</p>
+                        <p className="text-xs text-muted-foreground break-all">
+                          {formatText(memberEmail ?? memberDocumento)}
+                        </p>
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-xs text-muted-foreground">
+                    <span className="font-medium text-foreground">{formatText(item.statusCliente)}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 text-xs text-muted-foreground">
                     {formatDay(accessDateTime)}

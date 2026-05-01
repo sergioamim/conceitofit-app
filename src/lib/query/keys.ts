@@ -117,8 +117,6 @@ export const queryKeys = {
       ["contratos", "origem-alunos", tenantId, monthKey] as const,
     sinaisRetencao: (tenantId: string, monthKey: string) =>
       ["contratos", "sinais-retencao", tenantId, monthKey] as const,
-    carteiraSnapshot: (tenantId: string, dataIso: string) =>
-      ["contratos", "carteira-snapshot", tenantId, dataIso] as const,
     carteiraSerieMensal: (tenantId: string, monthKey: string) =>
       ["contratos", "carteira-serie-mensal", tenantId, monthKey] as const,
   },
@@ -139,6 +137,11 @@ export const queryKeys = {
   contasReceber: {
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["contasReceber", "list", tenantId, filters] as const,
+  },
+
+  contasPagar: {
+    list: (tenantId: string, filters: Record<string, unknown>) =>
+      ["contasPagar", "list", tenantId, filters] as const,
   },
 
   dre: {
@@ -219,6 +222,11 @@ export const queryKeys = {
   catracaAcessos: {
     list: (tenantId: string, filters: Record<string, unknown>) =>
       ["catracaAcessos", "list", tenantId, filters] as const,
+  },
+
+  cockpit: {
+    acessosPorHoraDia: (tenantId: string, diaISO: string) =>
+      ["cockpit", "acessosPorHoraDia", tenantId, diaISO] as const,
   },
 
   treinos: {

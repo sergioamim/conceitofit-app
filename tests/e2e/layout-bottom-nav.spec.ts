@@ -72,7 +72,7 @@ async function installBottomNavShell(page: Page) {
     });
   });
 
-  await page.route("**/api/v1/gerencial/catraca/acessos/dashboard**", async (route) => {
+  await page.route("**/api/v1/gerencial/catraca-acessos**", async (route) => {
     if (route.request().method() !== "GET") {
       await route.fallback();
       return;

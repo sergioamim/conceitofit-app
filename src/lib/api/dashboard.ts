@@ -1,4 +1,4 @@
-import type { DashboardData } from "@/lib/types";
+import type { DashboardClienteSectionPayload, DashboardData } from "@/lib/types";
 import { apiRequest } from "./http";
 
 export type DashboardScope = "FULL" | "CLIENTES" | "VENDAS" | "FINANCEIRO";
@@ -30,6 +30,7 @@ type DashboardSummaryPayload = {
   pagamentosPendentes?: unknown;
   tenantId?: unknown;
   referenceDate?: unknown;
+  contratosCanceladosMotivos?: unknown;
 };
 
 type DashboardSummaryPayloadWithLegacy = {
@@ -73,6 +74,10 @@ type DashboardPayload = Partial<DashboardData> &
     prospectsRecentes?: unknown;
     matriculasVencendo?: unknown;
     pagamentosPendentes?: unknown;
+    /** Bloco rico opcional `/academia/dashboard` (camelCase Jackson). */
+    clientes?: unknown;
+    /** Opcional futuro — agrupa cancelamentos por motivo (camelCase Jackson). */
+    contratosCanceladosMotivos?: Record<string, unknown>;
   };
 
 type DashboardApiResponse =
@@ -92,6 +97,66 @@ function toNumber(value: unknown, fallback = 0): number {
 function toArray<T>(value: unknown): T[] {
   if (!Array.isArray(value)) return [];
   return value as T[];
+}
+
+function toRecordNumbers(raw?: Record<string, unknown>): Record<string, number> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(raw)) out[k] = toNumber(v, 0);
+  return out;
+}
+
+function normalizeDashboardClienteSection(raw: unknown): DashboardClienteSectionPayload | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const totaisSrc = o.totais && typeof o.totais === "object" ? (o.totais as Record<string, unknown>) : undefined;
+  const breakdownSrc =
+    o.breakdownStatus && typeof o.breakdownStatus === "object" ? (o.breakdownStatus as Record<string, unknown>) : undefined;
+  const metricasSrc =
+    o.metricas && typeof o.metricas === "object" ? (o.metricas as Record<string, unknown>) : undefined;
+
+  const payload: DashboardClienteSectionPayload = {};
+  if (totaisSrc) {
+    payload.totais = {
+      alunosAtivos: toNumber(totaisSrc.alunosAtivos),
+      prospectsEmAberto: toNumber(totaisSrc.prospectsEmAberto),
+      baseRelacionamento: toNumber(totaisSrc.baseRelacionamento),
+    };
+  }
+  const alunos = breakdownSrc?.alunos;
+  const prospects = breakdownSrc?.prospects;
+  payload.breakdownStatus = {
+    ...(alunos && typeof alunos === "object" ? { alunos: toRecordNumbers(alunos as Record<string, unknown>) } : {}),
+    ...(prospects && typeof prospects === "object" ? { prospects: toRecordNumbers(prospects as Record<string, unknown>) } : {}),
+  };
+
+  if (metricasSrc) {
+    payload.metricas = {
+      aberturasMesAtual: toNumber(metricasSrc.aberturasMesAtual),
+      aberturasMesAnterior: toNumber(metricasSrc.aberturasMesAnterior),
+      followUpsRealizadosMesAtual: toNumber(metricasSrc.followUpsRealizadosMesAtual),
+      followUpsPendentes: toNumber(metricasSrc.followUpsPendentes),
+      visitasAguardandoRetorno: toNumber(metricasSrc.visitasAguardandoRetorno),
+    };
+  }
+
+  const hasAnything =
+    (payload.totais && Object.keys(payload.totais).length > 0) ||
+    (payload.breakdownStatus?.alunos && Object.keys(payload.breakdownStatus.alunos).length > 0) ||
+    (payload.breakdownStatus?.prospects && Object.keys(payload.breakdownStatus.prospects).length > 0) ||
+    (payload.metricas && Object.values(payload.metricas).some((n) => n > 0));
+
+  return hasAnything ? payload : undefined;
+}
+
+function normalizeContratosCanceladosMotivos(raw: unknown): Record<string, number> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const entries = Object.entries(raw as Record<string, unknown>).map<[string, number]>(([k, v]) => [
+    String(k),
+    toNumber(v, 0),
+  ]);
+  const withValues = entries.filter(([, q]) => q > 0);
+  return withValues.length > 0 ? Object.fromEntries(withValues) : undefined;
 }
 
 function normalizeStatusAlunoCount(raw?: Record<string, unknown>): Record<string, number> {
@@ -179,6 +244,11 @@ function normalizeDashboard(response: DashboardApiResponse): DashboardData {
     vendasRecorrentes: toNumber(summaryPayload.vendasRecorrentes ?? payload.vendasRecorrentes),
     inadimplencia: toNumber(summaryPayload.inadimplencia ?? payload.inadimplencia),
     aReceber: toNumber(summaryPayload.aReceber ?? payload.aReceber),
+    dashboardClientes: normalizeDashboardClienteSection(payload.clientes),
+    contratosCanceladosMotivos:
+      normalizeContratosCanceladosMotivos(
+        summaryPayload.contratosCanceladosMotivos ?? payload.contratosCanceladosMotivos
+      ) ?? undefined,
   };
 }
 

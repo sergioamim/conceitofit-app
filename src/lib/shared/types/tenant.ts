@@ -270,6 +270,26 @@ export interface HorarioFuncionamento {
 
 /* --- Metrics / Dashboard --- */
 
+/** Bloco `clientes` retornado pela API `/api/v1/academia/dashboard` (Jackson camelCase). */
+export interface DashboardClienteSectionPayload {
+  totais?: {
+    alunosAtivos?: number;
+    prospectsEmAberto?: number;
+    baseRelacionamento?: number;
+  };
+  breakdownStatus?: {
+    alunos?: Record<string, number>;
+    prospects?: Record<string, number>;
+  };
+  metricas?: {
+    aberturasMesAtual?: number;
+    aberturasMesAnterior?: number;
+    followUpsRealizadosMesAtual?: number;
+    followUpsPendentes?: number;
+    visitasAguardandoRetorno?: number;
+  };
+}
+
 export interface DashboardData {
   totalAlunosAtivos: number;
   prospectsNovos: number;
@@ -293,6 +313,13 @@ export interface DashboardData {
   vendasRecorrentes: number;
   inadimplencia: number;
   aReceber: number;
+  /** Quando ausente, front deriva donut só de {@link DashboardData.statusAlunoCount}. */
+  dashboardClientes?: DashboardClienteSectionPayload;
+  /**
+   * Agrupamento opcional motivo → quantidade (cancelamentos na janela da API dashboard).
+   * Jackson esperado camelCase (`contratosCanceladosMotivos`).
+   */
+  contratosCanceladosMotivos?: Record<string, number>;
 }
 
 export interface MetricasOperacionaisGlobalSerie {

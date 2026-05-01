@@ -9,6 +9,7 @@ import {
   useContratosOrigemAlunos,
   useContratosSinaisRetencao,
 } from "@/lib/query/use-contratos";
+import { useClientes } from "@/lib/query/use-clientes";
 import { formatBRL } from "@/lib/formatters";
 import { formatMonthLabel } from "@/lib/tenant/comercial/matriculas-insights";
 import { useTenantContext } from "@/lib/tenant/hooks/use-session-context";
@@ -271,15 +272,26 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
   const { tenantId, tenantResolved } = useTenantContext();
   const visibleMonthLabel = monthKey ? formatMonthLabel(monthKey) : "mês de referência";
   const [planHighlightId, setPlanHighlightId] = useState<string | null>(null);
+  const [donutLegendExpanded, setDonutLegendExpanded] = useState(false);
   const [planSearch, setPlanSearch] = useState("");
   const [planSort, setPlanSort] = useState<"vinculos" | "nome" | "preco" | "mom">("vinculos");
+
+  const LEGEND_PREVIEW = 6;
 
   const sinaisQuery = useContratosSinaisRetencao({ tenantId, tenantResolved, monthKey });
   const origemQuery = useContratosOrigemAlunos({ tenantId, tenantResolved, monthKey });
   const evolucaoQuery = useContratosEvolucaoCanais({ tenantId, tenantResolved, monthKey, meses: 6 });
+  const clientesCadastroAtivosQuery = useClientes({
+    tenantId,
+    tenantResolved,
+    status: "ATIVO",
+    page: 0,
+    size: 1,
+  });
 
   useEffect(() => {
     setPlanHighlightId(null);
+    setDonutLegendExpanded(false);
     setPlanSearch("");
   }, [monthKey]);
 
@@ -300,6 +312,10 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
   const planCanals = useMemo(() => (origem?.canais ?? []).filter((c) => c.tipo === "PLANO"), [origem?.canais]);
 
   const totalPlanStudents = useMemo(() => planCanals.reduce((s, c) => s + c.alunos, 0), [planCanals]);
+
+  /** Distinto no backend (`totalSomentePlanos`); sem campo (API velha), usa soma por fatia como fallback (pode sobrepor aluno duplicado entre planos). */
+  const distinctPlanStudentCount =
+    typeof origem?.totalSomentePlanos === "number" ? origem.totalSomentePlanos : totalPlanStudents;
 
   const evolucaoPlanosOnly = useMemo(
     () => (evolucao?.canais ?? []).filter((c) => c.tipo === "PLANO"),
@@ -358,6 +374,16 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
   );
 
   const sortedLegendSegs = useMemo(() => [...planDonutSegments].sort((a, b) => b.value - a.value), [planDonutSegments]);
+  const legendHiddenCount = Math.max(sortedLegendSegs.length - LEGEND_PREVIEW, 0);
+  const visibleLegendSegs = donutLegendExpanded ? sortedLegendSegs : sortedLegendSegs.slice(0, LEGEND_PREVIEW);
+
+  const cadastroAtivosTotal = useMemo(() => {
+    const fromTotais = clientesCadastroAtivosQuery.data?.totaisStatus?.totalAtivo;
+    if (typeof fromTotais === "number" && Number.isFinite(fromTotais)) return fromTotais;
+    const fallback = clientesCadastroAtivosQuery.data?.total;
+    if (typeof fallback === "number" && Number.isFinite(fallback)) return fallback;
+    return undefined;
+  }, [clientesCadastroAtivosQuery.data]);
 
   function togglePlanHighlight(planId: string) {
     setPlanHighlightId((h) => (h === planId ? null : planId));
@@ -379,13 +405,14 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
           void sinaisQuery.refetch();
           void origemQuery.refetch();
           void evolucaoQuery.refetch();
+          void clientesCadastroAtivosQuery.refetch();
         }}
       />
     );
   }
 
   const awaitingDashboardRow = awaitingSinais || awaitingOrigem || awaitingEvolucao;
-  const totalPlanLabelDen = Math.max(totalPlanStudents, 1);
+  const totalPlanLabelDen = Math.max(distinctPlanStudentCount, 1);
 
   return (
     <section className={cn("space-y-4", className)}>
@@ -399,13 +426,31 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
           </>
         ) : (
           <>
-            <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-card px-4 py-3">
-              <span className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">Contratos ativos</span>
+            <div
+              className="flex flex-col gap-1 rounded-xl border border-border bg-card px-4 py-3"
+              title="Conta apenas alunos ATIVOS com matrícula (não diária) que sobrepõe o mês selecionado. A aba Clientes soma todos com status ATIVO no cadastro, com ou sem matrícula no mês."
+            >
+              <span className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Alunos na carteira do mês
+              </span>
               <span className="font-display text-2xl font-bold leading-tight">
-                {sinais ? formatInteger(sinais.alunosPlano) : "—"}
+                {sinais ? formatInteger(sinais.alunosAtivos) : "—"}
               </span>
               <span className="text-[11px] text-muted-foreground">
-                {planosKinds} {planosKinds === 1 ? "tipo de plano" : "tipos de plano"}
+                União dos canais no período · {planosKinds}{" "}
+                {planosKinds === 1 ? "tipo de plano direto" : "tipos de plano direto"}
+              </span>
+              <span className="text-[10.5px] leading-snug text-muted-foreground/90 border-t border-border/60 pt-1.5">
+                {clientesCadastroAtivosQuery.isPending ? (
+                  <>Cadastro ATIVO na unidade: …</>
+                ) : cadastroAtivosTotal !== undefined ? (
+                  <>
+                    No cadastro: <span className="font-semibold tabular-nums">{formatInteger(cadastroAtivosTotal)}</span>{" "}
+                    <span className="text-muted-foreground">status ATIVO (aba Clientes — mesma referência)</span>
+                  </>
+                ) : (
+                  <>Comparar totais também na lista Clientes › filtro Ativos.</>
+                )}
               </span>
             </div>
             <div className="flex flex-col gap-0.5 rounded-xl border border-border bg-card px-4 py-3">
@@ -436,21 +481,6 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
         )}
       </div>
 
-      <div className="rounded-xl border border-dashed border-border/80 bg-secondary/20 px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
-        <span className="font-semibold text-foreground">Resumo da carteira: </span>
-        {sinais ? (
-          <>
-            {formatInteger(sinais.alunosAtivos)} ativos ({sinais.dataReferenciaOperacional}) · {formatInteger(sinais.emRiscoChurn.quantidade)}{" "}
-            risco churn · {formatInteger(sinais.diariasNoPeriodo)} diárias · receita total {formatBRL(sinais.receitaMes)}
-            {typeof sinais.alunosContratoPersonal === "number" ? <> · {formatInteger(sinais.alunosContratoPersonal)} personal</> : null}
-            {typeof sinais.alunosAgregadores === "number" ? <> · {formatInteger(sinais.alunosAgregadores)} via agreg.</> : null}
-            . Contratos de agregador ficam na aba <strong className="text-foreground">Agregadores</strong>.
-          </>
-        ) : (
-          "Sem dados agregados."
-        )}
-      </div>
-
       <div className="flex min-h-0 flex-col gap-3 lg:flex-row lg:gap-3">
         <div className="flex w-full shrink-0 flex-col gap-3 lg:w-[420px]">
           <div className="rounded-xl border border-border bg-card p-4">
@@ -466,36 +496,52 @@ export function ContratosOverview({ monthKey, className }: ContratosOverviewProp
                 <div className="relative mx-auto shrink-0">
                   <Donut segments={planDonutSegments} size={136} thickness={18} />
                   <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">contratos</span>
-                    <strong className="font-display text-2xl tabular-nums">{formatInteger(totalPlanStudents)}</strong>
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">alunos</span>
+                    <strong className="font-display text-2xl tabular-nums">{formatInteger(distinctPlanStudentCount)}</strong>
                   </div>
                 </div>
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="mb-1 text-[11.5px] text-muted-foreground">Distribuição por plano</p>
-                  {sortedLegendSegs.slice(0, 6).map((d) => {
-                    const pct = ((d.value / totalPlanLabelDen) * 100).toFixed(1);
-                    const faded = Boolean(planHighlightId && d.id && planHighlightId !== d.id);
-                    return (
-                      <button
-                        key={d.id ?? d.label}
-                        type="button"
-                        className={cn(
-                          "flex w-full cursor-pointer items-center gap-2 rounded px-1.5 py-0.5 text-left transition-colors hover:bg-secondary/60",
-                          faded && "opacity-40",
-                        )}
-                        onClick={() => d.id && togglePlanHighlight(d.id)}
-                      >
-                        <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: d.color }} aria-hidden />
-                        <span className="truncate text-[11px] font-medium">{d.label}</span>
-                        <span className="ml-auto shrink-0 tabular-nums text-[11px] font-semibold">{formatInteger(d.value)}</span>
-                        <span className="w-8 shrink-0 text-right tabular-nums text-[10.5px] text-muted-foreground">{pct}%</span>
-                      </button>
-                    );
-                  })}
-                  {sortedLegendSegs.length > 6 ? (
-                    <span className="block pl-4 text-[10.5px] text-muted-foreground">
-                      +{sortedLegendSegs.length - 6} outros planos
-                    </span>
+                  <div
+                    className={cn(
+                      "space-y-1",
+                      donutLegendExpanded &&
+                        legendHiddenCount > 0 &&
+                        "max-h-[min(340px,50vh)] overflow-y-auto overscroll-contain pr-1",
+                    )}
+                  >
+                    {visibleLegendSegs.map((d) => {
+                      const pct = ((d.value / totalPlanLabelDen) * 100).toFixed(1);
+                      const faded = Boolean(planHighlightId && d.id && planHighlightId !== d.id);
+                      return (
+                        <button
+                          key={d.id ?? d.label}
+                          type="button"
+                          className={cn(
+                            "flex w-full cursor-pointer items-center gap-2 rounded px-1.5 py-0.5 text-left transition-colors hover:bg-secondary/60",
+                            faded && "opacity-40",
+                          )}
+                          onClick={() => d.id && togglePlanHighlight(d.id)}
+                        >
+                          <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: d.color }} aria-hidden />
+                          <span className="truncate text-[11px] font-medium">{d.label}</span>
+                          <span className="ml-auto shrink-0 tabular-nums text-[11px] font-semibold">{formatInteger(d.value)}</span>
+                          <span className="w-8 shrink-0 text-right tabular-nums text-[10.5px] text-muted-foreground">{pct}%</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {legendHiddenCount > 0 ? (
+                    <button
+                      type="button"
+                      className="pl-4 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+                      onClick={() => setDonutLegendExpanded((expanded) => !expanded)}
+                      aria-expanded={donutLegendExpanded}
+                    >
+                      {donutLegendExpanded
+                        ? "Ver menos"
+                        : `Ver mais (${legendHiddenCount} ${legendHiddenCount === 1 ? "plano" : "planos"})`}
+                    </button>
                   ) : null}
                 </div>
               </div>

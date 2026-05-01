@@ -287,7 +287,7 @@ test.describe("Smoke — rotas migradas do nav-items legacy", () => {
     page,
   }) => {
     await page.route(
-      /\/api\/v1\/gerencial\/catraca\/acessos\/dashboard/,
+      /\/api\/v1\/gerencial\/catraca-acessos/,
       async (route) => {
         if (route.request().method() !== "GET") return route.fallback();
         await route.fulfill({

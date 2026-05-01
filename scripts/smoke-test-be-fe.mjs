@@ -85,7 +85,7 @@ const ENDPOINTS_REQUIRING_EXTRA_PARAMS = new Map([
   ["/api/v1/conversas", "filtros especificos"],
   ["/api/v1/administrativo/vouchers", "depende de context-id + filtros"],
   ["/api/v1/administrativo/vouchers/usage-counts", "depende de context-id + filtros"],
-  ["/api/v1/gerencial/catraca/acessos/dashboard", "data range obrigatorio"],
+  ["/api/v1/gerencial/catraca-acessos", "data range obrigatorio"],
   ["/api/v1/academia/dashboard", "filtros especificos"],
   ["/api/v1/storefront/theme", "context-id + tenantId no caller real"],
   // 3 ultimos descobertos na segunda iteracao:

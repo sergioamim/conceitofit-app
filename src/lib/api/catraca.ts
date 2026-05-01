@@ -76,6 +76,7 @@ export interface CatracaAcesso {
   tenantId?: string;
   memberId?: string;
   memberNome?: string;
+  memberEmail?: string;
   memberDocumento?: string;
   memberFoto?: string;
   agentId?: string;
@@ -89,6 +90,8 @@ export interface CatracaAcesso {
   systemName?: string;
   occurredAt?: string;
   createdAt?: string;
+  /** Situação do cliente na data do acesso (backend: statusCliente); plano ativo como "Ativa · Nome do plano"; Prospect quando oriundo de prospect. */
+  statusCliente?: string;
   raw: Record<string, unknown>;
 }
 
@@ -707,12 +710,20 @@ function normalizeAcessoItem(item: unknown, index: number): CatracaAcesso | null
     tenantId: toStringByKeys(record, ["tenantId"]),
     memberId: toStringByKeys(record, ["memberId", "alunoId", "clienteId", "userId"]),
     memberNome: toStringByKeys(record, [
+      "memberNome",
       "memberName",
       "alunoNome",
       "clienteNome",
       "nomeCliente",
       "nomeAluno",
       "nome",
+    ]),
+    memberEmail: toStringByKeys(record, [
+      "memberEmail",
+      "member_email",
+      "clienteEmail",
+      "alunoEmail",
+      "email",
     ]),
     memberDocumento: toStringByKeys(record, [
       "memberDocument",
@@ -741,6 +752,23 @@ function normalizeAcessoItem(item: unknown, index: number): CatracaAcesso | null
     reason:
       toStringByKeys(record, ["reason", "motivo", "justificativa"]) ??
       toStringByKeysInRecord(metadata, ["reason", "motivo", "justificativa", "ackMessage"]),
+    statusCliente:
+      toStringByKeys(record, [
+        "statusCliente",
+        "statusPlanoCliente",
+        "memberPlanStatus",
+        "planStatus",
+        "statusPlano",
+        "contratoStatus",
+      ]) ??
+      toStringByKeysInRecord(metadata, [
+        "statusCliente",
+        "clienteStatus",
+        "statusPlanoCliente",
+        "memberPlanStatus",
+        "planStatus",
+        "statusPlano",
+      ]),
     createdBy,
     issuedBy,
     systemName: toStringByKeys(record, ["systemName", "system_name"]),
@@ -903,7 +931,7 @@ export async function listarAcessosCatracaDashboardApi(
   const page = Math.max(0, input.page ?? 0);
   const size = Math.min(200, Math.max(1, input.size ?? 20));
   const response = await apiRequest<unknown>({
-    path: "/api/v1/gerencial/catraca/acessos/dashboard",
+    path: "/api/v1/gerencial/catraca-acessos",
     query: {
       tenantId: input.tenantId,
       page,
@@ -1011,9 +1039,16 @@ export type AdminCatracaLiberarAcessoResult = {
 export async function liberarAcessoAdminCatracaApi(input: {
   tenantId: string;
   pessoaId: string;
+  /** Motivo digitado no modal — persiste em catraca_eventos e aparece na lista gerencial. */
+  reason?: string;
+  agentId?: string;
 }): Promise<AdminCatracaLiberarAcessoResult> {
+  const body: Record<string, string> = {};
+  if (input.agentId?.trim()) body.agentId = input.agentId.trim();
+  if (input.reason?.trim()) body.reason = input.reason.trim();
   return apiRequest<AdminCatracaLiberarAcessoResult>({
     path: `/api/v1/admin/unidades/${input.tenantId}/catraca/clientes/${input.pessoaId}/liberar-acesso`,
     method: "POST",
+    ...(Object.keys(body).length > 0 ? { body } : {}),
   });
 }

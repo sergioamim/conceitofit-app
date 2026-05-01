@@ -7,6 +7,8 @@ export type DonutSegment = {
   label: string;
   value: number;
   color: string;
+  /** Chave estável (ex.: canal id) quando `label` pode repetir. */
+  id?: string;
 };
 
 export type DonutProps = {
@@ -55,7 +57,7 @@ export function Donut({
       <circle cx={cx} cy={cy} r={r} fill="none" stroke={trackColor} strokeWidth={thickness} />
       {computed.items.map(({ seg, len, offset }) => (
         <circle
-          key={seg.label}
+          key={seg.id ?? seg.label}
           cx={cx}
           cy={cy}
           r={r}

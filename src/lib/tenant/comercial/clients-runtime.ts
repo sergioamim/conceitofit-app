@@ -364,6 +364,7 @@ export async function liberarAcessoCatracaService(input: {
   const response = await liberarAcessoAdminCatracaApi({
     tenantId: input.tenantId,
     pessoaId: input.alunoId,
+    reason,
   });
   return response.requestId;
 }

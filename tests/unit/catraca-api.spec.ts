@@ -221,7 +221,7 @@ test.describe("catraca api", () => {
         },
       ]);
 
-      expect(calls[0].url).toContain("/api/v1/gerencial/catraca/acessos/dashboard");
+      expect(calls[0].url).toContain("/api/v1/gerencial/catraca-acessos");
       expect(calls[0].url).toContain("tipoLiberacao=MANUAL");
       expect(calls[0].url).toContain("status=LIBERADO");
       expect(calls[0].url).toContain("uniqueWindowMinutes=30");
